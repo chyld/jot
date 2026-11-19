@@ -296,6 +296,29 @@ export function listTags(db: DB, userId: string): Tag[] {
     .all(userId, userId) as Tag[];
 }
 
+export type DeleteTagResult = { removedFrom: number } | { readOnly: number } | 'not-found';
+
+/**
+ * Deletes a tag: removes it from every note of the user that carries it (live, in the
+ * Inbox or in the trash, so restoring a note cannot bring the tag back). The notes stay.
+ * Refused while a read-only note carries the tag, because a read-only note cannot change.
+ */
+export function deleteTag(db: DB, userId: string, tag: string): DeleteTagResult {
+  return db.transaction((): DeleteTagResult => {
+    const t = db.prepare('SELECT id FROM tags WHERE user_id = ? AND name = ?').get(userId, tag) as { id: string } | undefined;
+    if (!t) return 'not-found';
+    const rows = db
+      .prepare('SELECT n.id AS id, n.read_only AS read_only FROM note_tags nt JOIN notes n ON n.id = nt.note_id WHERE nt.tag_id = ? AND nt.user_id = ? AND n.user_id = ?')
+      .all(t.id, userId, userId) as Array<{ id: string; read_only: number }>;
+    const readOnly = rows.filter((r) => r.read_only).length;
+    if (readOnly > 0) return { readOnly };
+    db.prepare('DELETE FROM note_tags WHERE tag_id = ? AND user_id = ?').run(t.id, userId);
+    db.prepare('DELETE FROM tags WHERE id = ? AND user_id = ?').run(t.id, userId);
+    for (const r of rows) reindexNote(db, r.id);
+    return { removedFrom: rows.length };
+  })();
+}
+
 export function searchNotes(db: DB, userId: string, q: unknown): NoteSummary[] {
   const match = buildFtsQuery(q);
   if (!match) return [];

@@ -83,7 +83,8 @@ Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write note
 - Uppercase input is converted to lowercase ("Demo" becomes "demo").
 - Anything else is rejected with a message: digits, hyphens, spaces, accents, or more than 30 characters.
 - Added inline on the note.
-- Browsed only through the tag filter on the home page (section 12): a tag appears as a chip while at least one non-trashed note uses it, and choosing it filters the list. There is no separate Tags page.
+- Browsed through the tag filter on the home page (section 12): a tag appears as a chip while at least one non-trashed note uses it, and choosing it filters the list.
+- The Tags page (`/tags`) lists every such tag with its number of notes. A tag can be deleted there after an in-page confirmation: it is removed from every note that has it and the notes are kept. A tag that a read-only note has cannot be deleted.
 - Clicking a tag's name on a note (in the editor header or on a note card in the list) opens the home page with that tag's filter selected.
 - Tags are per user.
 
@@ -216,15 +217,16 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Screen | Contents |
 |---|---|
 | Login | Username, password |
-| Notes (home page) | Search box, New button, a tag filter (chips for the user's tags; choosing one filters the list; "All" clears it) and the notes list. No editor beside the list. Clicking a tag's name on a note opens this page with that tag selected |
+| Notes (home page) | Search box, New button, a tag filter (chips for the user's tags; choosing one filters the list; "All" clears it) and the notes list. Each note card has a trash button that moves the note to the trash at once, with Undo (read-only notes have none). No editor beside the list. Clicking a tag's name on a note opens this page with that tag selected |
 | Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it. A read-only note shows a "Read-only" indicator and cannot be edited |
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
 | Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
+| Tags (`/tags`) | Every tag with its number of notes; each name opens the home page filtered by it; Delete (with an in-page confirmation) removes the tag from every note and keeps the notes |
 | Inbox (`/inbox`) | Notes bots wrote and the user has not kept yet, newest first, each with its bot's name and a Keep button. See `agent-spec.md` |
 | Account (`/account`) | The logged-in user's username at the top, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. Then Bots: the address for bots (from `JOT_PUBLIC_URL`) and a setup snippet for a generic MCP client; create a bot by name; each bot's token always visible with Copy, Copy setup, its last-used time and Revoke (with a second-click confirm). No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
 
-A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) the New note button and the Inbox (with the number of notes in it); at the bottom: Fonts, Styles, Account (a person icon), Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.
+A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles, Account (a person icon), Trash and log out. It has no notes icon. The bar is 48 px wide with 36 px buttons.
 
 ---
 

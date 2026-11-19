@@ -33,7 +33,8 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 - The UI font is Inter (every user has it from the starter pack).
 - The left bar (owner feedback) holds the Jot logo, which is the link home and is
   highlighted on the home page, and the New note button; at the bottom: Fonts, Styles,
-  Trash and Log out. There is no notes icon and no tags icon.
+  Trash and Log out. There is no notes icon. (A Tags item was added later; see "Tags page,
+  card trash button and a slimmer left bar".)
 
 ## Accounts, sessions and the CLI
 
@@ -142,8 +143,9 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   shows one chip per tag that is on at least one live note, plus "All". Choosing a chip
   again also clears it. Search and the tag filter combine: search results are narrowed
   to the chosen tag.
-- There is no separate Tags page (owner feedback; `/tags` is gone and shows "Not
-  found"). The home page filter is the only way to browse by tag. It lives in the URL
+- There was no separate Tags page for a while (owner feedback). The owner later asked for
+  one back, for counts and deleting tags: see "Tags page, card trash button and a slimmer
+  left bar". The home page filter is still how notes are browsed by tag. It lives in the URL
   as `/?tag=name`, so clicking a tag's name in a note's header or on a note card opens
   the home page with that filter selected, and Back returns to where you were. A
   `?tag=` naming a tag that no live note of yours has clears the filter.
@@ -164,6 +166,37 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   one non-trashed note uses it; a tag row is deleted when no note (trashed or not) uses it.
 - Search: each word is matched as a prefix, all words must match (AND), and `#word`
   matches that tag exactly. At most 20 terms are used. Results are ranked by relevance.
+
+## Tags page, card trash button and a slimmer left bar (owner request)
+
+- **Left bar.** 48 px wide (was 64), with 36 px buttons (were 44) and 20 px icons. It gained
+  a Tags item after the Inbox.
+- **Trash button on note cards.** Only in the home page's notes list (not the Inbox). One
+  click moves the note to the trash through the existing `DELETE /api/notes/:id`. There is
+  no confirmation, because the trash is recoverable; instead a line above the list says
+  which note moved, with Undo (restore) and Dismiss. Only the last trashed note can be
+  undone from there; the rest are on the Trash page.
+  - A read-only note's card has no trash button (the server refuses it anyway, 403).
+  - The button sits above the card's stretched title link, so clicking it never opens the
+    note. Its accessible name is "Move <title> to the trash".
+- **Tags page (`/tags`).** Lists what `GET /api/tags` returns: the user's tags with the
+  number of live notes outside the Inbox, by name. A tag's name opens the home page
+  filtered by it.
+- **Deleting a tag** is `DELETE /api/tags/:tag`, answering `{ tag, removedFrom }`.
+  - It removes the tag from every note of the user that has it, in one transaction, and
+    keeps the notes. That includes notes in the Inbox and in the trash, so restoring a
+    note cannot bring a deleted tag back. `removedFrom` counts all of them, so it can be
+    higher than the count the page showed.
+  - Refused with 409 while a read-only note has the tag, and nothing changes: a read-only
+    note cannot change through the web app. So the "manual" tag of the User manual cannot
+    be deleted (the manual is found by that tag).
+  - 404 for a tag the user does not have (also another user's tag, and a name that cannot
+    be a tag). Notes' dates do not change, as with removing a tag from one note.
+  - The page asks once more in the tag's own row (Confirm: delete tag / Cancel), saying the
+    notes are kept: the same second-click pattern as the other destructive actions.
+- The User manual note was not changed.
+- Covered by `tests/api/tags-delete.test.ts`, `tests/component/tags-trash-card.test.tsx`
+  and `e2e/specs/tags-page.spec.ts`.
 
 ## Editor and styles
 

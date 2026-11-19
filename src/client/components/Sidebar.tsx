@@ -1,4 +1,4 @@
-import { Inbox, LogOut, NotebookPen, Paintbrush, Plus, Trash2, Type, UserRound } from 'lucide-react';
+import { Inbox, LogOut, NotebookPen, Paintbrush, Plus, Tags, Trash2, Type, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useData } from '../data';
@@ -46,34 +46,37 @@ export function Sidebar(props: { path: string }) {
           navigate('/');
         }}
       >
-        <NotebookPen size={26} />
+        <NotebookPen size={20} />
       </a>
       <button type="button" className="rail-new" aria-label="New note" title="New note" onClick={() => void createAndOpenNote(bumpNotes).then(setNewError)}>
-        <Plus size={24} />
+        <Plus size={20} />
       </button>
       <RailLink to="/inbox" label="Inbox" title={`Inbox: ${inboxCount} ${inboxCount === 1 ? 'note' : 'notes'} from bots`} active={p === '/inbox'}>
         <span className="rail-inbox">
-          <Inbox size={22} />
+          <Inbox size={20} />
           <span className="rail-count" data-testid="inbox-count">
             {inboxCount > 0 ? inboxCount : ''}
           </span>
         </span>
       </RailLink>
+      <RailLink to="/tags" label="Tags" active={p === '/tags'}>
+        <Tags size={20} />
+      </RailLink>
       <div className="rail-spacer" />
       <RailLink to="/fonts" label="Fonts" active={p === '/fonts'}>
-        <Type size={22} />
+        <Type size={20} />
       </RailLink>
       <RailLink to="/styles" label="Styles" active={p === '/styles'}>
-        <Paintbrush size={22} />
+        <Paintbrush size={20} />
       </RailLink>
       <RailLink to="/account" label="Account" active={p === '/account'}>
-        <UserRound size={22} />
+        <UserRound size={20} />
       </RailLink>
       <RailLink to="/trash" label="Trash" active={p === '/trash'}>
-        <Trash2 size={22} />
+        <Trash2 size={20} />
       </RailLink>
       <button type="button" className="rail-btn" aria-label={`Log out ${user.username}`} title={`Log out (${user.username})`} onClick={() => void logout()}>
-        <LogOut size={22} />
+        <LogOut size={20} />
       </button>
       {newError && (
         <div role="alert" className="rail-error" onClick={() => setNewError(null)}>

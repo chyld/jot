@@ -1,5 +1,5 @@
 // The home page: the user's notes as a list, with search, a New button and a tag
-// filter. The tag filter is the only way to browse by tag; it lives in the URL
+// filter. The tag filter is how notes are browsed by tag; it lives in the URL
 // (/?tag=name) so a tag name clicked anywhere can open the home page filtered.
 // Opening a note goes to its own full-screen editor page.
 import { useEffect, useState } from 'react';
@@ -20,6 +20,30 @@ export function NotesScreen(props: { tag: string | null }) {
   const [tags, setTags] = useState<Tag[] | null>(null);
   const [notes, setNotes] = useState<NoteSummary[] | null>(null);
   const now = useNow();
+  // The note last moved to the trash from this list, so it can be put back with Undo.
+  const [trashed, setTrashed] = useState<{ id: string; title: string } | null>(null);
+  const [trashError, setTrashError] = useState<string | null>(null);
+  const trash = async (n: NoteSummary) => {
+    setTrashError(null);
+    try {
+      await api.trashNote(n.id);
+      setTrashed({ id: n.id, title: n.title || 'Untitled' });
+      bumpNotes();
+    } catch (e) {
+      setTrashError(e instanceof Error ? e.message : 'Could not move the note to the trash.');
+    }
+  };
+  const undoTrash = async () => {
+    if (!trashed) return;
+    setTrashError(null);
+    try {
+      await api.restore(trashed.id);
+      setTrashed(null);
+      bumpNotes();
+    } catch (e) {
+      setTrashError(e instanceof Error ? e.message : 'Could not restore the note.');
+    }
+  };
 
   useEffect(() => {
     api.tags().then((r) => setTags(r.tags), () => setTags([]));
@@ -68,6 +92,22 @@ export function NotesScreen(props: { tag: string | null }) {
           {newError}
         </div>
       )}
+      {trashError && (
+        <div role="alert" className="banner banner-error">
+          {trashError}
+        </div>
+      )}
+      {trashed && (
+        <div role="status" className="banner undo-banner" data-testid="trash-undo">
+          <span>Moved “{trashed.title}” to the trash.</span>
+          <button type="button" className="btn btn-sm" onClick={() => void undoTrash()}>
+            Undo
+          </button>
+          <button type="button" className="btn btn-sm" onClick={() => setTrashed(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="tag-filter" role="group" aria-label="Filter by tag">
         <button type="button" className={`filter-chip ${tag === null ? 'is-selected' : ''}`} aria-pressed={tag === null} onClick={() => setTag(null)}>
           All
@@ -87,7 +127,7 @@ export function NotesScreen(props: { tag: string | null }) {
       <div className="notes-list wide" data-testid="notes-list">
         {notes === null && <div className="muted pad">Loading…</div>}
         {notes?.length === 0 && <div className="muted pad">{filtering ? 'No notes match.' : 'No notes yet. Create one with New.'}</div>}
-        {notes?.map((n) => <NoteCard key={n.id} note={n} now={now} />)}
+        {notes?.map((n) => <NoteCard key={n.id} note={n} now={now} onTrash={() => void trash(n)} />)}
       </div>
     </div>
   );

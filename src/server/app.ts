@@ -325,6 +325,19 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   app.get('/api/tags', async (req) => ({ tags: notes.listTags(db, uid(req)) }));
 
+  // Deleting a tag takes it off every note of the user; the notes are kept.
+  app.delete('/api/tags/:tag', async (req) => {
+    const r = normalizeTag((req.params as Record<string, string>).tag);
+    if (!r.ok) throw notFound('Tag not found.');
+    const res = notes.deleteTag(db, uid(req), r.tag);
+    if (res === 'not-found') throw notFound('Tag not found.');
+    if ('readOnly' in res) {
+      const n = res.readOnly;
+      throw new HttpError(409, `This tag cannot be deleted: ${n === 1 ? 'a read-only note has' : `${n} read-only notes have`} it, and read-only notes cannot be changed.`);
+    }
+    return { tag: r.tag, removedFrom: res.removedFrom };
+  });
+
   // ---------------------------------------------------------------- inbox and bots
   app.get('/api/inbox', async (req) => ({ notes: notes.listInbox(db, uid(req)) }));
 

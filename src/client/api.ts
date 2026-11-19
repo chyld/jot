@@ -67,6 +67,7 @@ export const api = {
   removeTag: (id: string, tag: string) =>
     request<{ note: Note }>('DELETE', `/api/notes/${encodeURIComponent(id)}/tags/${encodeURIComponent(tag)}`),
   tags: () => request<{ tags: Tag[] }>('GET', '/api/tags'),
+  deleteTag: (tag: string) => request<{ tag: string; removedFrom: number }>('DELETE', `/api/tags/${encodeURIComponent(tag)}`),
 
   trash: () => request<{ notes: NoteSummary[] }>('GET', '/api/trash'),
   restore: (id: string) => request<{ note: Note }>('POST', `/api/trash/${encodeURIComponent(id)}/restore`, {}),
