@@ -55,6 +55,48 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 
 ## Notes, tags, trash, search
 
+- **Read-only notes (owner request).**
+  - Storage: a `read_only` column on notes (schema version 3).
+  - Turning it on is one route, `POST /api/notes/:id/read-only`. It is one-way: the web app
+    has no route that turns it off; only `jot unlock-note <note id>` does.
+  - It does not change the note's dates, and asking again changes nothing. A note in the
+    trash can't be made read-only (409), so a read-only note is never in the trash, and
+    Empty trash and permanent delete never meet one.
+  - Every route that changes a note checks it on the server (title and body saves, add
+    tag, remove tag, move to trash) and refuses with 403: "This note is read-only: it
+    cannot be changed or deleted. It can only be made writable again from the command
+    line on the server." 403 is not a temporary refusal, so autosave does not retry it.
+  - Editor: the lock is the last control in the toolbar. Its in-page confirmation (Confirm /
+    Cancel) is the same second-click pattern as the other irreversible actions. Pending
+    edits are saved before the note is locked.
+  - A read-only note shows a "Read-only" badge in the note header. The editor and title
+    are not editable, and the tag box, remove buttons and trash button are hidden.
+  - Every toolbar control is disabled through one shared "toolbar disabled" setting; the
+    table and photo bars are hidden. ProseMirror still lets text be selected and copied.
+    Any unsaved edits this browser kept for the note are dropped, since they could never
+    be saved.
+  - Note cards show a small lock (labelled "Read-only").
+- **`jot unlock-note <note id>`** takes the system-wide lock like every CLI command, works
+  next to the running app (SQLite), and does not change the note's dates.
+  - It prints `Note "<title>" (owner <username>) is writable again.`
+  - An unknown or malformed id gets "No note with id …". A note that isn't read-only
+    gets "… is not read-only; nothing was changed." Both exit 1.
+- **User manual.** `src/server/manual.ts` builds the document.
+  - It uses the starter styles stamped as plain formatting, as applying a style does:
+    Title for its first line, Body for text, Quote for a tip, Aside for the last line.
+    It also uses headings, a numbered list, and one code block per command.
+  - The commands are the ones the CLI and the smoke test run, with the file and note
+    placeholders written as `jot-backup-YYYYMMDD-HHMMSS.tar` and `NOTE_ID`.
+  - New accounts get it inside the same transaction as the starter pack.
+  - Existing accounts get it from the schema version 3 migration. That is one transaction
+    which adds the column and one manual per user, so it runs exactly once.
+  - It reuses a `manual` tag the user may already have. The migration is tested against
+    a copy of a database made by the previous version (`tests/fixtures/jot-v2.db`).
+  - Most tests remove the manual from their test users so they can count notes simply.
+    The manual's own tests keep it.
+- **The Backup page** went back to three cards (owner request). The full system backup
+  instructions now live in the User manual note instead.
+
 - **Empty trash (owner request)** is one route, `DELETE /api/trash`, answering
   `{ deleted: n }`.
   - In one transaction it permanently deletes every note of the logged-in user that is in
@@ -321,6 +363,13 @@ locks, no extra CLI commands, no admin role). Where the spec is silent:
   take it. Uploading and checking a restore file does not, because it touches nothing live.
 
 **Personal backup**
+- Format version 2 adds `readOnly` to each note in `data.json`, so an older Jot refuses
+  such a backup instead of losing the flag.
+  - A version 1 backup has no flag and restores with every note writable.
+  - A flag that isn't true or false is refused, and so is a read-only note in the trash
+    (Jot never allows that).
+  - A restore replaces every note, read-only ones included; the safety backup keeps them.
+    Full system backups carry the column in the database as usual.
 - Two requests. `POST /api/backup` builds the archive on disk, reads it back against its
   manifest and reports what was already missing, so the screen can say it plainly.
   `GET /api/backup/:id` then streams it and removes it from the server. If a download
@@ -407,21 +456,6 @@ locks, no extra CLI commands, no admin role). Where the spec is silent:
   - On failure it removes `jot.db` (and any journal) and `users/`, never `backups`.
 - Run it as `docker compose run --rm app jot restore /data/backups/<file>`. With the app
   stopped, `exec` is not possible, and `run` mounts the new empty `./data`.
-
-**Full system backup instructions on the Backup screen**
-- Static text and commands at the bottom of the Backup screen (`backup-spec.md` §3.1). They
-  are shown to every user, add no routes and do nothing; each command has a Copy button
-  (clipboard; where the browser refuses, the text is selectable).
-- The commands are the ones the CLI and the smoke test really run, from the folder that
-  holds `docker-compose.yml`. File paths are given as the container sees them
-  (`/data/backups/…`), because `./data` is mounted at `/data`. The file name is written as
-  `jot-backup-YYYYMMDD-HHMMSS.tar`, to be replaced with the name `jot backup` printed.
-- "Create an empty data folder and put the backup where the container can read it" is
-  `mkdir -p data/backups` plus a `cp` from `data-old/backups`. A `backups` folder is the one
-  thing an "empty" data folder may hold.
-- `--out <folder>` is explained in words, not given as a command to copy. The folder is a
-  path inside the container, so it must be mounted from the other disk first. Otherwise
-  the backup would sit in the container's own filesystem and be lost with the container.
 
 **The three fixes (§5)**
 - `jot-spec.md`'s "backup is a copy of `data`" now points to `jot backup`. A folder copy is

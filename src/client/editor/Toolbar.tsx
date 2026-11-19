@@ -2,7 +2,7 @@
 //  1 Styles  2 Font  3 Size  4 Text colour, highlight  5 B I U S code link
 //  6 Heading  7 List  8 Insert  9 Undo, redo
 // plus table controls (cursor in a table) and photo controls (photo selected).
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {
@@ -28,12 +28,14 @@ import {
   Undo2,
   Heading,
   SeparatorHorizontal,
+  Lock,
+  LockOpen,
 } from 'lucide-react';
 import { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, MAX_FONT_SIZE, MIN_FONT_SIZE } from '../../shared/constants';
 import { findPalette, PALETTE } from '../../shared/palette';
 import type { Style } from '../../shared/styles';
 import type { Font } from '../../shared/types';
-import { Dropdown, MenuItem, ToolButton } from '../components/Dropdown';
+import { Dropdown, MenuItem, ToolButton, ToolbarDisabled } from '../components/Dropdown';
 import { currentFormat, matchingStyle, quoteFamily, applyStyle, type CurrentFormat } from './stamp';
 import { PhotoControls } from './PhotoControls';
 import { TableControls } from './TableControls';
@@ -172,6 +174,7 @@ export const clampSize = (n: number) => Math.max(MIN_FONT_SIZE, Math.min(MAX_FON
 export function FontSizeControl(props: { editor: Editor }) {
   const size = useEditorState({ editor: props.editor, selector: ({ editor }) => currentFormat(editor).size }) as number | null;
   const current = size ?? DEFAULT_FONT_SIZE;
+  const off = useContext(ToolbarDisabled);
   const [text, setText] = useState(String(current));
   useEffect(() => setText(String(current)), [current]);
   const apply = (n: number) => {
@@ -191,6 +194,7 @@ export function FontSizeControl(props: { editor: Editor }) {
       <input
         className="tb-size-input"
         aria-label="Font size"
+        disabled={off}
         inputMode="numeric"
         value={text}
         onChange={(e) => setText(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
@@ -593,15 +597,70 @@ export interface ToolbarProps {
   onManageStyles: () => void;
   onBrowseFonts: () => void;
   onPickImage: (file: File) => void;
+  /** The note is read-only: every control is switched off. */
+  readOnly?: boolean;
+  /** Shows the read-only toggle at the end; called after the in-page confirmation. */
+  onMakeReadOnly?: () => Promise<void> | void;
+}
+
+/** The lock at the end of the toolbar. Turning it on asks once more; the web app cannot turn it off. */
+function ReadOnlyToggle(props: { readOnly: boolean; onRequest: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`tb-btn tb-lock ${props.readOnly ? 'is-active' : ''}`}
+      aria-label={props.readOnly ? 'Read-only' : 'Make read-only'}
+      title={props.readOnly ? 'Read-only' : 'Make read-only'}
+      aria-pressed={props.readOnly}
+      disabled={props.readOnly}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={props.onRequest}
+    >
+      {props.readOnly ? <Lock size={ICON} /> : <LockOpen size={ICON} />}
+    </button>
+  );
+}
+
+function ReadOnlyConfirm(props: { onConfirm: () => Promise<void> | void; onCancel: () => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="readonly-confirm" role="group" aria-label="Make read-only">
+      <span>
+        Make this note read-only? Once read-only, nothing about the note can be changed and it cannot be deleted. It can only be made writable
+        again from the command line on the server.
+      </span>
+      <button
+        type="button"
+        className="btn btn-sm btn-danger"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await props.onConfirm();
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Confirm: make read-only
+      </button>
+      <button type="button" className="btn btn-sm" disabled={busy} onClick={props.onCancel}>
+        Cancel
+      </button>
+    </div>
+  );
 }
 
 export function Toolbar(props: ToolbarProps) {
   const { editor } = props;
+  const readOnly = !!props.readOnly;
+  const [confirming, setConfirming] = useState(false);
   const ctx = useEditorState({
     editor,
     selector: ({ editor }) => ({ inTable: editor.isActive('table'), photo: editor.isActive('image') }),
   }) as { inTable: boolean; photo: boolean };
   return (
+    <ToolbarDisabled.Provider value={readOnly}>
     <div className="toolbar-wrap">
       <div className="toolbar" role="toolbar" aria-label="Formatting">
         <StylesDropdown editor={editor} styles={props.styles} onSaveSelection={props.onSaveSelectionAsStyle} onManage={props.onManageStyles} />
@@ -624,9 +683,25 @@ export function Toolbar(props: ToolbarProps) {
         </div>
         <span className="tb-sep" />
         <UndoRedo editor={editor} />
+        {props.onMakeReadOnly && (
+          <>
+            <span className="tb-sep" />
+            <ReadOnlyToggle readOnly={readOnly} onRequest={() => setConfirming(true)} />
+          </>
+        )}
       </div>
-      {ctx.inTable && <TableControls editor={editor} />}
-      {ctx.photo && <PhotoControls editor={editor} />}
+      {confirming && !readOnly && props.onMakeReadOnly && (
+        <ReadOnlyConfirm
+          onConfirm={async () => {
+            await props.onMakeReadOnly!();
+            setConfirming(false);
+          }}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
+      {!readOnly && ctx.inTable && <TableControls editor={editor} />}
+      {!readOnly && ctx.photo && <PhotoControls editor={editor} />}
     </div>
+    </ToolbarDisabled.Provider>
   );
 }

@@ -143,7 +143,7 @@ describe('wrong entries', () => {
   });
 
   it('a newer format version is refused', async () => {
-    await refused(edit((b) => (b.manifest.version = 2)), /newer/i);
+    await refused(edit((b) => (b.manifest.version = 3)), /newer/i);
   });
 
   it('another kind of file is refused', async () => {
@@ -224,6 +224,17 @@ describe('contents that break Jot’s rules', () => {
     await refused(edit((b) => (b.data.notes[0].title = 'x'.repeat(501))), /title/i);
     await refused(edit((b) => (b.data.notes[0].createdAt = 'yesterday')));
     await refused(edit((b) => (b.data.fonts[0].faces[0].file = '../../evil.woff2')));
+  });
+
+  it('read-only must be true or false, and a read-only note cannot be in the trash', async () => {
+    await refused(edit((b) => (b.data.notes[0].readOnly = 'yes')), /read-only/i);
+    await refused(
+      edit((b) => {
+        b.data.notes[0].readOnly = true;
+        b.data.notes[0].deletedAt = '2026-11-01T00:00:00.000Z';
+      }),
+      /read-only/i,
+    );
   });
 
   it('counts in the manifest must match the data', async () => {

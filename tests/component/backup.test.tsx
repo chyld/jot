@@ -2,10 +2,10 @@
 // Type 7 (component): the Backup screen, the Backup item in the left bar, and unsaved
 // edits kept in the browser until the server confirms them (backup-spec.md §3.1, §5).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAutosave } from '../../src/client/autosave';
-import { BackupScreen, SYSTEM_COMMANDS } from '../../src/client/screens/BackupScreen';
+import { BackupScreen } from '../../src/client/screens/BackupScreen';
 import { Sidebar } from '../../src/client/components/Sidebar';
 import { DataProvider, useData } from '../../src/client/data';
 import { clearAllUnsaved, loadUnsaved, resumeUnsaved, storeUnsaved, unsavedKey } from '../../src/client/unsaved';
@@ -183,8 +183,10 @@ describe('Backup screen', () => {
     };
   });
 
-  it('has the three parts', async () => {
+  it('has the three parts, and only those', async () => {
     render(<BackupScreen />);
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))).toEqual(['backup-make', 'backup-restore', 'backup-safety']);
+    expect(document.body.textContent).not.toMatch(/full system backup|command line|docker compose/i);
     expect(screen.getByRole('heading', { name: 'Backup' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Back up my data' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Restore from a backup' })).toBeTruthy();
@@ -259,39 +261,4 @@ describe('Backup screen', () => {
     await waitFor(() => expect(region.textContent).toMatch(/no safety backups/i));
   });
 
-  it('ends with instructions for the full system backup on the command line, with a copy button per command', async () => {
-    const writeText = vi.fn(async () => {});
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    render(<BackupScreen />);
-    const regions = screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'));
-    expect(regions.at(-1)).toBe('backup-system'); // below Safety backups
-    const region = screen.getByRole('region', { name: 'Full system backup (command line)' });
-    expect(region.textContent).toMatch(/every user.s data plus the accounts/i);
-    expect(region.textContent).toMatch(/cannot be done from the web app/i);
-    expect(region.textContent).toMatch(/same disk/i);
-    expect(region.textContent).toContain('--out');
-    expect(region.textContent).toMatch(/everyone signs in again/i);
-    expect(region.textContent).toContain('data-old');
-    const shown = [...region.querySelectorAll('.cli-command code')].map((c) => c.textContent);
-    expect(shown).toEqual([
-      'docker compose exec app jot backup',
-      'docker compose exec app jot verify /data/backups/jot-backup-YYYYMMDD-HHMMSS.tar',
-      'docker compose stop app',
-      'mv data data-old',
-      'mkdir -p data/backups',
-      'cp data-old/backups/jot-backup-YYYYMMDD-HHMMSS.tar data/backups/',
-      'docker compose run --rm app jot restore /data/backups/jot-backup-YYYYMMDD-HHMMSS.tar',
-      'docker compose up -d',
-    ]);
-    expect(shown).toEqual([SYSTEM_COMMANDS.backup, SYSTEM_COMMANDS.verify, ...SYSTEM_COMMANDS.restore]);
-    // Instructions only: the only buttons are the copy buttons, and nothing is sent to the server.
-    const buttons = [...region.querySelectorAll('button')];
-    expect(buttons.length).toBe(shown.length);
-    await screen.findByRole('link', { name: /Download/ }); // the safety list has loaded
-    const before = calls.length;
-    fireEvent.click(screen.getByRole('button', { name: 'Copy: docker compose exec app jot backup' }));
-    expect(writeText).toHaveBeenCalledWith('docker compose exec app jot backup');
-    await waitFor(() => expect(region.textContent).toContain('Copied'));
-    expect(calls.length).toBe(before);
-  });
 });

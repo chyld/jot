@@ -16,10 +16,11 @@ interface NoteRow {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  read_only: number;
   tag_list: string | null;
 }
 
-const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at,
+const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only,
   (SELECT group_concat(t.name, ' ' ORDER BY t.name) FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
      WHERE nt.note_id = n.id) AS tag_list`;
 
@@ -32,6 +33,7 @@ function toSummary(r: NoteRow): NoteSummary {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     deletedAt: r.deleted_at,
+    readOnly: r.read_only === 1,
   };
 }
 
@@ -100,12 +102,42 @@ export function createNote(db: DB, userId: string, title: string, content: Tipta
   return getNote(db, userId, id)!;
 }
 
-export type UpdateResult = Note | 'not-found' | 'trashed';
+export type UpdateResult = Note | 'not-found' | 'trashed' | 'read-only';
 
-function liveCheck(db: DB, userId: string, id: string): 'ok' | 'not-found' | 'trashed' {
-  const r = db.prepare('SELECT deleted_at FROM notes WHERE id = ? AND user_id = ?').get(id, userId) as { deleted_at: string | null } | undefined;
+/** Whether the note may be changed: it must exist, be the user's, not be in the trash, and not be read-only. */
+function liveCheck(db: DB, userId: string, id: string): 'ok' | 'not-found' | 'trashed' | 'read-only' {
+  const r = db.prepare('SELECT deleted_at, read_only FROM notes WHERE id = ? AND user_id = ?').get(id, userId) as
+    | { deleted_at: string | null; read_only: number }
+    | undefined;
   if (!r) return 'not-found';
+  if (r.read_only) return 'read-only';
   return r.deleted_at ? 'trashed' : 'ok';
+}
+
+/**
+ * Makes a note read-only. From then on nothing about it can change through the web app;
+ * only `jot unlock-note` makes it writable again. A note in the trash cannot be made read-only.
+ */
+export function makeReadOnly(db: DB, userId: string, id: string): Note | 'not-found' | 'trashed' {
+  return db.transaction(() => {
+    const state = liveCheck(db, userId, id);
+    if (state === 'not-found' || state === 'trashed') return state;
+    db.prepare('UPDATE notes SET read_only = 1 WHERE id = ? AND user_id = ?').run(id, userId);
+    return getNote(db, userId, id)!;
+  })();
+}
+
+/** For `jot unlock-note`: makes any user's read-only note writable again. */
+export function unlockNote(db: DB, id: string): { title: string; username: string; result: 'unlocked' | 'not-read-only' } | null {
+  return db.transaction(() => {
+    const r = db.prepare('SELECT n.title, n.read_only, u.username FROM notes n JOIN users u ON u.id = n.user_id WHERE n.id = ?').get(id) as
+      | { title: string; read_only: number; username: string }
+      | undefined;
+    if (!r) return null;
+    if (!r.read_only) return { title: r.title, username: r.username, result: 'not-read-only' as const };
+    db.prepare('UPDATE notes SET read_only = 0 WHERE id = ?').run(id);
+    return { title: r.title, username: r.username, result: 'unlocked' as const };
+  })();
 }
 
 export function updateNote(db: DB, userId: string, id: string, patch: { title?: string; content?: TiptapDoc }): UpdateResult {
@@ -156,9 +188,10 @@ export function removeTag(db: DB, userId: string, id: string, tag: string): Upda
   })();
 }
 
-/** Moves a live note to the trash. Returns null if the user has no such note. */
-export function trashNote(db: DB, userId: string, id: string): Note | null {
+/** Moves a live note to the trash. Returns null if the user has no such note. A read-only note cannot be trashed. */
+export function trashNote(db: DB, userId: string, id: string): Note | null | 'read-only' {
   return db.transaction(() => {
+    if (liveCheck(db, userId, id) === 'read-only') return 'read-only' as const;
     const r = db.prepare('UPDATE notes SET deleted_at = COALESCE(deleted_at, ?) WHERE id = ? AND user_id = ?').run(now(), id, userId);
     if (r.changes === 0) return null;
     reindexNote(db, id);

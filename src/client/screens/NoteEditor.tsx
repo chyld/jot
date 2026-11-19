@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note } from '../../shared/types';
@@ -56,11 +56,16 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   const { fonts, styles, reloadStyles, user } = useData();
   const note = props.note;
   const trashed = note.deletedAt !== null;
+  const readOnly = note.readOnly;
+  // Nothing can be edited in a trashed or a read-only note.
+  const locked = trashed || readOnly;
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
   const now = useNow();
   const saved = (n: Note) => props.onChange(n);
   // Edits this browser kept because the server never confirmed them come back here.
-  const autosave = useAutosave(note.id, saved, user.id);
-  const restored = trashed ? null : autosave.restored;
+  const autosave = useAutosave(note.id, saved, user.id, { readOnly });
+  const restored = locked ? null : autosave.restored;
   const [title, setTitle] = useState(restored?.title ?? note.title);
   const [styleDraft, setStyleDraft] = useState<StyleInput | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,26 +77,39 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     // Pasted text is plain text: no Markdown-style or link rules on paste.
     enablePasteRules: false,
     content: (restored?.content as Note['content'] | undefined) ?? note.content,
-    editable: !trashed,
+    editable: !locked,
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
     editorProps: {
       attributes: { class: 'note-body', 'aria-label': 'Note text', spellcheck: 'true' },
       ...pasteProps((file) => pasteFile.current(file)),
     },
-    onUpdate: ({ editor }) => autosave.schedule({ content: editor.getJSON() }),
+    onUpdate: ({ editor }) => {
+      if (!lockedRef.current) autosave.schedule({ content: editor.getJSON() });
+    },
   });
 
   useEffect(() => {
-    if (editor && editor.isEditable === trashed) editor.setEditable(!trashed);
-  }, [editor, trashed]);
+    if (editor && editor.isEditable === locked) editor.setEditable(!locked);
+  }, [editor, locked]);
 
   // A note just made with a New button: the caret goes into the body as soon as the
   // editor holds this note, so typing starts there without a click. Existing notes are
   // opened as before.
   useEffect(() => {
-    if (editor && !trashed && takeNewNote(note.id)) editor.commands.focus('end');
-  }, [editor, note.id, trashed]);
+    if (editor && !locked && takeNewNote(note.id)) editor.commands.focus('end');
+  }, [editor, note.id, locked]);
+
+  const makeReadOnly = async () => {
+    setMessage(null);
+    try {
+      await autosave.flush(); // what was typed is saved first
+      const { note: n } = await api.makeReadOnly(note.id);
+      props.onChange(n);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not make the note read-only.');
+    }
+  };
 
   const saveSelectionAsStyle = (ed: Editor) => {
     const fmt = currentFormat(ed);
@@ -139,7 +157,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           aria-label="Title"
           placeholder="Untitled"
           value={title}
-          readOnly={trashed}
+          readOnly={locked}
           maxLength={500}
           onChange={(e) => {
             setTitle(e.target.value);
@@ -154,7 +172,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
         />
         <TagInput
           tags={note.tags}
-          disabled={trashed}
+          disabled={locked}
           onOpenTag={(t) => navigate(homeHref(t))}
           onAdd={async (tag) => {
             try {
@@ -167,13 +185,18 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           onRemove={(tag) => void tagChange(() => api.removeTag(note.id, tag)).catch(() => {})}
         />
         <div className="note-meta">
+          {readOnly && (
+            <span className="read-only-badge" data-testid="read-only-indicator" title="This note is read-only. It can only be made writable again from the command line on the server.">
+              <Lock size={14} /> Read-only
+            </span>
+          )}
           <span data-testid="save-status" className={`save-status status-${autosave.status}`} role="status">
             {STATUS_TEXT[autosave.status]}
           </span>
           <span className="note-dates" data-testid="note-dates">
             Created {shortDate(note.createdAt)} · Updated {relativeTime(note.updatedAt, now)}
           </span>
-          {!trashed && (
+          {!locked && (
             <button
               type="button"
               className="icon-btn"
@@ -233,6 +256,8 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           onManageStyles={() => navigate('/styles')}
           onBrowseFonts={() => navigate('/fonts')}
           onPickImage={(f) => void pickImage(f)}
+          readOnly={readOnly}
+          onMakeReadOnly={makeReadOnly}
         />
       )}
       <div className="note-scroll">

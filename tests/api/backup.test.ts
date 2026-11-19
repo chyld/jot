@@ -135,9 +135,61 @@ describe('round trip', () => {
     expect(names[0]).toBe('data.json');
     expect(names.filter((n) => n.startsWith('photos/')).length).toBe(2);
     expect(names.filter((n) => n.startsWith('fonts/')).length).toBeGreaterThan(6);
-    expect(b.manifest).toMatchObject({ format: 'jot-personal-backup', version: 1 });
+    expect(b.manifest).toMatchObject({ format: 'jot-personal-backup', version: 2 });
     expect(b.manifest.entries.map((e: any) => e.name).sort()).toEqual([...names].sort());
     expect(JSON.stringify(b.data)).not.toMatch(/password|argon2|layout/); // no username, no password
+  });
+});
+
+describe('read-only notes', () => {
+  it('a backup records which notes are read-only, and a restore brings them back exactly', async () => {
+    const c = await newUser(env, 'ro_user', undefined, { keepManual: true });
+    const id = await idOf(c);
+    const locked = (await c.post('/api/notes', { title: 'locked one', content: doc('fixed text') })).json.note;
+    await c.post(`/api/notes/${locked.id}/tags`, { tag: 'frozen' });
+    await c.post(`/api/notes/${locked.id}/read-only`, {});
+    await c.post('/api/notes', { title: 'loose one', content: doc('free text') });
+    const before = snap(id);
+    const { file } = await takeBackup(c);
+    const data = openBackup(file).data;
+    expect(Object.fromEntries(data.notes.map((n: any) => [n.title, n.readOnly]))).toEqual({ 'User manual': true, 'locked one': true, 'loose one': false });
+    expect(openBackup(file).manifest.version).toBe(2);
+
+    // The restore replaces every note, read-only ones included (the safety backup has them).
+    await c.post('/api/notes', { title: 'after the backup', content: doc('x') });
+    expect((await restore(c, file)).done.status).toBe(200);
+    expect(snap(id)).toEqual(before);
+    const list = (await c.get('/api/notes')).json.notes;
+    expect(list.find((n: any) => n.title === 'locked one').readOnly).toBe(true);
+    expect(list.find((n: any) => n.title === 'User manual').readOnly).toBe(true);
+    expect(list.find((n: any) => n.title === 'loose one').readOnly).toBe(false);
+    const restoredLocked = list.find((n: any) => n.title === 'locked one');
+    expect((await c.patch(`/api/notes/${restoredLocked.id}`, { title: 'x' })).status).toBe(403);
+    expect(strayFiles(db(), env.dataDir, id)).toEqual([]);
+    // The safety backup holds the read-only notes as they were.
+    const safety = (await c.get('/api/safety-backups')).json.backups[0];
+    const safe = openBackup((await c.get(`/api/safety-backups/${safety.name}`)).rawPayload).data;
+    expect(safe.notes.find((n: any) => n.title === 'locked one').readOnly).toBe(true);
+  });
+
+  it('a backup made before read-only notes existed restores with every note writable', async () => {
+    const c = await newUser(env, 'ro_old');
+    const id = await idOf(c);
+    await c.post('/api/notes', { title: 'old one', content: doc('x') });
+    await c.post('/api/notes', { title: 'old two', content: doc('y') });
+    const b = openBackup((await takeBackup(c)).file);
+    // As the previous version wrote it: format 1, no readOnly field.
+    b.manifest.version = 1;
+    for (const n of b.data.notes) delete n.readOnly;
+    const old = packBackup(b);
+    const lockedNow = (await c.get('/api/notes')).json.notes[0];
+    await c.post(`/api/notes/${lockedNow.id}/read-only`, {});
+    const r = await restore(c, old);
+    expect(r.done.status, r.done.body).toBe(200);
+    const list = (await c.get('/api/notes')).json.notes;
+    expect(list.map((n: any) => n.title).sort()).toEqual(['old one', 'old two']);
+    expect(list.every((n: any) => n.readOnly === false)).toBe(true);
+    expect(strayFiles(db(), env.dataDir, id)).toEqual([]);
   });
 });
 

@@ -36,11 +36,10 @@ A "Backup" item in the left bar opens a screen with:
 - **Back up my data:** builds a backup and downloads it.
 - **Restore from a backup:** choose a file, see a summary (date made, counts of notes, photos, fonts and styles, and anything that will be adjusted), then confirm by typing RESTORE, or cancel.
 - **Safety backups:** the backups Jot took automatically before each restore. Each can be downloaded or deleted. Jot never deletes them itself.
-- **Full system backup (command line):** at the bottom, below Safety backups. Instructions only (no buttons apart from a Copy button per command, no routes, no behaviour): a full system backup covers every user's data plus accounts, is run on the server by whoever manages Jot, and cannot be done from the web app. Numbered steps with the exact commands from §4: back up (`docker compose exec app jot backup`; the file lands in `data/backups`, `--out <folder>` writes to another disk, and a backup left in `data/backups` is on the same disk as the data), check (`docker compose exec app jot verify /data/backups/<file>`), and restore (`docker compose stop app`, `mv data data-old`, `mkdir -p data/backups`, copy the backup file into `data/backups`, `docker compose run --rm app jot restore /data/backups/<file>`, `docker compose up -d`; everyone signs in again, and the old data stays in `data-old` until deleted).
 
 ### 3.2 What it contains
 
-Everything the user owns: notes (title, content, tags, dates, and whether each is in the trash), every photo including unused ones, every font including archived ones with its files, and every style. It does not contain the username, the password, or anything belonging to another user.
+Everything the user owns: notes (title, content, tags, dates, whether each is in the trash, and whether each is read-only), every photo including unused ones, every font including archived ones with its files, and every style. It does not contain the username, the password, or anything belonging to another user.
 
 ### 3.3 Format
 
@@ -55,6 +54,8 @@ One uncompressed tar file:
 
 The manifest is last, so a download that was cut off has no manifest and is refused.
 
+Format version 2 records whether each note is read-only (`jot-spec.md` §3). A version 1 backup (made before read-only notes) restores with every note writable.
+
 ### 3.4 Taking a backup
 
 1. Read all of the user's records in a single database read transaction, so the backup is one moment in time.
@@ -64,7 +65,7 @@ The manifest is last, so a download that was cut off has no manifest and is refu
 
 ### 3.5 Restoring
 
-Restore **replaces**: afterwards the account holds what the backup holds.
+Restore **replaces**: afterwards the account holds what the backup holds. That includes read-only notes: every note the account has now, read-only ones included, is replaced (the safety backup keeps them), and every note comes back exactly as it was in the backup, read-only or not. A read-only note is never in the trash, so a backup with one there is refused.
 
 1. **Upload** to a staging folder. Nothing live is touched. An upload that is not confirmed is deleted when cancelled, after 24 hours, or at the next server start.
 2. **Check everything.** The restore is refused, with the reason shown, unless:

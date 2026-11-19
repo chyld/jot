@@ -232,8 +232,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       throw e;
     }
   };
+  const READ_ONLY = 'This note is read-only: it cannot be changed or deleted. It can only be made writable again from the command line on the server.';
   const updated = (r: notes.UpdateResult) => {
     if (r === 'not-found') throw notFound('Note not found.');
+    if (r === 'read-only') throw new HttpError(403, READ_ONLY);
     if (r === 'trashed') throw new HttpError(409, 'This note is in the trash. Restore it to edit it.');
     return { note: r };
   };
@@ -268,8 +270,17 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   app.delete('/api/notes/:id', async (req) => {
     const note = notes.trashNote(db, uid(req), param(req, 'id'));
+    if (note === 'read-only') throw new HttpError(403, READ_ONLY);
     if (!note) throw notFound('Note not found.');
     return { note };
+  });
+
+  // Read-only is one way: the web app can turn it on, never off (only `jot unlock-note`).
+  app.post('/api/notes/:id/read-only', async (req) => {
+    const r = notes.makeReadOnly(db, uid(req), param(req, 'id'));
+    if (r === 'not-found') throw notFound('Note not found.');
+    if (r === 'trashed') throw new HttpError(409, 'This note is in the trash. Restore it before making it read-only.');
+    return { note: r };
   });
 
   app.post('/api/notes/:id/tags', async (req) => {

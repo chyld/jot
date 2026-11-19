@@ -2,7 +2,7 @@
 // a file after a summary and typing RESTORE, and the safety backups Jot took before
 // each restore.
 import { useEffect, useState } from 'react';
-import { Check, Copy, Download, RotateCcw, ShieldCheck, Terminal, Trash2, Upload } from 'lucide-react';
+import { Download, RotateCcw, ShieldCheck, Trash2, Upload } from 'lucide-react';
 import type { BackupInfo, RestoreSummary, SafetyBackup } from '../../shared/types';
 import { api } from '../api';
 
@@ -290,92 +290,6 @@ function SafetySection(props: { version: number }) {
   );
 }
 
-/** A command in a copyable monospace block. */
-function Command(props: { children: string }) {
-  const [copied, setCopied] = useState<'yes' | 'no' | null>(null);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(props.children);
-      setCopied('yes');
-    } catch {
-      setCopied('no'); // e.g. no clipboard access over plain http: the text can still be selected
-    }
-    setTimeout(() => setCopied(null), 2000);
-  };
-  return (
-    <div className="cli-command">
-      <code>{props.children}</code>
-      <button type="button" className="btn btn-sm cli-copy" aria-label={`Copy: ${props.children}`} title="Copy" onClick={() => void copy()}>
-        {copied === 'yes' ? <Check size={14} /> : <Copy size={14} />} {copied === 'yes' ? 'Copied' : copied === 'no' ? 'Select and copy' : 'Copy'}
-      </button>
-    </div>
-  );
-}
-
-/** The full system backup is done with the CLI on the server; this only explains how (backup-spec.md §4). */
-export const SYSTEM_COMMANDS = {
-  backup: 'docker compose exec app jot backup',
-  verify: 'docker compose exec app jot verify /data/backups/jot-backup-YYYYMMDD-HHMMSS.tar',
-  restore: [
-    'docker compose stop app',
-    'mv data data-old',
-    'mkdir -p data/backups',
-    'cp data-old/backups/jot-backup-YYYYMMDD-HHMMSS.tar data/backups/',
-    'docker compose run --rm app jot restore /data/backups/jot-backup-YYYYMMDD-HHMMSS.tar',
-    'docker compose up -d',
-  ],
-};
-
-function SystemBackupSection() {
-  const c = SYSTEM_COMMANDS;
-  return (
-    <section className="card backup-section system-backup" aria-labelledby="backup-system">
-      <h2 id="backup-system">
-        <Terminal size={18} /> Full system backup (command line)
-      </h2>
-      <p>
-        A full system backup holds every user’s data plus the accounts. It is run on the server by whoever manages Jot, and cannot be done from
-        the web app.
-      </p>
-      <p className="muted">
-        Run these in the folder that holds Jot’s <code>docker-compose.yml</code>. Replace <code>jot-backup-YYYYMMDD-HHMMSS.tar</code> with the
-        file name <code>jot backup</code> printed.
-      </p>
-      <ol className="cli-steps">
-        <li>
-          <strong>Back up.</strong>
-          <Command>{c.backup}</Command>
-          <p className="muted">
-            The file lands in <code>data/backups</code> (inside the container: <code>/data/backups</code>), with a <code>.sha256</code> file beside it.
-            A backup left in <code>data/backups</code> is on the same disk as the data, so copy it to another disk. Or write it there directly with{' '}
-            <code>--out &lt;folder&gt;</code>, where the folder is a path inside the container that is mounted from the other disk.
-          </p>
-        </li>
-        <li>
-          <strong>Check a backup.</strong>
-          <Command>{c.verify}</Command>
-          <p className="muted">
-            Give the path as the container sees it: <code>/data/backups/…</code>. It changes nothing.
-          </p>
-        </li>
-        <li>
-          <strong>Restore the whole system.</strong> Stop the app, move the old data folder aside, create an empty one with the backup file in its{' '}
-          <code>backups</code> folder (where the container can read it), restore, and start the app:
-          <Command>{c.restore[0]}</Command>
-          <Command>{c.restore[1]}</Command>
-          <Command>{c.restore[2]}</Command>
-          <Command>{c.restore[3]}</Command>
-          <Command>{c.restore[4]}</Command>
-          <Command>{c.restore[5]}</Command>
-          <p className="muted">
-            Everyone signs in again afterwards. The old data stays untouched in <code>data-old</code> until you delete it.
-          </p>
-        </li>
-      </ol>
-    </section>
-  );
-}
-
 export function BackupScreen(props: { onRestored?: () => void }) {
   const [safetyVersion, setSafetyVersion] = useState(0);
   // After a restore the whole app reloads: every note has a new address.
@@ -388,7 +302,6 @@ export function BackupScreen(props: { onRestored?: () => void }) {
       <BackUpSection />
       <RestoreSection onRestored={onRestored} onSafetyChange={() => setSafetyVersion((v) => v + 1)} />
       <SafetySection version={safetyVersion} />
-      <SystemBackupSection />
     </div>
   );
 }

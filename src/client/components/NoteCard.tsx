@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Lock } from 'lucide-react';
 import { relativeTime } from '../../shared/time';
 import type { NoteSummary } from '../../shared/types';
 import { homeHref, navigate } from '../router';
@@ -32,6 +33,11 @@ export function NoteCard(props: { note: NoteSummary; selected?: boolean; now: Da
         <a href={href} className="note-card-title note-card-link" aria-current={props.selected ? 'true' : undefined} onClick={go(href)}>
           {n.title || 'Untitled'}
         </a>
+        {n.readOnly && (
+          <span className="note-card-lock" role="img" aria-label="Read-only" title="Read-only">
+            <Lock size={13} />
+          </span>
+        )}
         <span className="note-card-time">{relativeTime(n.updatedAt, props.now)}</span>
       </div>
       {n.preview && <div className="note-card-preview">{n.preview}</div>}

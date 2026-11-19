@@ -1,6 +1,9 @@
 // A small accessible dropdown menu. Mouse-down on its controls does not steal focus
 // from the editor, so the text selection survives while choosing an item.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+
+/** True inside a toolbar whose controls are all switched off (a read-only note). */
+export const ToolbarDisabled = createContext(false);
 
 const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
@@ -27,6 +30,7 @@ export function Dropdown(props: {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+  const off = useContext(ToolbarDisabled);
   return (
     <div className="dropdown" ref={ref}>
       <button
@@ -36,6 +40,7 @@ export function Dropdown(props: {
         title={props.label}
         aria-haspopup="menu"
         aria-expanded={open}
+        disabled={off}
         onMouseDown={keepFocus}
         onClick={() => setOpen((o) => !o)}
       >
@@ -73,6 +78,7 @@ export function ToolButton(props: {
   disabled?: boolean;
   children: ReactNode;
 }) {
+  const off = useContext(ToolbarDisabled);
   return (
     <button
       type="button"
@@ -80,7 +86,7 @@ export function ToolButton(props: {
       aria-label={props.label}
       title={props.label}
       aria-pressed={props.active === undefined ? undefined : props.active}
-      disabled={props.disabled}
+      disabled={props.disabled || off}
       onMouseDown={keepFocus}
       onClick={props.onClick}
     >

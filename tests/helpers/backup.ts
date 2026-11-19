@@ -39,6 +39,7 @@ export function accountSnapshot(db: DB, dataDir: string, userId: string) {
     createdAt: n.created_at,
     updatedAt: n.updated_at,
     deletedAt: n.deleted_at,
+    readOnly: !!n.read_only,
     tags: (
       db
         .prepare('SELECT t.name FROM note_tags nt JOIN tags t ON t.id = nt.tag_id WHERE nt.note_id = ? ORDER BY t.name')

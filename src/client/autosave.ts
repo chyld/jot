@@ -35,9 +35,16 @@ function describe(err: unknown): string {
     : `Not saved: ${why}.`;
 }
 
-export function useAutosave(noteId: string, onSaved: (note: Note) => void, userId: string) {
-  // Edits from an earlier visit that the server never confirmed come back first.
-  const [restored] = useState(() => loadUnsaved(userId, noteId));
+export function useAutosave(noteId: string, onSaved: (note: Note) => void, userId: string, opts: { readOnly?: boolean } = {}) {
+  // Edits from an earlier visit that the server never confirmed come back first; a
+  // read-only note can never take them, so they are dropped.
+  const [restored] = useState(() => {
+    if (opts.readOnly) {
+      clearUnsaved(userId, noteId);
+      return null;
+    }
+    return loadUnsaved(userId, noteId);
+  });
   const pending = useRef<Patch>(restored ? { ...restored } : {});
   const inflight = useRef<Patch>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

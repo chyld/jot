@@ -149,21 +149,33 @@ describe('tidy-up after a committed restore', () => {
   }, 120_000);
 });
 
-describe('schema version 2', () => {
-  it('adds the restore_files table to a version 1 database and keeps its data', () => {
+// Turns a current database back into a version 1 one: no restore_files, no read_only, no manual notes.
+function makeVersion1(db: Database.Database) {
+  for (const m of db.prepare("SELECT id FROM notes WHERE title = 'User manual' AND read_only = 1").all() as any[]) {
+    db.prepare('DELETE FROM notes_fts WHERE note_id = ?').run(m.id);
+    db.prepare('DELETE FROM notes WHERE id = ?').run(m.id);
+  }
+  db.exec("DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)");
+  db.exec('ALTER TABLE notes DROP COLUMN read_only');
+  db.exec('DROP TABLE IF EXISTS restore_files');
+  db.pragma('user_version = 1');
+}
+
+describe('schema versions 2 and 3', () => {
+  it('a version 1 database gets the restore_files table, read-only notes and its manual, and keeps its data', () => {
     const dir = tmp('v1');
     const file = join(dir, 'jot.db');
     cpSync(join(template, 'jot.db'), file);
     const raw = new Database(file);
-    raw.exec('DROP TABLE IF EXISTS restore_files');
-    raw.pragma('user_version = 1');
+    makeVersion1(raw);
     raw.close();
     const db = openDatabase(file);
     expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(2);
+    expect(SCHEMA_VERSION).toBe(3);
     const cols = db.prepare('PRAGMA table_info(restore_files)').all().map((c: any) => c.name);
     expect(cols).toEqual(expect.arrayContaining(['path', 'state', 'user_id']));
-    expect((db.prepare('SELECT COUNT(*) AS n FROM notes').get() as any).n).toBe(2);
+    expect((db.prepare('SELECT COUNT(*) AS n FROM notes WHERE read_only = 0').get() as any).n).toBe(2);
+    expect((db.prepare("SELECT COUNT(*) AS n FROM notes WHERE title = 'User manual' AND read_only = 1").get() as any).n).toBe(1);
     expect(() => db.prepare("INSERT INTO restore_files (path, state, user_id) VALUES ('x', 'maybe', ?)").run(userId)).toThrow();
     db.close();
   });

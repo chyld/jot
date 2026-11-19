@@ -1,10 +1,11 @@
 // SQLite database: one file in the data folder. Every owned row carries user_id,
 // and every query in Jot filters by the logged-in user.
 import Database from 'better-sqlite3';
+import { addManual } from './manual';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -132,6 +133,16 @@ function migrate(db: DB) {
     db.transaction(() => {
       db.exec(SCHEMA_V2);
       db.pragma(`user_version = 2`);
+    })();
+  }
+  // Version 3: read-only notes, and every existing account gets its User manual note
+  // (once: this runs only when the database is older than version 3).
+  if (version < 3) {
+    db.transaction(() => {
+      db.exec('ALTER TABLE notes ADD COLUMN read_only INTEGER NOT NULL DEFAULT 0');
+      const at = now();
+      for (const u of db.prepare('SELECT id FROM users ORDER BY created_at, id').all() as Array<{ id: string }>) addManual(db, u.id, at);
+      db.pragma(`user_version = 3`);
     })();
   }
 }

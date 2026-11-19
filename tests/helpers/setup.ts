@@ -135,10 +135,26 @@ export async function login(app: FastifyInstance, username: string, password = P
   return client(app, cookie);
 }
 
-/** Creates a user through the same code the CLI uses, then logs in. */
-export async function newUser(env: TestEnv, username: string, password = PASSWORD): Promise<Client> {
-  await createUser((env.app as any).jot, username, password);
+/**
+ * Creates a user through the same code the CLI uses, then logs in. Every new account
+ * gets a read-only "User manual" note; most tests are about other things, so it is
+ * removed here unless the test asks to keep it.
+ */
+export async function newUser(env: TestEnv, username: string, password = PASSWORD, opts: { keepManual?: boolean } = {}): Promise<Client> {
+  const { id } = await createUser((env.app as any).jot, username, password);
+  if (!opts.keepManual) removeManual((env.app as any).jot.db, id);
   return login(env.app, username, password);
+}
+
+/** Deletes a user's manual note straight from the database (tests only). */
+export function removeManual(db: any, userId: string) {
+  db.transaction(() => {
+    for (const n of db.prepare("SELECT id FROM notes WHERE user_id = ? AND title = 'User manual' AND read_only = 1").all(userId)) {
+      db.prepare('DELETE FROM notes_fts WHERE note_id = ?').run(n.id);
+      db.prepare('DELETE FROM notes WHERE id = ?').run(n.id);
+    }
+    db.prepare('DELETE FROM tags WHERE user_id = ? AND NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)').run(userId);
+  })();
 }
 
 /** A Tiptap document with one paragraph of plain text. */

@@ -12,6 +12,8 @@ export interface NoteSummary {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  /** Nothing about a read-only note can change through the web app. */
+  readOnly: boolean;
 }
 
 export interface Note extends NoteSummary {

@@ -31,6 +31,18 @@ function emptyDataWith(file: string) {
   return { dir: d, file: join(d, 'backups', basename(file)) };
 }
 
+// Turns a current database back into a version 1 one: no restore_files, no read_only, no manual notes.
+function makeVersion1(db: Database.Database) {
+  for (const m of db.prepare("SELECT id FROM notes WHERE title = 'User manual' AND read_only = 1").all() as any[]) {
+    db.prepare('DELETE FROM notes_fts WHERE note_id = ?').run(m.id);
+    db.prepare('DELETE FROM notes WHERE id = ?').run(m.id);
+  }
+  db.exec("DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)");
+  db.exec('ALTER TABLE notes DROP COLUMN read_only');
+  db.exec('DROP TABLE IF EXISTS restore_files');
+  db.pragma('user_version = 1');
+}
+
 const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles'];
 function dump(dbFile: string) {
   const db = new Database(dbFile, { readonly: true });
@@ -225,8 +237,7 @@ describe('jot restore', () => {
     const work = join(tmp('olddb'), 'jot.db');
     writeFileSync(work, dbEntry.data);
     const odb = new Database(work);
-    odb.exec('DROP TABLE IF EXISTS restore_files');
-    odb.pragma('user_version = 1');
+    makeVersion1(odb);
     odb.close();
     dbEntry.data = readFileSync(work);
     b.manifest.schemaVersion = 1;

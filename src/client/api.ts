@@ -56,6 +56,7 @@ export const api = {
   createNote: () => request<{ note: Note }>('POST', '/api/notes', {}),
   updateNote: (id: string, patch: { title?: string; content?: unknown }) =>
     request<{ note: Note }>('PATCH', `/api/notes/${encodeURIComponent(id)}`, patch),
+  makeReadOnly: (id: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/read-only`, {}),
   trashNote: (id: string) => request<{ note: Note }>('DELETE', `/api/notes/${encodeURIComponent(id)}`),
   addTag: (id: string, tag: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/tags`, { tag }),
   removeTag: (id: string, tag: string) =>

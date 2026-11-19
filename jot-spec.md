@@ -35,6 +35,7 @@ Jot is a private, multi-user note-taking web app with a rich-text editor, per-us
 | `jot backup` | Writes a full system backup to `data/backups/` (or `--out` another folder) and prints its name and SHA-256 (`backup-spec.md` §4) |
 | `jot verify <file>` | Checks a backup completely without changing anything |
 | `jot restore <file>` | Rebuilds the system from a backup into an empty data folder, with the app stopped |
+| `jot unlock-note <note id>` | Makes one read-only note writable again (the id is the last part of the note's address, `/n/<note id>`); prints the note's title and owner; says so when the id does not exist or the note is not read-only. Works with the app running. It is the only way to turn read-only off |
 
 Run inside the container with `docker compose exec`; `jot restore` runs with the app stopped, through `docker compose run --rm app`.
 
@@ -47,6 +48,18 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - Each note has its own URL.
 - New note button.
 - A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
+
+### Read-only notes
+
+- A note can be made read-only with the lock toggle at the end of the editor toolbar. Turning it on asks once more in the page, saying plainly that once read-only nothing about the note can be changed, it cannot be deleted, and it can only be made writable again from the command line on the server.
+- Once read-only, nothing about the note can change through the web app: not the title, not the body, not its tags, and it cannot be moved to the trash or deleted. The server refuses every such request with a clear message (403). A note in the trash cannot be made read-only.
+- In the editor a read-only note shows a "Read-only" indicator. The title and body are not editable, the tag box, tag remove buttons and trash button are not shown, and the formatting toolbar is disabled. Text can still be selected and copied. The note still appears in the list (with a lock mark), the tag filter and search.
+- The web app has no way to turn read-only off; only `jot unlock-note <note id>` on the server does (section 2).
+
+### User manual
+
+- Every user has a read-only note titled "User manual", tagged `manual`. New accounts get it with the starter pack; existing accounts got it once, from the schema migration that added read-only notes.
+- It is written with the starter styles and headings, and covers: backing up your own data, restoring your own data (with the safety backup), the full system backup from the command line (the exact commands), and read-only notes with `jot unlock-note`.
 
 ### Trash
 
@@ -85,6 +98,7 @@ The toolbar matches the screenshots, left to right:
 7. **List** dropdown: Bullet list, Numbered list, Task list
 8. **Insert** dropdown: Horizontal line, Block quote, Table, Image
 9. **Undo** and **redo**
+10. **Read-only** toggle (a lock): makes the note read-only after an in-page confirmation (section 3)
 
 Shown only when relevant:
 
@@ -135,7 +149,7 @@ A style is made of:
 
 ## 10. Starter pack
 
-Every new user gets their own copy of 5 fonts and 5 styles. They are ordinary fonts and styles: the user can edit or delete the styles and archive the fonts.
+Every new user gets their own copy of 5 fonts and 5 styles, and the read-only "User manual" note (section 3). They are ordinary fonts and styles: the user can edit or delete the styles and archive the fonts.
 
 Fonts: Inter, Lora, Playfair Display, Caveat, Fira Code.
 
@@ -187,11 +201,11 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 |---|---|
 | Login | Username, password |
 | Notes (home page) | Search box, New button, a tag filter (chips for the user's tags; choosing one filters the list; "All" clears it) and the notes list. No editor beside the list. Clicking a tag's name on a note opens this page with that tag selected |
-| Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it |
+| Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it. A read-only note shows a "Read-only" indicator and cannot be edited |
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
 | Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
-| Backup | Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete); at the bottom, Full system backup (command line): instructions only, with the CLI commands to copy. See `backup-spec.md` §3.1 |
+| Backup | Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. (The full system backup is described in the User manual note, not on this screen) |
 
 A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) and the New note button; at the bottom: Fonts, Styles, Backup, Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.
 

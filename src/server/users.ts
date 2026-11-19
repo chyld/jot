@@ -7,6 +7,7 @@ import { syncDir, syncFile } from './durable';
 import { newId } from './ids';
 import { checkPasswordRules, hashPassword } from './passwords';
 import { deleteUserSessions } from './sessions';
+import { addManual } from './manual';
 import { loadStarterManifest, STARTER_STYLES } from './starter';
 
 export class UserError extends Error {}
@@ -65,6 +66,7 @@ export async function createUser(ctx: JotContext, usernameInput: string, passwor
       for (const s of STARTER_STYLES) {
         insStyle.run(newId(), id, s.name, fontIds.get(s.font), s.size, s.bold ? 1 : 0, s.italic ? 1 : 0, s.textColor, created, created);
       }
+      addManual(ctx.db, id, created);
     })();
   } catch (err) {
     rmSync(userDir(ctx, id), { recursive: true, force: true });

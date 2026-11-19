@@ -154,13 +154,8 @@ test('the Olive theme', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Backup', level: 1 })).toBeVisible();
   await expect(backupLink).toHaveCSS('background-color', 'rgb(228, 242, 196)');
   await expect(page.getByRole('button', { name: 'Back up my data' })).toHaveCSS('background-color', 'rgb(77, 124, 15)');
-  const cli = page.getByRole('region', { name: 'Full system backup (command line)' });
-  await expect(cli).toBeVisible();
-  await expect(cli.locator('.cli-command code').first()).toHaveText('docker compose exec app jot backup');
-  await expect(cli.locator('.cli-command')).toHaveCount(8);
+  await expect(page.locator('.backup-section')).toHaveCount(3);
   expect(await pinkInChrome(page)).toEqual([]);
-  await cli.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: 'test-results/screens/backup-cli-olive.png', fullPage: true });
   await page.screenshot({ path: 'test-results/screens/backup-olive.png' });
 
   // Editor toolbar: pale, with a bottom border.

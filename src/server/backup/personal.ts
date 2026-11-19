@@ -35,7 +35,8 @@ import { isPersonalEntry, isPersonalMissingName, personalBackupName, SAFETY_NAME
 import { TarWriter } from './tar';
 
 export const PERSONAL_FORMAT = 'jot-personal-backup';
-export const PERSONAL_VERSION = 1;
+// Format 2 added `readOnly` on notes; a format 1 backup restores with every note writable.
+export const PERSONAL_VERSION = 2;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------------------ what a backup holds
@@ -48,6 +49,7 @@ interface BNote {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  readOnly: boolean;
 }
 interface BPhoto {
   id: string;
@@ -116,6 +118,7 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
       createdAt: n.created_at,
       updatedAt: n.updated_at,
       deletedAt: n.deleted_at,
+      readOnly: n.read_only === 1,
     }));
     const photos = (db.prepare('SELECT * FROM photos WHERE user_id = ? ORDER BY created_at, id').all(userId) as any[]).map((p) => ({
       id: p.id,
@@ -437,13 +440,17 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
       tags.add(t);
     }
     if (!isDate(n.createdAt) || !isDate(n.updatedAt) || !isDateOrNull(n.deletedAt)) fail(`note "${label}" has an invalid date.`);
+    // Backups made before read-only notes have no flag: those notes are writable.
+    if (n.readOnly !== undefined && typeof n.readOnly !== 'boolean') fail(`note "${label}" has an invalid read-only flag.`);
+    const readOnly = n.readOnly === true;
+    if (readOnly && n.deletedAt !== null) fail(`note "${label}" is read-only and in the trash, which Jot never allows.`);
     for (const id of photoRefs(content)) {
       if (photoIds.has(id)) continue;
       if (missingNames.has(`photos/${id}`)) danglingUsed.add(`photos/${id}`);
       else fail(`note "${label}" uses a photo that is not in the backup.`);
     }
     noteIds.add(n.id);
-    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt });
+    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly });
   }
 
   // The entries must be exactly the files the records point at, apart from listed missing ones.
@@ -697,13 +704,13 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
     const tagIds = new Map<string, string>();
     const insTag = db.prepare('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)');
     const insNote = db.prepare(
-      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     const insLink = db.prepare('INSERT INTO note_tags (note_id, tag_id, user_id) VALUES (?, ?, ?)');
     for (const n of data.notes) {
       const id = newId();
       const content = remapPhotoRefs(n.content, photoMap);
-      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt);
+      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0);
       for (const t of n.tags) {
         if (!tagIds.has(t)) {
           tagIds.set(t, newId());

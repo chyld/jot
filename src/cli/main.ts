@@ -6,6 +6,7 @@
 //   jot backup [--out <folder>]    write a full backup (default: data/backups)
 //   jot verify <file>              check a backup completely, changing nothing
 //   jot restore <file>             rebuild the system from a backup (app stopped, empty data folder)
+//   jot unlock-note <note id>      make one read-only note writable again
 //
 // Passwords are read from the terminal (hidden, asked twice) or, when piped, from
 // the first line of standard input. Run with: docker compose exec app jot <command>
@@ -20,6 +21,8 @@ import { createSystemBackup, restoreSystemBackup, verifyBackup } from '../server
 import { DEFAULT_STARTER_FONTS_DIR, type JotContext } from '../server/context';
 import { openDatabase } from '../server/db';
 import { GOOGLE_FONTS } from '../server/fonts';
+import { isId } from '../server/ids';
+import { unlockNote } from '../server/notes';
 import { createUser, listUsers, setPassword, UserError } from '../server/users';
 
 const USAGE = `Usage:
@@ -29,7 +32,9 @@ const USAGE = `Usage:
   jot backup [--out <folder>]    Write a full backup of everything (default: data/backups)
   jot verify <file>              Check a backup completely without changing anything
   jot restore <file>             Rebuild the system from a backup into an empty data folder
-                                 (with Jot stopped: docker compose run --rm app jot restore <file>)`;
+                                 (with Jot stopped: docker compose run --rm app jot restore <file>)
+  jot unlock-note <note id>      Make a read-only note writable again (the id is the last part
+                                 of the note's address, /n/<note id>)`;
 
 function readHidden(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -170,6 +175,22 @@ async function main(argv: string[]): Promise<number> {
           printMissing(r.missing, 'These files were already missing when it was made', (s) => console.log(s));
           return 0;
         } finally {
+          lock.release();
+        }
+      }
+      case 'unlock-note': {
+        if (args.length !== 1) break;
+        const lock = takeLock(dataDir);
+        const db = openDatabase(join(dataDir, 'jot.db'));
+        try {
+          const noSuch = `No note with id "${args[0]}". The id is the last part of the note's address, /n/<note id>.`;
+          const r = isId(args[0]) ? unlockNote(db, args[0]) : null;
+          if (!r) throw new UserError(noSuch);
+          if (r.result === 'not-read-only') throw new UserError(`Note "${r.title}" (owner ${r.username}) is not read-only; nothing was changed.`);
+          console.log(`Note "${r.title}" (owner ${r.username}) is writable again.`);
+          return 0;
+        } finally {
+          db.close();
           lock.release();
         }
       }
