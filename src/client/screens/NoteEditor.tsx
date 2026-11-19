@@ -83,7 +83,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
     editorProps: {
-      attributes: { class: 'note-body', 'aria-label': 'Note text', spellcheck: 'true' },
+      attributes: { class: 'note-body', 'aria-label': 'Note text', spellcheck: 'false' },
       ...pasteProps((file) => pasteFile.current(file)),
     },
     onUpdate: ({ editor }) => {
@@ -197,6 +197,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
       <header className="note-header">
         <input
           className="note-title"
+          spellCheck={false}
           aria-label="Title"
           placeholder="Untitled"
           value={title}

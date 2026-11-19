@@ -70,6 +70,7 @@ export function TagInput(props: {
         <input
           ref={inputRef}
           className={`tag-add ${error ? 'has-error' : ''}`}
+          spellCheck={false}
           placeholder="Add tag"
           aria-label="Add tag"
           aria-invalid={!!error}
