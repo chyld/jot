@@ -48,6 +48,8 @@ curl -sf "$URL/notes/whatever" | grep -q '<div id="root">' || fail "client-side 
 ok "frontend served on port 9003"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/notes")" = 401 ] || fail "API not protected"
 ok "API requires login"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{}' "$URL/mcp")" = 401 ] || fail "/mcp not protected"
+ok "/mcp requires a bot token"
 
 [ "$("${DC[@]}" exec -T app id -u)" = "$(id -u)" ] || fail "container does not run as the host user"
 ok "container runs as the host user ($(id -u))"

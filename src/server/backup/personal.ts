@@ -38,8 +38,9 @@ import { isPersonalEntry, isPersonalMissingName, personalBackupName, SAFETY_NAME
 import { TarWriter } from './tar';
 
 export const PERSONAL_FORMAT = 'jot-personal-backup';
-// Format 2 added `readOnly` on notes; a format 1 backup restores with every note writable.
-export const PERSONAL_VERSION = 2;
+// Format 2 added `readOnly` on notes (format 1 restores with every note writable).
+// Format 3 added `inbox` and `botName` (older formats restore with every note outside the Inbox).
+export const PERSONAL_VERSION = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------------------ what a backup holds
@@ -53,6 +54,8 @@ interface BNote {
   updatedAt: string;
   deletedAt: string | null;
   readOnly: boolean;
+  inbox: boolean;
+  botName: string | null;
 }
 interface BPhoto {
   id: string;
@@ -122,6 +125,8 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
       updatedAt: n.updated_at,
       deletedAt: n.deleted_at,
       readOnly: n.read_only === 1,
+      inbox: n.inbox === 1,
+      botName: n.bot_name ?? null,
     }));
     const photos = (db.prepare('SELECT * FROM photos WHERE user_id = ? ORDER BY created_at, id').all(userId) as any[]).map((p) => ({
       id: p.id,
@@ -462,13 +467,20 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
     if (n.readOnly !== undefined && typeof n.readOnly !== 'boolean') fail(`note "${label}" has an invalid read-only flag.`);
     const readOnly = n.readOnly === true;
     if (readOnly && n.deletedAt !== null) fail(`note "${label}" is read-only and in the trash, which Jot never allows.`);
+    // Backups made before agent notes have neither: those notes are outside the Inbox.
+    if (n.inbox !== undefined && typeof n.inbox !== 'boolean') fail(`note "${label}" has an invalid Inbox flag.`);
+    if (n.botName !== undefined && n.botName !== null && (typeof n.botName !== 'string' || !n.botName.trim() || n.botName.length > 40)) {
+      fail(`note "${label}" has an invalid bot name.`);
+    }
+    const inbox = n.inbox === true;
+    const botName = typeof n.botName === 'string' ? n.botName : null;
     for (const id of photoRefs(content)) {
       if (photoIds.has(id)) continue;
       if (missingNames.has(`photos/${id}`)) danglingUsed.add(`photos/${id}`);
       else fail(`note "${label}" uses a photo that is not in the backup.`);
     }
     noteIds.add(n.id);
-    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly });
+    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly, inbox, botName });
   }
 
   // The entries must be exactly the files the records point at, apart from listed missing ones.
@@ -731,13 +743,13 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
     const tagIds = new Map<string, string>();
     const insTag = db.prepare('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)');
     const insNote = db.prepare(
-      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only, inbox, bot_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     const insLink = db.prepare('INSERT INTO note_tags (note_id, tag_id, user_id) VALUES (?, ?, ?)');
     for (const n of data.notes) {
       const id = newId();
       const content = remapPhotoRefs(n.content, photoMap);
-      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0);
+      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0, n.inbox ? 1 : 0, n.botName);
       for (const t of n.tags) {
         if (!tagIds.has(t)) {
           tagIds.set(t, newId());

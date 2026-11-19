@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Bot, Lock } from 'lucide-react';
 import { relativeTime } from '../../shared/time';
 import type { NoteSummary } from '../../shared/types';
 import { homeHref, navigate } from '../router';
@@ -36,6 +36,11 @@ export function NoteCard(props: { note: NoteSummary; selected?: boolean; now: Da
         {n.readOnly && (
           <span className="note-card-lock" role="img" aria-label="Read-only" title="Read-only">
             <Lock size={13} />
+          </span>
+        )}
+        {n.botName && (
+          <span className="bot-chip" data-testid="note-bot" title={`Written by the bot ${n.botName}`}>
+            <Bot size={12} /> {n.botName}
           </span>
         )}
         <span className="note-card-time">{relativeTime(n.updatedAt, props.now)}</span>

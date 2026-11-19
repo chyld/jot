@@ -6,6 +6,7 @@ import { DataProvider } from './data';
 import { match, navigate, useLocation } from './router';
 import { AccountScreen } from './screens/AccountScreen';
 import { FontsScreen } from './screens/FontsScreen';
+import { InboxScreen } from './screens/InboxScreen';
 import { Login } from './screens/Login';
 import { NotesScreen } from './screens/NotesScreen';
 import { NoteScreen } from './screens/NoteScreen';
@@ -20,6 +21,7 @@ function Screen(props: { path: string; search: URLSearchParams }) {
   if (p === '/fonts') return <FontsScreen />;
   if (p === '/styles') return <StylesScreen />;
   if (p === '/account') return <AccountScreen />;
+  if (p === '/inbox') return <InboxScreen />;
   if (p === '/trash') return <TrashScreen />;
   return (
     <div className="screen">

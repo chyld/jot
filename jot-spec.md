@@ -56,6 +56,14 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - In the editor a read-only note shows a "Read-only" indicator. The title and body are not editable, the tag box, tag remove buttons and trash button are not shown, and the formatting toolbar is disabled. Text can still be selected and copied. The note still appears in the list (with a lock mark), the tag filter and search.
 - The web app has no way to turn read-only off; only `jot unlock-note <note id>` on the server does (section 2).
 
+### Agent notes (Inbox)
+
+Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write notes into a user's Inbox and read that user's notes through Jot's MCP server at `/mcp`, each with a token the user makes on the Account page.
+
+- A note a bot writes is an ordinary note marked as in the Inbox and carrying the bot's name (kept after Keep and after the token is revoked).
+- Inbox notes appear only on the Inbox screen (newest first, with the bot's name), not on the home page, in its search or in its tag filter. Keep moves a note into the user's notes. They can be opened, edited, tagged, made read-only or trashed like any note.
+- Bots cannot change, tag, keep, trash or delete any note.
+
 ### User manual
 
 - Every user has a read-only note titled "User manual", tagged `manual`. New accounts get it with the starter pack; existing accounts got it once, from the schema migration that added read-only notes.
@@ -212,9 +220,10 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
 | Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
-| Account (`/account`) | The logged-in user's username at the top, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
+| Inbox (`/inbox`) | Notes bots wrote and the user has not kept yet, newest first, each with its bot's name and a Keep button. See `agent-spec.md` |
+| Account (`/account`) | The logged-in user's username at the top, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. Then Bots: the address for bots (from `JOT_PUBLIC_URL`) and a setup snippet for a generic MCP client; create a bot by name; each bot's token always visible with Copy, Copy setup, its last-used time and Revoke (with a second-click confirm). No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
 
-A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) and the New note button; at the bottom: Fonts, Styles, Account (a person icon), Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.
+A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) the New note button and the Inbox (with the number of notes in it); at the bottom: Fonts, Styles, Account (a person icon), Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.
 
 ---
 

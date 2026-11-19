@@ -57,6 +57,31 @@ docker compose up -d
 (a `backups` folder is allowed). If it fails it removes what it extracted and can be
 re-run; if it is killed, empty the data folder again (keeping `backups`) and re-run.
 
+## Bots (agent notes)
+
+AI assistants with an MCP client can write notes into a user's **Inbox** and read that
+user's notes (see `agent-spec.md`). Each user makes one token per bot on the **Account**
+page (Bots), which also shows the address and a setup snippet:
+
+- MCP server: `<JOT_PUBLIC_URL>/mcp`, Streamable HTTP, stateless
+- Header: `Authorization: Bearer <token>`
+- Tools: `create_note`, `list_notes`, `read_note` (bots cannot change or delete notes)
+
+`JOT_PUBLIC_URL` (default `http://localhost:9003`) is the address shown to bots; set it
+when starting Jot, e.g. `JOT_PUBLIC_URL=https://jot.example.org docker compose up -d`.
+
+Jot itself serves plain HTTP on port 9003. Bots in the cloud need an HTTPS address that you
+put in front of Jot (a reverse proxy or tunnel). That front must:
+
+1. provide HTTPS;
+2. pass requests and the `Authorization` header through to Jot unchanged;
+3. ideally forward only `/mcp`, so the login page and notes stay reachable from your home
+   network only.
+
+Tokens are stored readable in the database (so the Account page can show them again):
+anyone with the database or a full system backup can read them. They are never written to
+the log and are not in personal backups.
+
 ## Users (CLI only)
 
 ```sh

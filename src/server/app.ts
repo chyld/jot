@@ -24,6 +24,8 @@ import {
   takeDownload,
   tidyUpOnStart,
 } from './backup/personal';
+import { registerMcp } from './agent/mcp';
+import { BotError, createBot, listBots, revokeBot } from './agent/tokens';
 import { ContentError, sanitizeDoc } from './content';
 import { DEFAULT_STARTER_FONTS_DIR, fontsDir, photosDir, REPO_ROOT, type JotContext } from './context';
 import { now, openDatabase } from './db';
@@ -64,6 +66,10 @@ export interface AppOptions {
   secureCookies?: boolean;
   /** Folder with the built frontend; served when it exists. */
   clientDir?: string;
+  /** Where log lines go (tests read them); default: standard output. */
+  logStream?: NodeJS.WritableStream;
+  /** The address bots use (JOT_PUBLIC_URL); default http://localhost:9003. */
+  publicUrl?: string;
 }
 
 const PUBLIC_API = new Set(['/api/health', '/api/login', '/api/logout']);
@@ -121,7 +127,14 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   };
 
   const app = Fastify({
-    logger: opts.logger ?? false,
+    // Authorization headers (bot tokens) and cookies are never written to the log.
+    logger: opts.logger
+      ? {
+          level: 'info',
+          redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'headers.authorization', 'headers.cookie'], censor: '[Redacted]' },
+          ...(opts.logStream ? { stream: opts.logStream } : {}),
+        }
+      : false,
     bodyLimit: 32 * 1024 * 1024, // note JSON (photos are separate uploads)
     trustProxy: false,
   });
@@ -141,8 +154,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   // ---------------------------------------------------------------- hooks
   app.addHook('onRequest', async (req, reply) => {
-    // Refuse cross-site state-changing requests.
-    if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers.origin) {
+    // Refuse cross-site state-changing requests. /mcp is exempt: it takes only a bearer
+    // token, which a browser never sends on its own, and never a cookie.
+    const isMcp = req.url.split('?')[0] === '/mcp';
+    if (!isMcp && req.method !== 'GET' && req.method !== 'HEAD' && req.headers.origin) {
       let originHost: string | null = null;
       try {
         originHost = new URL(req.headers.origin).host;
@@ -175,6 +190,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   app.setErrorHandler((err: any, req, reply) => {
     if (err instanceof HttpError) return reply.code(err.statusCode).send({ error: err.message });
+    if (err?.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+      const mcp = req.url.split('?')[0] === '/mcp';
+      return reply.code(413).send({ error: mcp ? 'The request is larger than 50 MB, the limit for /mcp.' : 'The request is too large.' });
+    }
     if (err instanceof BackupError) return reply.code(err.status).send(err.code ? { error: err.message, code: err.code } : { error: err.message });
     const status = typeof err.statusCode === 'number' ? err.statusCode : 500;
     if (status >= 500) {
@@ -305,6 +324,29 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   });
 
   app.get('/api/tags', async (req) => ({ tags: notes.listTags(db, uid(req)) }));
+
+  // ---------------------------------------------------------------- inbox and bots
+  app.get('/api/inbox', async (req) => ({ notes: notes.listInbox(db, uid(req)) }));
+
+  app.post('/api/notes/:id/keep', async (req) => updated(notes.keepNote(db, uid(req), param(req, 'id'))));
+
+  const publicUrl = (opts.publicUrl ?? process.env.JOT_PUBLIC_URL ?? 'http://localhost:9003').replace(/\/+$/, '');
+  const botError = (e: unknown) => (e instanceof BotError ? new HttpError(e.status, e.message) : e);
+  app.get('/api/bots', async (req) => ({ publicUrl, mcpUrl: `${publicUrl}/mcp`, bots: listBots(db, uid(req)) }));
+  app.post('/api/bots', async (req, reply) => {
+    try {
+      return reply.code(201).send({ bot: createBot(db, uid(req), body(req).name) });
+    } catch (e) {
+      throw botError(e);
+    }
+  });
+  app.delete('/api/bots/:id', async (req, reply) => {
+    if (!revokeBot(db, uid(req), param(req, 'id'))) throw notFound('No such bot.');
+    return reply.code(204).send();
+  });
+
+  // The MCP server for bots (bearer tokens only).
+  registerMcp(app, ctx, restoring);
 
   app.get('/api/search', async (req) => ({ notes: notes.searchNotes(db, uid(req), (req.query as Record<string, unknown>).q) }));
 

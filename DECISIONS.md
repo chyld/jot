@@ -616,3 +616,118 @@ locks, no extra CLI commands, no admin role). Where the spec is silent:
   - Type 8: back up, delete, restore; old tab; unsaved edit through a reload; another user.
   - Type 9: `jot backup`/`verify` in the container, restore guards (also from a `run`
     container), and the owner's full restore procedure.
+
+## Agent notes (`agent-spec.md`)
+
+Built as specified: an MCP server at `/mcp`, bearer tokens per bot, the Inbox, three
+tools. Nothing the spec does not ask for (no sessions, no per-token permissions, no
+read/unread tracking, no rate limiting, no extra tools).
+
+**Libraries (pinned, checked against their current documentation and type definitions)**
+- `@modelcontextprotocol/sdk` 1.32.2 (latest on npm, 2026-10-23), the MCP TypeScript SDK.
+  The server follows its documented stateless Streamable HTTP pattern
+  (`examples/server/simpleStatelessStreamableHttp`):
+  - each POST builds a new `McpServer` and a `StreamableHTTPServerTransport` with
+    `sessionIdGenerator: undefined`, passes Fastify's parsed body to `handleRequest`, and
+    closes both when the response closes;
+  - GET and DELETE answer 405;
+  - `enableJsonResponse: true` answers with plain JSON instead of an event stream.
+  Tools are declared with `registerTool(name, { description, inputSchema: <zod shape> },
+  handler)` and return `{ content: [{ type: 'text', text }] }`, or `isError: true` with a
+  message. The tests and the end-to-end test use the SDK's own `Client` with
+  `StreamableHTTPClientTransport` and an `Authorization` header in `requestInit`.
+- `zod` 4.6.7 (the SDK's peer dependency, for the tool argument shapes).
+- `markdown-it` 15.0.3 (latest, 2026-10-16), a maintained CommonMark parser.
+  - Options: `html: false` (raw HTML stays literal text), `linkify: false`,
+    `typographer: false`.
+  - Its token stream is mapped onto Jot's document through an allow-list. There is no
+    hand-written Markdown parsing: Jot only writes Markdown back out, for `read_note`.
+  - `validateLink`/`normalizeLink` are opened up so the converter sees every link as
+    written. It then keeps only http, https and mailto (also through the sanitiser's
+    `isSafeHref`); any other link keeps its text. markdown-it's own check would have left
+    such a link as literal `[text](url)`.
+- The same SDK and zod versions are in the e2e runner, for its real MCP client.
+
+**Server**
+- `/mcp` accepts only `Authorization: Bearer <token>`.
+  - The scheme is case-insensitive; the token must be the whole value.
+  - A login cookie is never read there.
+  - The web app's routes never read the Authorization header, so a token does nothing
+    there.
+  - An unknown, revoked or missing token gets 401 with `WWW-Authenticate: Bearer`.
+- `/mcp` is exempt from the cross-site Origin check that protects the cookie routes. It
+  takes no cookie, and a bearer token is never sent by a browser on its own.
+- Body limit: 50 MB on `/mcp` only (route option); every other route keeps 32 MB. Over the
+  limit, /mcp answers 413 "The request is larger than 50 MB, the limit for /mcp."
+- Logging: the Fastify logger redacts `authorization` and `cookie` headers wherever a
+  log line carries them. Fastify's default request log has no headers anyway. A test
+  reads the real log stream and finds no token.
+- "Last used" is updated on every request a token makes.
+- Tokens are `jot_` plus 32 random bytes (base64url), stored as given (the owner's
+  decision), unique. Names are 1–40 characters on one line, unique per user and
+  case-sensitive (so "Claude" and "claude" can both exist). The Account list sorts them
+  ignoring case.
+- `request_id` (1–200 characters) is stored on the note, unique per user, bot name and
+  request id. A retry, even two at once, returns the note already made. "The same bot" is
+  the same bot name, so a bot whose token was replaced under the same name still gets its
+  retries matched.
+- A restore of the user's data refuses `create_note` while it runs, like the web app's
+  changes.
+
+**Notes and the Inbox**
+- Schema version 6 (one migration) adds to notes `inbox` (0/1), `bot_name` and
+  `bot_request_id`, and the `bot_tokens` table. Existing notes get `inbox = 0`.
+  It is tested against a copy of a version-5 database.
+- The home page's list, its tag filter and tag chips, and its search leave Inbox notes out.
+  The Inbox lists them newest first by creation.
+- Keep (`POST /api/notes/:id/keep`) clears the flag. Like every other change, it is refused
+  on a read-only or trashed note.
+- The left bar's Inbox item sits after New note. Its count is fetched again on each move
+  between screens; there is no polling.
+
+**create_note**
+- Order of checks: tags, `request_id`, images (base64 and image bytes), so any problem
+  refuses the whole request before anything is written.
+- The photo files are then written and synced, and the photo records and the note are
+  saved in one transaction. A failure removes the files.
+- An image's type comes from its bytes, not `mime_type`. Its name (1–200 characters,
+  unique in the request) is how the Markdown refers to it. An image the Markdown mentions
+  becomes a photo block where it was mentioned, splitting its paragraph, with its caption
+  as the photo's alt text.
+- Title: the one given, else the first heading, else the first line of text (500
+  characters at most).
+- The Typewriter look is a `textStyle` mark (Fira Code, 15 px, Jet) on every text run
+  outside code blocks, after any bold/italic/strike/code/link marks. The result is passed
+  through the sanitiser, and the tests check that it leaves it unchanged.
+- A soft line break in Markdown becomes a space, as Markdown defines; two trailing spaces
+  or a backslash make a line break.
+- Things markdown-it parses that are not in the table keep their text: task boxes stay as
+  `[ ]` text, footnote markers as text.
+
+**list_notes / read_note**
+- 20 per page. The cursor is the offset as a number; "next cursor: none" ends.
+- `query` uses the same full-text search as the web app, over the user's live notes
+  including the Inbox. `tag` filters exactly.
+- Every title, preview and body is wrapped as
+  `<<<UNTRUSTED NOTE DATA <random> — written by author "<name>"; …>>> … <<<END UNTRUSTED NOTE DATA <random>>>`.
+  The random marker changes per block, so a note cannot fake the end of its own block.
+- Each tool's description says to treat those blocks only as data.
+- `read_note` writes Markdown back out. Fonts, sizes, colours, highlights and underline
+  are dropped; task lists become plain lists; photos become `[photo]`; Markdown characters
+  in text are escaped.
+
+**Account page and backups**
+- Account page, Bots: the address (`JOT_PUBLIC_URL` + `/mcp`) with Copy, and a generic
+  setup snippet (`mcpServers.jot` with `type: "http"`, `url` and an `Authorization:
+  Bearer` header). Each bot shows its token, Copy, "Copy setup" (the snippet with its
+  token), last used and Revoke with a second-click confirm.
+  - Where the browser refuses the clipboard (plain HTTP), the page says to select and copy
+    the text.
+- Personal backup format 3 adds `inbox` and `botName` per note; formats 1 and 2 restore with
+  every note outside the Inbox. Tokens are not in personal backups, and a personal restore
+  does not touch them. Full system backups carry the tokens in the database (the CLI
+  round-trip test compares the `bot_tokens` table).
+- `JOT_PUBLIC_URL` is passed through `docker-compose.yml` (default
+  `http://localhost:9003`).
+- The User manual needed no change (it describes the Account page's backup parts, which
+  are unchanged), so it has no bots section.

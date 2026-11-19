@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Lock, RotateCcw, Trash2 } from 'lucide-react';
+import { Bot, Check, Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note } from '../../shared/types';
@@ -53,7 +53,7 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
 }
 
 function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: Note) => void }) {
-  const { fonts, styles, reloadStyles, user } = useData();
+  const { fonts, styles, reloadStyles, user, bumpNotes } = useData();
   const note = props.note;
   const trashed = note.deletedAt !== null;
   const readOnly = note.readOnly;
@@ -185,6 +185,31 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           onRemove={(tag) => void tagChange(() => api.removeTag(note.id, tag)).catch(() => {})}
         />
         <div className="note-meta">
+          {note.botName && (
+            <span className="bot-badge" data-testid="note-bot" title={`Written by the bot ${note.botName}`}>
+              <Bot size={14} /> From {note.botName}
+            </span>
+          )}
+          {note.inbox && !trashed && !readOnly && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              title="Move this note out of the Inbox into your notes"
+              onClick={async () => {
+                setMessage(null);
+                try {
+                  await autosave.flush();
+                  const { note: n } = await api.keep(note.id);
+                  props.onChange(n);
+                  bumpNotes();
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : 'Could not keep the note.');
+                }
+              }}
+            >
+              <Check size={14} /> Keep
+            </button>
+          )}
           {readOnly && (
             <span className="read-only-badge" data-testid="read-only-indicator" title="This note is read-only. It can only be made writable again from the command line on the server.">
               <Lock size={14} /> Read-only

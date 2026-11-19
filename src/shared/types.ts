@@ -14,6 +14,18 @@ export interface NoteSummary {
   deletedAt: string | null;
   /** Nothing about a read-only note can change through the web app. */
   readOnly: boolean;
+  /** Written by a bot and not kept yet: shown only on the Inbox screen. */
+  inbox: boolean;
+  /** The bot that wrote the note (kept after Keep and after the token is revoked). */
+  botName: string | null;
+}
+
+export interface Bot {
+  id: string;
+  name: string;
+  token: string;
+  createdAt: string;
+  lastUsedAt: string | null;
 }
 
 export interface Note extends NoteSummary {

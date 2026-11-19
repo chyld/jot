@@ -3,8 +3,9 @@
 // typing RESTORE, and the safety backups Jot took before each restore. There are no
 // account settings: user administration is the command line's.
 import { useEffect, useState } from 'react';
-import { Download, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from 'lucide-react';
-import type { BackupInfo, RestoreSummary, SafetyBackup } from '../../shared/types';
+import { Bot as BotIcon, Copy, Download, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from 'lucide-react';
+import { relativeTime } from '../../shared/time';
+import type { BackupInfo, Bot, RestoreSummary, SafetyBackup } from '../../shared/types';
 import { api } from '../api';
 import { useData } from '../data';
 
@@ -292,6 +293,156 @@ function SafetySection(props: { version: number }) {
   );
 }
 
+/** Copies text; where the browser refuses (plain http), says so and the text can be selected instead. */
+async function copy(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A setup snippet for a generic MCP client: the address and the Authorization header. */
+export function setupSnippet(mcpUrl: string, token: string) {
+  return JSON.stringify({ mcpServers: { jot: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${token}` } } } }, null, 2);
+}
+
+function BotItem(props: { bot: Bot; mcpUrl: string; onRevoke: () => Promise<void>; onCopied: (what: string | null) => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const b = props.bot;
+  const copied = async (text: string, what: string) => props.onCopied((await copy(text)) ? what : null);
+  return (
+    <li className="card bot-item">
+      <div className="bot-head">
+        <BotIcon size={16} />
+        <strong>{b.name}</strong>
+        <span className="muted small">last used: {b.lastUsedAt ? relativeTime(b.lastUsedAt, new Date()) : 'never'}</span>
+      </div>
+      <code className="bot-token" data-testid="bot-token">
+        {b.token}
+      </code>
+      <div className="card-actions">
+        <button type="button" className="btn btn-sm" aria-label={`Copy token for ${b.name}`} onClick={() => void copied(b.token, 'Token copied.')}>
+          <Copy size={14} /> Copy
+        </button>
+        <button type="button" className="btn btn-sm" aria-label={`Copy setup for ${b.name}`} onClick={() => void copied(setupSnippet(props.mcpUrl, b.token), 'Setup copied.')}>
+          <Copy size={14} /> Copy setup
+        </button>
+        {confirming ? (
+          <>
+            <button type="button" className="btn btn-sm btn-danger" aria-label={`Confirm: revoke ${b.name}`} onClick={() => void props.onRevoke()}>
+              Confirm: revoke
+            </button>
+            <button type="button" className="btn btn-sm" onClick={() => setConfirming(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn btn-sm" aria-label={`Revoke ${b.name}`} onClick={() => setConfirming(true)}>
+            <Trash2 size={14} /> Revoke
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** Bots: one token per bot, always visible, for MCP clients (agent-spec.md §2, §4). */
+function BotsSection() {
+  const [data, setData] = useState<{ mcpUrl: string; bots: Bot[] } | null>(null);
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const load = () =>
+    api.bots().then(
+      (r) => setData({ mcpUrl: r.mcpUrl, bots: r.bots }),
+      () => setData({ mcpUrl: '', bots: [] }),
+    );
+  useEffect(() => {
+    void load();
+  }, []);
+  const onCopied = (what: string | null) => setNote(what ?? 'This browser does not allow copying here: select the text and copy it.');
+  const create = async () => {
+    setError(null);
+    try {
+      await api.createBot(name);
+      setName('');
+      await load();
+    } catch (err) {
+      setError(errorText(err, 'Could not create the bot.'));
+    }
+  };
+  const mcpUrl = data?.mcpUrl ?? '';
+  return (
+    <section className="card backup-section" aria-labelledby="account-bots">
+      <h2 id="account-bots">
+        <BotIcon size={18} /> Bots
+      </h2>
+      <p className="muted">
+        A bot (an AI assistant with an MCP client) can write notes into your Inbox and read your notes. It cannot change or delete anything. Give each bot its own token; revoking a token stops that bot at once.
+      </p>
+      <div className="bot-address">
+        <span>
+          Address for bots: <code>{mcpUrl}</code>
+        </span>
+        <button type="button" className="btn btn-sm" aria-label="Copy address" onClick={() => void copy(mcpUrl).then((ok) => onCopied(ok ? 'Address copied.' : null))}>
+          <Copy size={14} /> Copy
+        </button>
+      </div>
+      <p className="muted small">Setup for an MCP client: the address above, and this header with the bot’s token (Copy setup on a bot fills it in):</p>
+      <pre className="bot-snippet">{setupSnippet(mcpUrl, 'YOUR_TOKEN')}</pre>
+      <form
+        className="bot-create"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void create();
+        }}
+      >
+        <label>
+          Bot name
+          <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="e.g. Claude" />
+        </label>
+        <button type="submit" className="btn btn-primary" disabled={!name.trim()}>
+          <Plus size={16} /> Create
+        </button>
+      </form>
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {note && (
+        <p className="muted small" role="status">
+          {note}
+        </p>
+      )}
+      {data && data.bots.length === 0 && <p className="muted">No bots yet.</p>}
+      {data && data.bots.length > 0 && (
+        <ul className="bot-list">
+          {data.bots.map((b) => (
+            <BotItem
+              key={b.id}
+              bot={b}
+              mcpUrl={mcpUrl}
+              onCopied={onCopied}
+              onRevoke={async () => {
+                setError(null);
+                try {
+                  await api.revokeBot(b.id);
+                } catch (err) {
+                  setError(errorText(err, 'Could not revoke the token.'));
+                }
+                await load();
+              }}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function AccountScreen(props: { onRestored?: () => void }) {
   const { user } = useData();
   const [safetyVersion, setSafetyVersion] = useState(0);
@@ -309,6 +460,7 @@ export function AccountScreen(props: { onRestored?: () => void }) {
       <BackUpSection />
       <RestoreSection onRestored={onRestored} onSafetyChange={() => setSafetyVersion((v) => v + 1)} />
       <SafetySection version={safetyVersion} />
+      <BotsSection />
     </div>
   );
 }

@@ -19,6 +19,7 @@ const app = await buildApp({
   dataDir,
   logger: true,
   secureCookies: process.env.JOT_SECURE_COOKIES === '1',
+  publicUrl: process.env.JOT_PUBLIC_URL,
 });
 
 const shutdown = async () => {

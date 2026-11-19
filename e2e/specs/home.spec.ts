@@ -31,7 +31,7 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   // The left bar: logo, new note, then fonts, styles, backup, trash and log out. No notes or tags icon.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'New note', 'Fonts', 'Styles', 'Account', 'Trash', 'Log out alice']);
+  expect(controls).toEqual(['Jot home: all notes', 'New note', 'Inbox', 'Fonts', 'Styles', 'Account', 'Trash', 'Log out alice']);
   await goHome(page);
 
   // Home: search, New, tag filter and the list, no editor.
@@ -155,7 +155,7 @@ test('the Olive theme', async ({ page }) => {
   await expect(page.getByTestId('account-username')).toHaveText('alice');
   await expect(backupLink).toHaveCSS('background-color', 'rgb(228, 242, 196)');
   await expect(page.getByRole('button', { name: 'Back up my data' })).toHaveCSS('background-color', 'rgb(77, 124, 15)');
-  await expect(page.locator('.backup-section')).toHaveCount(3);
+  await expect(page.locator('.backup-section')).toHaveCount(4); // three backup parts and Bots
   expect(await pinkInChrome(page)).toEqual([]);
   await page.screenshot({ path: 'test-results/screens/account-olive.png' });
 

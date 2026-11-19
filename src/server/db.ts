@@ -7,7 +7,7 @@ import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -172,6 +172,29 @@ function migrate(db: DB) {
     db.transaction(() => {
       refreshManuals(db);
       db.pragma(`user_version = 5`);
+    })();
+  }
+  // Version 6: agent notes (agent-spec.md). Notes get the Inbox flag, the name of the bot
+  // that wrote them and the bot's request id (for safe retries); bots get their tokens.
+  // Every existing note stays as it is, outside the Inbox.
+  if (version < 6) {
+    db.transaction(() => {
+      db.exec(`
+        ALTER TABLE notes ADD COLUMN inbox INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE notes ADD COLUMN bot_name TEXT;
+        ALTER TABLE notes ADD COLUMN bot_request_id TEXT;
+        CREATE UNIQUE INDEX notes_bot_request ON notes(user_id, bot_name, bot_request_id) WHERE bot_request_id IS NOT NULL;
+        CREATE TABLE bot_tokens (
+          id           TEXT PRIMARY KEY,
+          user_id      TEXT NOT NULL REFERENCES users(id),
+          name         TEXT NOT NULL,
+          token        TEXT NOT NULL UNIQUE,
+          created_at   TEXT NOT NULL,
+          last_used_at TEXT,
+          UNIQUE (user_id, name)
+        );
+      `);
+      db.pragma(`user_version = 6`);
     })();
   }
 }

@@ -153,7 +153,7 @@ describe('left bar', () => {
       </DataProvider>,
     );
     const labels = screen.getAllByRole('link').map((a) => a.getAttribute('aria-label'));
-    expect(labels).toEqual(['Jot home: all notes', 'Fonts', 'Styles', 'Account', 'Trash']);
+    expect(labels).toEqual(['Jot home: all notes', 'Inbox', 'Fonts', 'Styles', 'Account', 'Trash']);
     const account = screen.getByRole('link', { name: 'Account' });
     expect(account.getAttribute('href')).toBe('/account');
     expect(account.getAttribute('title')).toBe('Account');
@@ -197,12 +197,13 @@ describe('Account page', () => {
     };
   });
 
-  it('shows the username at the top, then the three backup parts, and only those', async () => {
+  it('shows the username at the top, then the three backup parts and Bots, and nothing else', async () => {
     renderAccount();
     expect(screen.getByRole('heading', { name: 'Account', level: 1 })).toBeTruthy();
     expect(screen.getByTestId('account-username').textContent).toBe('alice');
     expect(document.body.textContent).not.toMatch(/password/i); // no account settings
-    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))).toEqual(['backup-make', 'backup-restore', 'backup-safety']);
+    // The three backup parts, then Bots (agent-spec.md §2).
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))).toEqual(['backup-make', 'backup-restore', 'backup-safety', 'account-bots']);
     expect(document.body.textContent).not.toMatch(/full system backup|command line|docker compose/i);
     expect(screen.getByRole('region', { name: 'Back up my data' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Restore from a backup' })).toBeTruthy();

@@ -376,3 +376,24 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .inv-tab::after { content: '→'; position: absolute; left: 0; }
 .inv-para::after { content: '¶'; }
 .inv-break::after { content: '↵'; }
+
+/* ---------------------------------------------------------------- Inbox and bots */
+.rail-inbox { position: relative; display: grid; place-items: center; }
+.rail-count { position: absolute; top: -7px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--accent-text); font-size: 10.5px; font-weight: 700; line-height: 16px; text-align: center; }
+.rail-count:empty { display: none; }
+.inbox-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.inbox-item { display: flex; align-items: center; gap: 12px; }
+.inbox-item .note-card { flex: 1; min-width: 0; }
+.bot-chip, .bot-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent-dark); border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.bot-badge { font-size: 13px; padding: 3px 9px; }
+.bot-address { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bot-address code, .bot-token { font-family: 'Fira Code', ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.bot-snippet { margin: 0; background: var(--subtle); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: 'Fira Code', ui-monospace, monospace; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bot-create { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.bot-create label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 500; }
+.bot-create input { border: 1px solid var(--field-edge); border-radius: 8px; padding: 8px 10px; background: var(--surface); min-width: 240px; }
+.bot-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.bot-item { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border); padding: 10px 14px; }
+.bot-item .card-actions { margin-top: 0; }
+.bot-head { display: flex; align-items: center; gap: 8px; }
+.bot-token { user-select: all; background: var(--subtle); border-radius: 6px; padding: 4px 8px; }

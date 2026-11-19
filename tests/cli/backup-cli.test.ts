@@ -40,11 +40,15 @@ function makeVersion1(db: Database.Database) {
   db.exec("DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)");
   db.exec('ALTER TABLE notes DROP COLUMN read_only');
   db.exec('ALTER TABLE styles DROP COLUMN is_default');
+  db.exec('DROP INDEX IF EXISTS notes_bot_request');
+  for (const c of ['inbox', 'bot_name', 'bot_request_id']) db.exec(`ALTER TABLE notes DROP COLUMN ${c}`);
+  db.exec('DROP TABLE IF EXISTS bot_tokens');
   db.exec('DROP TABLE IF EXISTS restore_files');
   db.pragma('user_version = 1');
 }
 
-const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles'];
+// bot_tokens: full system backups carry the bots' tokens (agent-spec.md §2).
+const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'bot_tokens'];
 function dump(dbFile: string) {
   const db = new Database(dbFile, { readonly: true });
   const out: Record<string, unknown[]> = {};
@@ -80,6 +84,7 @@ beforeAll(async () => {
     await c.del(`/api/notes/${t.id}`);
   }
   await alice.post('/api/fonts', { family: 'Roboto Slab' });
+  expect((await alice.post('/api/bots', { name: 'Grok' })).status).toBe(201);
   await bob.post(`/api/fonts/${(await bob.post('/api/fonts', { family: 'Bebas Neue' })).json.font.id}/archive`);
 });
 afterAll(async () => {

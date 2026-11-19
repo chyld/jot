@@ -36,9 +36,11 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 it('replaces only the text of each account’s User manual note; id, tags, dates and read-only stay', () => {
   const db = openDatabase(file);
-  expect(SCHEMA_VERSION).toBe(5);
-  expect(db.pragma('user_version', { simple: true })).toBe(5);
-  const after = db.prepare('SELECT * FROM notes ORDER BY id').all() as any[];
+  expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(5);
+  expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
+  // The columns version 5 had (later versions add more, tested on their own).
+  const cols = Object.keys(before[0]).join(', ');
+  const after = db.prepare(`SELECT ${cols} FROM notes ORDER BY id`).all() as any[];
   expect(after.map((n) => n.id)).toEqual(before.map((n) => n.id));
   const manuals = before.filter((n) => n.title === 'User manual' && n.read_only === 1);
   expect(manuals.length).toBe(2); // alice's and bob's; not alice's own writable "User manual"
@@ -67,6 +69,7 @@ it('replaces only the text of each account’s User manual note; id, tags, dates
 it('later starts change nothing', () => {
   const db = openDatabase(file);
   const snap = db.prepare('SELECT * FROM notes ORDER BY id').all();
+  void snap;
   db.close();
   const again = openDatabase(file);
   expect(again.prepare('SELECT * FROM notes ORDER BY id').all()).toEqual(snap);

@@ -17,10 +17,12 @@ interface NoteRow {
   updated_at: string;
   deleted_at: string | null;
   read_only: number;
+  inbox: number;
+  bot_name: string | null;
   tag_list: string | null;
 }
 
-const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only,
+const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only, n.inbox, n.bot_name,
   (SELECT group_concat(t.name, ' ' ORDER BY t.name) FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
      WHERE nt.note_id = n.id) AS tag_list`;
 
@@ -34,6 +36,8 @@ function toSummary(r: NoteRow): NoteSummary {
     updatedAt: r.updated_at,
     deletedAt: r.deleted_at,
     readOnly: r.read_only === 1,
+    inbox: r.inbox === 1,
+    botName: r.bot_name ?? null,
   };
 }
 
@@ -70,14 +74,14 @@ export function listNotes(db: DB, userId: string, tag?: string): NoteSummary[] {
   const rows = tag
     ? db
         .prepare(
-          `SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL
+          `SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
            AND EXISTS (SELECT 1 FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
                        WHERE nt.note_id = n.id AND t.user_id = ? AND t.name = ?)
            ORDER BY n.updated_at DESC, n.id`,
         )
         .all(userId, userId, tag)
     : db
-        .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL ORDER BY n.updated_at DESC, n.id`)
+        .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 ORDER BY n.updated_at DESC, n.id`)
         .all(userId);
   return (rows as NoteRow[]).map(toSummary);
 }
@@ -232,13 +236,61 @@ export function emptyTrash(db: DB, userId: string): number {
   })();
 }
 
+/** The Inbox: notes bots wrote that the user has not kept yet, newest first. */
+export function listInbox(db: DB, userId: string): NoteSummary[] {
+  const rows = db
+    .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 1 ORDER BY n.created_at DESC, n.id`)
+    .all(userId) as NoteRow[];
+  return rows.map(toSummary);
+}
+
+/** Keep: moves a note out of the Inbox into the user's notes. The bot's name stays. */
+export function keepNote(db: DB, userId: string, id: string): UpdateResult {
+  return db.transaction((): UpdateResult => {
+    const state = liveCheck(db, userId, id);
+    if (state !== 'ok') return state;
+    db.prepare('UPDATE notes SET inbox = 0 WHERE id = ? AND user_id = ?').run(id, userId);
+    return getNote(db, userId, id)!;
+  })();
+}
+
+/** A note a bot wrote: in the Inbox, with the bot's name copied onto it. The caller runs this in a transaction. */
+export function createBotNote(
+  db: DB,
+  userId: string,
+  n: { title: string; content: TiptapDoc; tags: string[]; botName: string; requestId: string | null },
+): Note {
+  const id = newId();
+  const t = now();
+  db.prepare(
+    `INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, inbox, bot_name, bot_request_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1, ?, ?)`,
+  ).run(id, userId, n.title, JSON.stringify(n.content), docText(n.content), t, t, n.botName, n.requestId);
+  for (const tag of n.tags) {
+    db.prepare('INSERT OR IGNORE INTO tags (id, user_id, name) VALUES (?, ?, ?)').run(newId(), userId, tag);
+    const tagId = (db.prepare('SELECT id FROM tags WHERE user_id = ? AND name = ?').get(userId, tag) as { id: string }).id;
+    db.prepare('INSERT OR IGNORE INTO note_tags (note_id, tag_id, user_id) VALUES (?, ?, ?)').run(id, tagId, userId);
+  }
+  reindexNote(db, id);
+  return getNote(db, userId, id)!;
+}
+
+/** The note a bot already made for this request_id, if any (so retries are safe). */
+export function findBotRequest(db: DB, userId: string, botName: string, requestId: string): { id: string; title: string } | null {
+  return (
+    (db.prepare('SELECT id, title FROM notes WHERE user_id = ? AND bot_name = ? AND bot_request_id = ?').get(userId, botName, requestId) as
+      | { id: string; title: string }
+      | undefined) ?? null
+  );
+}
+
 export function listTags(db: DB, userId: string): Tag[] {
   return db
     .prepare(
       `SELECT t.name AS name, COUNT(*) AS count FROM tags t
        JOIN note_tags nt ON nt.tag_id = t.id
        JOIN notes n ON n.id = nt.note_id
-       WHERE t.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL
+       WHERE t.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
        GROUP BY t.id ORDER BY t.name`,
     )
     .all(userId, userId) as Tag[];
@@ -251,7 +303,7 @@ export function searchNotes(db: DB, userId: string, q: unknown): NoteSummary[] {
     const rows = db
       .prepare(
         `SELECT ${SUMMARY_COLS} FROM notes_fts f JOIN notes n ON n.id = f.note_id
-         WHERE notes_fts MATCH ? AND f.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL
+         WHERE notes_fts MATCH ? AND f.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
          ORDER BY f.rank, n.updated_at DESC LIMIT 200`,
       )
       .all(match, userId, userId) as NoteRow[];

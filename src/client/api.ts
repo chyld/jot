@@ -1,5 +1,5 @@
 // Thin JSON client for Jot's API.
-import type { BackupInfo, CatalogFont, Font, Note, NoteSummary, Photo, RestoreSummary, SafetyBackup, Tag, User } from '../shared/types';
+import type { BackupInfo, Bot, CatalogFont, Font, Note, NoteSummary, Photo, RestoreSummary, SafetyBackup, Tag, User } from '../shared/types';
 import type { Style, StyleInput } from '../shared/styles';
 
 export class ApiError extends Error {
@@ -56,6 +56,11 @@ export const api = {
   createNote: () => request<{ note: Note }>('POST', '/api/notes', {}),
   updateNote: (id: string, patch: { title?: string; content?: unknown }) =>
     request<{ note: Note }>('PATCH', `/api/notes/${encodeURIComponent(id)}`, patch),
+  inbox: () => request<{ notes: NoteSummary[] }>('GET', '/api/inbox'),
+  keep: (id: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/keep`, {}),
+  bots: () => request<{ publicUrl: string; mcpUrl: string; bots: Bot[] }>('GET', '/api/bots'),
+  createBot: (name: string) => request<{ bot: Bot }>('POST', '/api/bots', { name }),
+  revokeBot: (id: string) => request<void>('DELETE', `/api/bots/${encodeURIComponent(id)}`),
   makeReadOnly: (id: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/read-only`, {}),
   trashNote: (id: string) => request<{ note: Note }>('DELETE', `/api/notes/${encodeURIComponent(id)}`),
   addTag: (id: string, tag: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/tags`, { tag }),

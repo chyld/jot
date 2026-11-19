@@ -14,6 +14,9 @@ interface Data {
   reloadStyles: () => Promise<void>;
   notesVersion: number;
   bumpNotes: () => void;
+  /** How many notes are in the Inbox (simply a count; nothing tracks read or unread). */
+  inboxCount: number;
+  reloadInbox: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -47,6 +50,17 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
   const [styles, setStyles] = useState<Style[]>([]);
   const [fontsVersion, setFontsVersion] = useState(1);
   const [notesVersion, setNotesVersion] = useState(1);
+  const [inboxCount, setInboxCount] = useState(0);
+  const reloadInbox = useCallback(async () => {
+    try {
+      setInboxCount((await api.inbox()).notes?.length ?? 0);
+    } catch {
+      /* the count just stays as it was */
+    }
+  }, []);
+  useEffect(() => {
+    void reloadInbox();
+  }, [reloadInbox, notesVersion]);
 
   const reloadFonts = useCallback(async () => {
     setFonts((await api.fonts()).fonts);
@@ -79,6 +93,8 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
         reloadStyles,
         notesVersion,
         bumpNotes: () => setNotesVersion((v) => v + 1),
+        inboxCount,
+        reloadInbox,
         logout,
       }}
     >

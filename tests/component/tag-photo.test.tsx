@@ -170,7 +170,7 @@ describe('tag names open the home page filtered by that tag', () => {
 
   it('on a note card', async () => {
     history.replaceState(null, '', '/');
-    const note = { id: 'n1', title: 'Card', preview: 'text', tags: ['demo', 'fonts'], createdAt: '2026-11-18T00:00:00Z', updatedAt: '2026-11-18T00:00:00Z', deletedAt: null, readOnly: false };
+    const note = { id: 'n1', title: 'Card', preview: 'text', tags: ['demo', 'fonts'], createdAt: '2026-11-18T00:00:00Z', updatedAt: '2026-11-18T00:00:00Z', deletedAt: null, readOnly: false, inbox: false, botName: null };
     render(<NoteCard note={note} now={new Date('2026-11-18T00:01:00Z')} />);
     const link = screen.getByRole('link', { name: '#fonts' });
     expect(link.getAttribute('href')).toBe('/?tag=fonts');

@@ -145,7 +145,7 @@ describe('wrong entries', () => {
   });
 
   it('a newer format version is refused', async () => {
-    await refused(edit((b) => (b.manifest.version = 3)), /newer/i);
+    await refused(edit((b) => (b.manifest.version = 4)), /newer/i);
   });
 
   it('another kind of file is refused', async () => {

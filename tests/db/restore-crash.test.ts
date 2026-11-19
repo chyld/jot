@@ -158,6 +158,9 @@ function makeVersion1(db: Database.Database) {
   db.exec("DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)");
   db.exec('ALTER TABLE notes DROP COLUMN read_only');
   db.exec('ALTER TABLE styles DROP COLUMN is_default');
+  db.exec('DROP INDEX IF EXISTS notes_bot_request');
+  for (const c of ['inbox', 'bot_name', 'bot_request_id']) db.exec(`ALTER TABLE notes DROP COLUMN ${c}`);
+  db.exec('DROP TABLE IF EXISTS bot_tokens');
   db.exec('DROP TABLE IF EXISTS restore_files');
   db.pragma('user_version = 1');
 }
@@ -172,7 +175,7 @@ describe('schema versions 2 and 3', () => {
     raw.close();
     const db = openDatabase(file);
     expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(5);
+    expect(SCHEMA_VERSION).toBe(6);
     const cols = db.prepare('PRAGMA table_info(restore_files)').all().map((c: any) => c.name);
     expect(cols).toEqual(expect.arrayContaining(['path', 'state', 'user_id']));
     expect((db.prepare('SELECT COUNT(*) AS n FROM notes WHERE read_only = 0').get() as any).n).toBe(2);
