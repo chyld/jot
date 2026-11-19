@@ -55,6 +55,19 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 
 ## Notes, tags, trash, search
 
+- **Empty trash (owner request)** is one route, `DELETE /api/trash`, answering
+  `{ deleted: n }`.
+  - In one transaction it permanently deletes every note of the logged-in user that is in
+    the trash, removes their search-index rows (trashed notes have none, but this keeps it
+    exact), and deletes tags no note uses any more. That is the same as permanent delete,
+    note by note.
+  - Photo files stay on disk, as with permanent delete.
+  - The Trash screen shows the button only when the trash has notes. The first click
+    shows, in the page, "N notes will be deleted forever. This cannot be undone." with
+    "Confirm: empty trash" and Cancel, the same second-click pattern as "Delete
+    permanently".
+  - While a restore of the user's data is running, it is refused like every other change.
+
 - Home page (owner feedback): the list, search, New and the tag filter. The tag filter
   shows one chip per tag that is on at least one live note, plus "All". Choosing a chip
   again also clears it. Search and the tag filter combine: search results are narrowed
@@ -183,6 +196,23 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   synthesised by the browser. All of Google's unicode subsets are downloaded, as woff2.
 - Adding a font that is already archived restores it; the Fonts screen also has a
   Restore button on archived fonts. Fonts can never be deleted.
+- **Default fonts (owner request).** The five starter fonts can never be archived.
+  - They are recognised by family name against the starter list (`src/shared/starter.ts`).
+    A user has at most one font per family, and starter fonts can't be deleted, so the
+    name is enough: no schema change and no new flag.
+  - The font list says `isDefault`. The Fonts screen shows "Default font" where the
+    Archive action would be, on the user's font chips and on the catalogue card.
+  - The archive route refuses with 400 "<Family> is a default font and cannot be
+    archived.", for every user. It checks ownership first, so another user's font is
+    still 404.
+  - A starter font archived before this rule is left as it is (no data migration). It
+    still shows Restore, and the unarchive route still works; once restored it can't be
+    archived again.
+  - Archiving a font the user added, restoring it, and adding an archived family again
+    work as before.
+- Starter styles are ordinary styles: a new user can delete each of them, and text
+  already stamped with a style is unchanged (it carries plain formatting, not a link to
+  the style). Nothing blocked this; a test now covers it.
 - Catalogue cards preview each family by loading only the letters of its name from
   Google when the card scrolls into view. The user's own fonts, the pickers and notes
   always use Jot's private copies and never contact Google.

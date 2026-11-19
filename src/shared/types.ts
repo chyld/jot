@@ -35,6 +35,8 @@ export interface Font {
   family: string;
   category: string;
   archived: boolean;
+  /** One of the five starter fonts: it can never be archived. */
+  isDefault: boolean;
   createdAt: string;
 }
 

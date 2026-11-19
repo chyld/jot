@@ -10,6 +10,7 @@ import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { MAX_TITLE_LENGTH } from '../shared/constants';
 import { validateStyleInput } from '../shared/styles';
+import { isDefaultFont } from '../shared/starter';
 import { normalizeTag } from '../shared/tags';
 import type { Font, TiptapDoc } from '../shared/types';
 import { BackupError, RESTORING_MESSAGE } from './backup/errors';
@@ -305,6 +306,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return { note };
   });
 
+  // Empty trash: every note in the user's trash, permanently, in one transaction.
+  app.delete('/api/trash', async (req) => ({ deleted: notes.emptyTrash(db, uid(req)) }));
+
   app.delete('/api/trash/:id', async (req, reply) => {
     if (!notes.purgeNote(db, uid(req), param(req, 'id'))) throw notFound('No such note in the trash.');
     return reply.code(204).send();
@@ -376,6 +380,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     family: r.family,
     category: r.category,
     archived: r.archived_at !== null,
+    isDefault: isDefaultFont(r.family),
     createdAt: r.created_at,
   });
   const getFont = (userId: string, id: string) =>
@@ -449,6 +454,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const setArchived = (archived: boolean) => async (req: FastifyRequest) => {
     const userId = uid(req);
     const id = param(req, 'id');
+    const font = getFont(userId, id);
+    if (!font) throw notFound('Font not found.');
+    // The starter fonts are default fonts. One archived before this rule can still be restored.
+    if (archived && isDefaultFont(font.family)) throw bad(`${font.family} is a default font and cannot be archived.`);
     const r = db
       .prepare('UPDATE fonts SET archived_at = ? WHERE id = ? AND user_id = ?')
       .run(archived ? (getFont(userId, id)?.archived_at ?? now()) : null, id, userId);

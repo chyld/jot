@@ -49,7 +49,9 @@ function CatalogCard(props: { font: CatalogFont; mine: Font | undefined; busy: b
         {font.family}
       </div>
       <div className="font-card-meta muted small">{font.category}</div>
-      {active ? (
+      {active && mine.isDefault ? (
+        <span className="muted small default-font">Default font</span>
+      ) : active ? (
         <button type="button" className="btn btn-sm" onClick={props.onArchive} disabled={props.busy}>
           <Archive size={14} /> Archive
         </button>
@@ -126,9 +128,14 @@ export function FontsScreen() {
           {active.map((f) => (
             <li key={f.id} className="chip font-chip" style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}>
               {f.family}
-              <button type="button" className="chip-x" aria-label={`Archive ${f.family}`} title="Archive" onClick={() => void archive(f)} disabled={busy === f.family}>
-                <Archive size={12} />
-              </button>
+              {f.isDefault ? (
+                // The starter fonts are defaults: they cannot be archived.
+                <span className="chip-note">Default font</span>
+              ) : (
+                <button type="button" className="chip-x" aria-label={`Archive ${f.family}`} title="Archive" onClick={() => void archive(f)} disabled={busy === f.family}>
+                  <Archive size={12} />
+                </button>
+              )}
             </li>
           ))}
         </ul>

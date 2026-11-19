@@ -5,7 +5,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FontFace } from './fonts';
 
-export const STARTER_FONTS = ['Inter', 'Lora', 'Playfair Display', 'Caveat', 'Fira Code'] as const;
+import { STARTER_FONT_FAMILIES } from '../shared/starter';
+
+export const STARTER_FONTS = STARTER_FONT_FAMILIES;
 
 export const STARTER_STYLES = [
   { name: 'Body', font: 'Inter', size: 16, bold: false, italic: false, textColor: 'Jet' },

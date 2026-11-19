@@ -187,6 +187,18 @@ export function purgeNote(db: DB, userId: string, id: string): boolean {
   })();
 }
 
+/** Permanently deletes every note in the user's trash. Photos stay on disk, as with purgeNote. */
+export function emptyTrash(db: DB, userId: string): number {
+  return db.transaction(() => {
+    const ids = (db.prepare('SELECT id FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL').all(userId) as Array<{ id: string }>).map((r) => r.id);
+    const delFts = db.prepare('DELETE FROM notes_fts WHERE note_id = ?');
+    for (const id of ids) delFts.run(id); // trashed notes have no index row; kept exact anyway
+    db.prepare('DELETE FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL').run(userId);
+    deleteOrphanTags(db, userId);
+    return ids.length;
+  })();
+}
+
 export function listTags(db: DB, userId: string): Tag[] {
   return db
     .prepare(

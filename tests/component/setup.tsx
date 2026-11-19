@@ -55,10 +55,10 @@ export function marksOf(editor: Editor, text: string): Record<string, any> {
 }
 
 export const FONTS: Font[] = [
-  { id: 'f-inter', family: 'Inter', category: 'Sans Serif', archived: false, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'f-lora', family: 'Lora', category: 'Serif', archived: false, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'f-caveat', family: 'Caveat', category: 'Handwriting', archived: false, createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'f-old', family: 'Old Standard TT', category: 'Serif', archived: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'f-inter', family: 'Inter', category: 'Sans Serif', archived: false, isDefault: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'f-lora', family: 'Lora', category: 'Serif', archived: false, isDefault: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'f-caveat', family: 'Caveat', category: 'Handwriting', archived: false, isDefault: true, createdAt: '2026-01-01T00:00:00Z' },
+  { id: 'f-old', family: 'Old Standard TT', category: 'Serif', archived: true, isDefault: false, createdAt: '2026-01-01T00:00:00Z' },
 ];
 
 export function style(partial: Partial<Style> & { name: string; fontFamily: string; size: number }): Style {

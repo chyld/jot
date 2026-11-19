@@ -39,6 +39,56 @@ function TrashItem(props: { note: NoteSummary; now: Date; onRestore: () => void;
   );
 }
 
+/** Empty trash: a second click confirms, saying how many notes go and that it cannot be undone. */
+function EmptyTrash(props: { count: number; onEmptied: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const n = props.count;
+  if (!confirming) {
+    return (
+      <button type="button" className="btn btn-sm" onClick={() => setConfirming(true)}>
+        <Trash2 size={14} /> Empty trash
+      </button>
+    );
+  }
+  return (
+    <div className="empty-trash-confirm" role="group" aria-label="Empty trash">
+      <span>
+        {n === 1 ? '1 note will be deleted forever.' : `${n} notes will be deleted forever.`} This cannot be undone.
+      </span>
+      <button
+        type="button"
+        className="btn btn-sm btn-danger"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await api.emptyTrash();
+            setConfirming(false);
+            props.onEmptied();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Could not empty the trash.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        Confirm: empty trash
+      </button>
+      <button type="button" className="btn btn-sm" disabled={busy} onClick={() => setConfirming(false)}>
+        Cancel
+      </button>
+      {error && (
+        <span role="alert" className="form-error">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function TrashScreen() {
   const { bumpNotes } = useData();
   const [notes, setNotes] = useState<NoteSummary[] | null>(null);
@@ -52,6 +102,17 @@ export function TrashScreen() {
       <div className="screen-head">
         <h1>Trash</h1>
         {notes && <span className="muted">{notes.length} {notes.length === 1 ? 'note' : 'notes'}</span>}
+        {notes && notes.length > 0 && (
+          <div className="screen-head-actions">
+            <EmptyTrash
+              count={notes.length}
+              onEmptied={async () => {
+                bumpNotes();
+                await load();
+              }}
+            />
+          </div>
+        )}
       </div>
       {notes?.length === 0 && <p className="muted">The trash is empty.</p>}
       <ul className="trash-list">

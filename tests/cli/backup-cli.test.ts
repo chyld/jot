@@ -67,7 +67,7 @@ beforeAll(async () => {
     await c.del(`/api/notes/${t.id}`);
   }
   await alice.post('/api/fonts', { family: 'Roboto Slab' });
-  await bob.post(`/api/fonts/${(await bob.get('/api/fonts')).json.fonts[0].id}/archive`);
+  await bob.post(`/api/fonts/${(await bob.post('/api/fonts', { family: 'Bebas Neue' })).json.font.id}/archive`);
 });
 afterAll(async () => {
   await env.close();

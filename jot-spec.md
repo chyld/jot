@@ -52,6 +52,7 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 
 - Deleting a note moves it to the trash.
 - From the trash a note can be restored or permanently deleted.
+- **Empty trash** permanently deletes every note in the user's trash in one action. It asks once more in the page, saying how many notes will be deleted and that this cannot be undone, and is not shown when the trash is empty. It touches only the user's own trashed notes. Photos stay on disk, as with permanent delete, and tags and search stay consistent.
 - Trashed notes do not appear in the notes list or in search.
 
 ## 4. Tags
@@ -107,6 +108,7 @@ Pasting (Ctrl+V or the browser's Paste menu) always inserts plain text: all form
 - Each user downloads fonts from Google Fonts into their own private collection.
 - A browsable, searchable catalogue with each font previewed in its own typeface.
 - Fonts cannot be deleted, only archived.
+- The five starter fonts (section 10) are default fonts and can never be archived: the Fonts screen shows "Default font" instead of an Archive action, and the server refuses. A starter font archived before this rule keeps its Restore action, and once restored cannot be archived again. Fonts the user added can be archived and restored.
 - An archived font disappears from the pickers, but every style and note that already uses it keeps working.
 - No limit on the number of fonts.
 
@@ -186,9 +188,9 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Login | Username, password |
 | Notes (home page) | Search box, New button, a tag filter (chips for the user's tags; choosing one filters the list; "All" clears it) and the notes list. No editor beside the list. Clicking a tag's name on a note opens this page with that tag selected |
 | Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it |
-| Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action |
+| Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
-| Trash | Trashed notes with Restore and Delete permanently |
+| Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
 | Backup | Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete); at the bottom, Full system backup (command line): instructions only, with the CLI commands to copy. See `backup-spec.md` §3.1 |
 
 A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) and the New note button; at the bottom: Fonts, Styles, Backup, Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.

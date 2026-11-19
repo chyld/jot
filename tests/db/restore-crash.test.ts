@@ -55,7 +55,8 @@ beforeAll(async () => {
     await c.post(`/api/notes/${n.id}/tags`, { tag: 'fresh' });
     await c.upload('/api/photos', 'spare.gif', GIF_1PX, 'image/gif');
     const fonts = (await c.get('/api/fonts')).json.fonts;
-    await c.post(`/api/fonts/${fonts[1].id}/archive`);
+    // An archived starter font, as accounts archived before default fonts existed have.
+    (app as any).jot.db.prepare('UPDATE fonts SET archived_at = ? WHERE id = ?').run('2026-11-19T06:59:17.696Z', fonts[1].id);
     await c.post('/api/styles', { name: 'Backed up', fontId: fonts[0].id, size: 33 });
     newData = snapshotOf(app, template);
     backupFile = (await takeBackup(c)).file;

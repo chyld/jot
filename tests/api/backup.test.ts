@@ -34,7 +34,7 @@ async function seed(c: Client, word: string) {
   await c.del(`/api/notes/${t.id}`);
   const slab = (await c.post('/api/fonts', { family: 'Roboto Slab' })).json.font;
   const fonts = (await c.get('/api/fonts')).json.fonts;
-  await c.post(`/api/fonts/${fonts.find((f: any) => f.family === 'Caveat').id}/archive`);
+  await c.post(`/api/fonts/${fonts.find((f: any) => f.family === 'Roboto Slab').id}/archive`);
   await c.post('/api/styles', { name: `${word} style`, fontId: slab.id, size: 21, bold: true, textColor: 'Crimson', highlight: 'Sunflower' });
   const code = (await c.get('/api/styles')).json.styles.find((s: any) => s.name === 'Code');
   await c.del(`/api/styles/${code.id}`);
