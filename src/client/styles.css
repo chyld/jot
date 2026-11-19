@@ -397,3 +397,4 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .bot-item .card-actions { margin-top: 0; }
 .bot-head { display: flex; align-items: center; gap: 8px; }
 .bot-token { user-select: all; background: var(--subtle); border-radius: 6px; padding: 4px 8px; }
+.rail-error { position: fixed; left: 72px; top: 72px; z-index: 50; max-width: 320px; background: var(--surface); border: 1px solid var(--danger); color: var(--danger); border-radius: 8px; padding: 8px 12px; font-size: 13px; box-shadow: var(--shadow); cursor: pointer; }

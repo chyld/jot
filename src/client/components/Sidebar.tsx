@@ -1,8 +1,8 @@
 import { Inbox, LogOut, NotebookPen, Paintbrush, Plus, Trash2, Type, UserRound } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useData } from '../data';
-import { markNewNote } from '../newNotes';
+import { createAndOpenNote } from '../newNotes';
 import { navigate } from '../router';
 
 function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode; title?: string }) {
@@ -23,15 +23,11 @@ function RailLink(props: { to: string; label: string; active: boolean; children:
   );
 }
 
-export async function createAndOpenNote(bump: () => void) {
-  const { note } = await api.createNote();
-  markNewNote(note.id); // its editor opens with the caret in the body
-  bump();
-  navigate(`/n/${note.id}`);
-}
+export { createAndOpenNote } from '../newNotes';
 
 export function Sidebar(props: { path: string }) {
   const { bumpNotes, logout, user, inboxCount, reloadInbox } = useData();
+  const [newError, setNewError] = useState<string | null>(null);
   const p = props.path;
   // The count is fetched again on every move between screens (bots write at any time).
   useEffect(() => {
@@ -52,7 +48,7 @@ export function Sidebar(props: { path: string }) {
       >
         <NotebookPen size={26} />
       </a>
-      <button type="button" className="rail-new" aria-label="New note" title="New note" onClick={() => void createAndOpenNote(bumpNotes)}>
+      <button type="button" className="rail-new" aria-label="New note" title="New note" onClick={() => void createAndOpenNote(bumpNotes).then(setNewError)}>
         <Plus size={24} />
       </button>
       <RailLink to="/inbox" label="Inbox" title={`Inbox: ${inboxCount} ${inboxCount === 1 ? 'note' : 'notes'} from bots`} active={p === '/inbox'}>
@@ -79,6 +75,11 @@ export function Sidebar(props: { path: string }) {
       <button type="button" className="rail-btn" aria-label={`Log out ${user.username}`} title={`Log out (${user.username})`} onClick={() => void logout()}>
         <LogOut size={22} />
       </button>
+      {newError && (
+        <div role="alert" className="rail-error" onClick={() => setNewError(null)}>
+          {newError}
+        </div>
+      )}
     </nav>
   );
 }

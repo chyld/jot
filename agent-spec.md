@@ -77,7 +77,8 @@ Converted with a standard Markdown parser and an allow-list, then passed through
 
 - Anything else (task-list checkboxes, footnotes, and so on) keeps its words and loses its markers.
 - Raw HTML is shown as literal text. It is never interpreted.
-- **Look:** all text a bot writes is stored in the Typewriter look, Fira Code at 15 px in Jet, written onto the text itself the way applying a style does. Code blocks use Jot's normal code look.
+- **Look:** all text a bot writes is stored in the Typewriter look, Fira Code at 15 px in Jet, written onto the text itself the way applying a style does. Heading text gets the Typewriter font and colour (Fira Code, Jet) but no font size, so Jot's normal Heading 1, 2 and 3 sizes apply and headings stay larger than the body text. Code blocks use Jot's normal code look.
+- Task-list items (`- [ ] item`, `- [x] item`) become plain list items: the words stay and the `[ ]` or `[x]` marker goes.
 
 ## 7. Reading a note
 

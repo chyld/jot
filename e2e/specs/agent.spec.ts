@@ -89,3 +89,37 @@ test('a bot with a real MCP client writes a note with a photo; the user finds it
   await expect(page.getByRole('region', { name: 'Bots' }).getByText(botName)).toHaveCount(0);
   await expect(connect(token)).rejects.toThrow();
 });
+
+test('a bot’s headings render larger than its body text, in descending size', async ({ page }) => {
+  await login(page, 'bob');
+  const token = (await (await page.request.post('/api/bots', { data: { name: `Sizes ${uniq()}` } })).json()).bot.token;
+  const client = await connect(token);
+  const word = uniq('sizes');
+  const created = text(await client.callTool({ name: 'create_note', arguments: { markdown: `# One ${word}\n\n## Two\n\n### Three\n\nBody text here.\n\n- [ ] task item\n- [x] done` } }));
+  await client.close();
+  const id = /id: ([A-Za-z0-9_-]{22})/.exec(created)![1];
+  await page.goto(`/n/${id}`);
+  const size = async (selector: string) =>
+    body(page)
+      .locator(selector)
+      .first()
+      .evaluate((el) => {
+        const inner = (el.querySelector('span') ?? el) as HTMLElement;
+        return parseFloat(getComputedStyle(inner).fontSize);
+      });
+  await expect(body(page).locator('h1')).toContainText(word);
+  const [h1, h2, h3, p] = [await size('h1'), await size('h2'), await size('h3'), await size('p')];
+  expect(p).toBe(15);
+  expect(h3).toBeGreaterThan(p);
+  expect(h2).toBeGreaterThan(h3);
+  expect(h1).toBeGreaterThan(h2);
+  // All in the Typewriter font.
+  for (const sel of ['h1', 'h2', 'h3', 'p']) {
+    const family = await body(page).locator(sel).first().evaluate((el) => getComputedStyle((el.querySelector('span') ?? el) as HTMLElement).fontFamily);
+    expect(family, sel).toMatch(/Fira Code/);
+  }
+  // Task-list markers are gone.
+  await expect(body(page).locator('li').nth(0)).toHaveText('task item');
+  await expect(body(page).locator('li').nth(1)).toHaveText('done');
+  await page.screenshot({ path: 'test-results/screens/agent-headings.png' });
+});

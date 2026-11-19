@@ -48,6 +48,7 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - Each note has its own URL.
 - New note button.
 - A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
+- One intent creates one note. While a new note is being created and opened, further presses of either New button (click, double-click, Enter, Space) are ignored, and keys typed meanwhile go into the new note's body in order. If the note open in the editor is completely empty (no title, no body, no tags, not read-only, not in the trash, as it is on screen at that moment), a New button does not create another note: it puts the cursor in that note's body. A new note is created only when no note is open or the open note has something in it.
 
 ### Read-only notes
 

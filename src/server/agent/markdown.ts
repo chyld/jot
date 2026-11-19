@@ -19,6 +19,11 @@ export const TYPEWRITER: Mark = {
   type: 'textStyle',
   attrs: { fontFamily: '"Fira Code"', fontSize: '15px', color: findPalette('Jet')!.text },
 };
+/** Heading text: the Typewriter font and colour without a size, so Jot's Heading 1/2/3 sizes apply. */
+export const TYPEWRITER_HEADING: Mark = {
+  type: 'textStyle',
+  attrs: { fontFamily: '"Fira Code"', color: findPalette('Jet')!.text },
+};
 
 const md = new MarkdownIt('default', { html: false, linkify: false, typographer: false, breaks: false });
 // Every link and image reaches the converter as written; it alone decides what is allowed.
@@ -26,17 +31,18 @@ md.validateLink = () => true;
 md.normalizeLink = (url: string) => url;
 
 const ALLOWED_LINK = /^(https?:\/\/|mailto:)/i;
+const TASK_MARKER = /^\[[ xX]\][ \t]+/;
 const LANGUAGE = /^[A-Za-z0-9+#_-]{1,30}$/;
 
 /** An inline piece: text (with marks), a line break, or a photo that splits its block. */
 type Piece = TiptapNode | { image: TiptapNode };
 
-function inlinePieces(tokens: Token[], images: Map<string, string>, used: Set<string>): Piece[] {
+function inlinePieces(tokens: Token[], images: Map<string, string>, used: Set<string>, look: Mark = TYPEWRITER): Piece[] {
   const out: Piece[] = [];
   const marks: Array<Mark | null> = []; // null: an opened marker that adds no mark
   const text = (t: string, extra: Mark[] = []) => {
     if (!t) return;
-    const ms = [...(marks.filter(Boolean) as Mark[]), ...extra, TYPEWRITER];
+    const ms = [...(marks.filter(Boolean) as Mark[]), ...extra, look];
     const last = out[out.length - 1] as TiptapNode | undefined;
     if (last && 'type' in last && last.type === 'text' && JSON.stringify(last.marks) === JSON.stringify(ms)) last.text += t;
     else out.push({ type: 'text', text: t, marks: ms });
@@ -90,7 +96,7 @@ function inlinePieces(tokens: Token[], images: Map<string, string>, used: Set<st
       default:
         // Anything else keeps its words and loses its markers.
         if (tok.content) text(tok.content);
-        else if (tok.children) out.push(...inlinePieces(tok.children, images, used));
+        else if (tok.children) out.push(...inlinePieces(tok.children, images, used, look));
     }
   }
   return out;
@@ -133,7 +139,7 @@ function blocks(tokens: Token[], start: number, close: string | null, images: Ma
       case 'heading_open': {
         const level = Math.min(3, Number(tok.tag.slice(1)) || 1);
         const inline = tokens[i + 1];
-        out.push(...textBlocks(inlinePieces(inline.children ?? [], images, used), (content) => ({ type: 'heading', attrs: { level }, content })));
+        out.push(...textBlocks(inlinePieces(inline.children ?? [], images, used, TYPEWRITER_HEADING), (content) => ({ type: 'heading', attrs: { level }, content })));
         i += 3;
         continue;
       }
@@ -143,6 +149,9 @@ function blocks(tokens: Token[], start: number, close: string | null, images: Ma
         const items: TiptapNode[] = [];
         i++;
         while (i < tokens.length && tokens[i].type === 'list_item_open') {
+          // A task-list item ("- [ ] x", "- [x] x") keeps its words and loses its marker.
+          const first = tokens[i + 1]?.type === 'paragraph_open' ? tokens[i + 2]?.children?.[0] : undefined;
+          if (first?.type === 'text') first.content = first.content.replace(TASK_MARKER, '');
           const [content, next] = blocks(tokens, i + 1, 'list_item_close', images, used);
           items.push({ type: 'listItem', content: content.length ? content : [{ type: 'paragraph' }] });
           i = next;

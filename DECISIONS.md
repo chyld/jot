@@ -224,6 +224,27 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   - Tiptap 3 keeps an empty paragraph after a final heading, so that paragraph shows a ¶
     too.
 
+- **One intent creates one note (owner bug report).** The left-bar + and the home page's
+  + New share one in-flight flag (`src/client/newNotes.ts`).
+  - Set when either is activated, cleared once the new note's editor is ready, or when the
+    create (or opening the note) fails, with the error shown.
+  - While it is set, further clicks, double-clicks, Enter and Space are ignored, never
+    queued. Focus leaves the button at once.
+  - Keys typed meanwhile are held and then typed into the body in order: characters,
+    Enter as a new paragraph, Backspace removing the last held key. Keys with Ctrl, Cmd or
+    Alt pass through untouched.
+  - The editor takes focus synchronously (not on the next frame), so no key falls in
+    between.
+  - No timers: a press after the new note is open creates another note.
+  - The flag alone cannot stop clicks 150 ms apart: a new note is ready about 90–110 ms
+    after the click, so each later click comes after the note is open.
+  - The owner's decision is one deterministic rule, no timers. If the note open in the
+    editor is completely empty, a New button puts the cursor in its body instead of
+    making another note. Empty means no title, no body (`editor.isEmpty`), no tags, not
+    read-only and not trashed, judged from the editor's live state (the title box and the
+    document on screen), not the saved copy.
+  - The editor registers that check while it is open. A new note is made only when no
+    note is open, or the open one has something in it.
 - **A new note opens ready to type.** Both New buttons create the note through one function, which
   marks the new note's id in a set kept in the page's memory. When the editor has loaded
   that note, it takes the mark (once) and puts the caret at the end of the body
@@ -697,12 +718,17 @@ read/unread tracking, no rate limiting, no extra tools).
 - Title: the one given, else the first heading, else the first line of text (500
   characters at most).
 - The Typewriter look is a `textStyle` mark (Fira Code, 15 px, Jet) on every text run
-  outside code blocks, after any bold/italic/strike/code/link marks. The result is passed
+  outside code blocks, after any bold/italic/strike/code/link marks. Heading text gets the
+  same mark without the size (owner check), so Jot's Heading 1/2/3 sizes apply. The result is passed
   through the sanitiser, and the tests check that it leaves it unchanged.
 - A soft line break in Markdown becomes a space, as Markdown defines; two trailing spaces
   or a backslash make a line break.
-- Things markdown-it parses that are not in the table keep their text: task boxes stay as
-  `[ ]` text, footnote markers as text.
+- Things markdown-it parses that are not in the table keep their text, for example
+  footnote markers.
+  - markdown-it has no task lists, so the `[ ]`, `[x]` or `[X]` at the very start of a list
+    item's first text is removed and the item stays a plain list item, keeping its words
+    (owner check).
+  - Anywhere else `[ ]` is just text.
 
 **list_notes / read_note**
 - 20 per page. The cursor is the offset as a number; "next cursor: none" ends.

@@ -1,10 +1,12 @@
 // Type 3 (unit): Markdown <-> Jot documents for agent notes (agent-spec.md §5-§7).
 import { describe, expect, it } from 'vitest';
-import { docToMarkdown, markdownToDoc, noteTitle, TYPEWRITER } from '../../src/server/agent/markdown';
+import { docToMarkdown, markdownToDoc, noteTitle, TYPEWRITER, TYPEWRITER_HEADING } from '../../src/server/agent/markdown';
 import { sanitizeDoc } from '../../src/server/content';
 
 const TW = TYPEWRITER; // the Typewriter look on every piece of text
 const tx = (text: string, ...marks: any[]) => ({ type: 'text', text, marks: [...marks, TW] });
+// Heading text: the Typewriter font and colour, but no size, so Jot's heading sizes apply.
+const hx = (text: string, ...marks: any[]) => ({ type: 'text', text, marks: [...marks, TYPEWRITER_HEADING] });
 const para = (...content: any[]) => ({ type: 'paragraph', content });
 const conv = (md: string, images = new Map<string, string>()) => markdownToDoc(md, images).doc as any;
 const blocks = (md: string) => conv(md).content;
@@ -19,10 +21,13 @@ describe('Markdown to a note', () => {
     expect(blocks('a **b** *c* ~~d~~')).toEqual([para(tx('a '), tx('b', { type: 'bold' }), tx(' '), tx('c', { type: 'italic' }), tx(' '), tx('d', { type: 'strike' }))]);
   });
 
-  it('headings 1-3; deeper ones become heading 3', () => {
-    const b = blocks('# One\n\n## Two\n\n### Three\n\n#### Four\n\n###### Six');
+  it('headings 1-3 (deeper ones become heading 3), in Fira Code and Jet with no font size of their own', () => {
+    expect(TYPEWRITER_HEADING).toEqual({ type: 'textStyle', attrs: { fontFamily: '"Fira Code"', color: '#141414' } });
+    const b = blocks('# One\n\n## Two **bold**\n\n### Three\n\n#### Four\n\n###### Six');
     expect(b.map((n: any) => n.attrs.level)).toEqual([1, 2, 3, 3, 3]);
-    expect(b[0]).toEqual({ type: 'heading', attrs: { level: 1 }, content: [tx('One')] });
+    expect(b[0]).toEqual({ type: 'heading', attrs: { level: 1 }, content: [hx('One')] });
+    expect(b[1].content).toEqual([hx('Two '), hx('bold', { type: 'bold' })]);
+    expect(JSON.stringify(b)).not.toContain('fontSize');
   });
 
   it('bullet and numbered lists, nested', () => {
@@ -77,9 +82,20 @@ describe('Markdown to a note', () => {
   });
 
   it('everything else keeps its words and loses its markers', () => {
-    const text = JSON.stringify(blocks('- [ ] task one\n- [x] task two\n\nnote[^1]\n\n[^1]: the footnote'));
-    for (const w of ['task one', 'task two', 'note', 'the footnote']) expect(text).toContain(w);
-    expect(text).not.toMatch(/taskList|taskItem/);
+    const text = JSON.stringify(blocks('note[^1]\n\n[^1]: the footnote'));
+    for (const w of ['note', 'the footnote']) expect(text).toContain(w);
+  });
+
+  it('task-list items keep their words and lose their [ ] and [x] markers', () => {
+    const b = blocks('- [ ] task item\n- [x] done\n- [X] also done\n- plain [ ] item\n\n1. [ ] numbered');
+    expect(b[0]).toEqual({
+      type: 'bulletList',
+      content: ['task item', 'done', 'also done', 'plain [ ] item'].map((t) => ({ type: 'listItem', content: [para(tx(t))] })),
+    });
+    expect(b[1].content[0]).toEqual({ type: 'listItem', content: [para(tx('numbered'))] });
+    expect(JSON.stringify(b)).not.toMatch(/taskList|taskItem/);
+    // Outside a list item, "[ ]" is just text.
+    expect(blocks('[ ] not a list')).toEqual([para(tx('[ ] not a list'))]);
   });
 
   it('raw HTML and script arrive as literal text, never interpreted', () => {
