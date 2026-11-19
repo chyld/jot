@@ -131,6 +131,7 @@ Pasting (Ctrl+V or the browser's Paste menu) always inserts plain text: all form
 - Each user creates their own named styles.
 - No limit on the number of styles.
 - Create, edit and delete styles; save the current selection as a style.
+- **Default styles.** The five default styles (Body, Title, Quote, Aside, Code; section 10) are part of the system: every user has exactly one of each, and no one can edit, rename or delete them. The server refuses with a clear message, and the Styles screen shows "Default style" in place of Edit and Delete. They are marked by a flag on the style record, not by name, so a style the user makes (even one called "Body") is an ordinary style that stays editable and deletable. Default styles are in the editor's Styles dropdown and stamp text like any other. "Save selection as style" always makes an ordinary style.
 - **A style is a stamp.** Applying it copies its formatting onto the text. Editing the style afterwards does not change that text unless the style is applied again. Deleting a style leaves text that used it unchanged.
 
 A style is made of:
@@ -149,7 +150,7 @@ A style is made of:
 
 ## 10. Starter pack
 
-Every new user gets their own copy of 5 fonts and 5 styles, and the read-only "User manual" note (section 3). They are ordinary fonts and styles: the user can edit or delete the styles and archive the fonts.
+Every new user gets their own copy of 5 fonts and 5 styles, and the read-only "User manual" note (section 3). The 5 fonts are default fonts, which cannot be archived (section 8). The 5 styles are default styles, which cannot be edited, renamed or deleted (section 9); this table is their standard definition.
 
 Fonts: Inter, Lora, Playfair Display, Caveat, Fira Code.
 

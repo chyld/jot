@@ -24,7 +24,10 @@ import { fontsDir, photosDir, userDir, type JotContext } from '../context';
 import { syncDir, syncFile } from '../durable';
 import { FONT_FILE, isValidFamilyName, type FontFace } from '../fonts';
 import { isId, newId } from '../ids';
+import { ensureDefaultStyles } from '../defaultStyles';
 import { reindexNote } from '../notes';
+import { STARTER_STYLES } from '../starter';
+import { STARTER_FONT_FAMILIES } from '../../shared/starter';
 import { ACCEPTED_IMAGE_TYPES, detectImageType, SNIFF_BYTES } from '../uploads';
 import { ISO_DATE, readArchive, type ArchiveCheck, type MissingFile } from './archive';
 import { BackupError } from './errors';
@@ -135,7 +138,8 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
       archivedAt: f.archived_at,
       createdAt: f.created_at,
     }));
-    const styles = (db.prepare('SELECT * FROM styles WHERE user_id = ? ORDER BY created_at, id').all(userId) as any[]).map((s) => ({
+    // Default styles are part of the system, not the user's data.
+    const styles = (db.prepare('SELECT * FROM styles WHERE user_id = ? AND is_default = 0 ORDER BY created_at, id').all(userId) as any[]).map((s) => ({
       id: s.id,
       name: s.name,
       fontId: s.font_id,
@@ -391,6 +395,7 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
 
   const styles: BStyle[] = [];
   const styleIds = new Set<string>();
+  let skippedStyles = 0;
   for (const s of raw.styles) {
     if (!isObj(s) || !isId(s.id) || styleIds.has(s.id)) fail('a style has a missing or repeated id.');
     const r = validateStyleInput({
@@ -408,9 +413,22 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
     if (!r.ok) fail(`style "${label}": ${r.error}`);
     if (!fontIds.has(r.value.fontId)) fail(`style "${label}" uses a font that is not in the backup.`);
     if (!isDate(s.createdAt) || !isDate(s.updatedAt)) fail(`style "${label}" has an invalid date.`);
+    if (s.isDefault !== undefined && typeof s.isDefault !== 'boolean') fail(`style "${label}" has an invalid default flag.`);
     styleIds.add(s.id);
+    // Default styles are system styles: the account keeps its own, so the backup's are
+    // skipped. Newer backups never hold them; older ones hold the starter styles as
+    // ordinary styles, recognised like the migration does: a starter name, created
+    // together with the account (= at the same moment as the backup's starter fonts).
+    const starter = STARTER_STYLES.find((d) => d.name === r.value.name);
+    const withAccount = starter && raw.fonts.some((f: any) => f.family === starter.font && f.createdAt === s.createdAt);
+    if (s.isDefault === true || withAccount) {
+      skippedStyles++;
+      continue;
+    }
     styles.push({ id: s.id, ...r.value, createdAt: s.createdAt, updatedAt: s.updatedAt });
   }
+  // The default styles are rebuilt on the restored fonts, so the backup must have them.
+  for (const family of STARTER_FONT_FAMILIES) if (!families.has(family)) fail(`it does not have the default font "${family}", which the default styles need.`);
 
   const missingNames = new Set(manifest.missing.map((m) => m.name));
   const notes: BNote[] = [];
@@ -463,7 +481,7 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
 
   const counts = { notes: notes.length, photos: photos.length, fonts: fonts.length, styles: styles.length };
   const mc = manifest.counts;
-  if (!isObj(mc) || mc.notes !== counts.notes || mc.photos !== counts.photos || mc.fonts !== counts.fonts || mc.styles !== counts.styles) {
+  if (!isObj(mc) || mc.notes !== counts.notes || mc.photos !== counts.photos || mc.fonts !== counts.fonts || mc.styles !== counts.styles + skippedStyles) {
     fail('its counts do not match its contents (it may be damaged).');
   }
 
@@ -687,13 +705,22 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
   db.transaction(() => {
     const oldPhotos = db.prepare('SELECT id FROM photos WHERE user_id = ?').all(userId) as Array<{ id: string }>;
     const oldFonts = db.prepare('SELECT id FROM fonts WHERE user_id = ?').all(userId) as Array<{ id: string }>;
-    for (const t of ['notes_fts', 'note_tags', 'notes', 'tags', 'styles', 'photos', 'fonts']) {
+    // The account keeps its default styles; they move onto the restored copy of their font.
+    const defaults = db
+      .prepare('SELECT s.id, f.family FROM styles s JOIN fonts f ON f.id = s.font_id WHERE s.user_id = ? AND s.is_default = 1')
+      .all(userId) as Array<{ id: string; family: string }>;
+    db.pragma('defer_foreign_keys = ON'); // until the defaults point at the new fonts, below
+    db.prepare('DELETE FROM styles WHERE user_id = ? AND is_default = 0').run(userId);
+    for (const t of ['notes_fts', 'note_tags', 'notes', 'tags', 'photos', 'fonts']) {
       db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
     }
     const insFont = db.prepare('INSERT INTO fonts (id, user_id, family, category, faces, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
     for (const f of data.fonts) insFont.run(fontMap.get(f.id), userId, f.family, f.category, JSON.stringify(f.faces), f.archivedAt, f.createdAt);
     const insPhoto = db.prepare('INSERT INTO photos (id, user_id, mime, size, original_name, created_at) VALUES (?, ?, ?, ?, ?, ?)');
     for (const p of data.photos) insPhoto.run(photoMap.get(p.id), userId, p.mime, p.size, p.originalName, p.createdAt);
+    const repoint = db.prepare('UPDATE styles SET font_id = (SELECT id FROM fonts WHERE user_id = ? AND family = ?) WHERE id = ?');
+    for (const d of defaults) repoint.run(userId, d.family, d.id);
+    ensureDefaultStyles(db, userId, new Date().toISOString());
     const insStyle = db.prepare(
       `INSERT INTO styles (id, user_id, name, font_id, size, bold, italic, underline, strike, text_color, highlight, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

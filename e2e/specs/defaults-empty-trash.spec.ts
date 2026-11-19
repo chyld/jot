@@ -19,6 +19,34 @@ test('default fonts have no Archive action, and the server refuses to archive th
   await page.screenshot({ path: 'test-results/screens/fonts-defaults.png' });
 });
 
+test('default styles have no Edit or Delete; a style the user makes, even one called Body, does', async ({ page }) => {
+  await login(page, 'carol');
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Styles' }).click();
+  for (const name of ['Body', 'Title', 'Quote', 'Aside', 'Code']) {
+    const card = page.getByTestId('style-card').filter({ hasText: 'Default style' }).and(page.getByRole('article', { name: `Style ${name}`, exact: true }));
+    await expect(card).toHaveCount(1);
+    await expect(card.getByRole('button', { name: /Edit|Delete/ })).toHaveCount(0);
+  }
+  const styles = (await (await page.request.get('/api/styles')).json()).styles;
+  const body = styles.find((s: any) => s.name === 'Body' && s.isDefault);
+  const res = await page.request.delete(`/api/styles/${body.id}`);
+  expect(res.status()).toBe(400);
+  expect((await res.json()).error).toMatch(/default style/i);
+  const name = `Body`;
+  await page.getByRole('button', { name: 'New style' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New style' });
+  await dialog.getByLabel('Name').fill(name);
+  await dialog.getByLabel('Size (px)').fill('27');
+  await dialog.getByRole('button', { name: 'Save style' }).click();
+  const mine = page.getByTestId('style-card').filter({ hasNotText: 'Default style' }).and(page.getByRole('article', { name: 'Style Body', exact: true }));
+  await expect(mine).toHaveCount(1);
+  await expect(mine.getByRole('button', { name: 'Edit' })).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/styles-defaults.png' });
+  await mine.getByRole('button', { name: /Delete/ }).click();
+  await mine.getByRole('button', { name: 'Confirm delete' }).click();
+  await expect(mine).toHaveCount(0);
+});
+
 test('Empty trash deletes every trashed note after a second click, and nothing else', async ({ page }) => {
   await login(page, 'carol');
   const word = uniq('bin');

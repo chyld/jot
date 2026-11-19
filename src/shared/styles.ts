@@ -21,6 +21,8 @@ export interface Style extends StyleInput {
   id: string;
   fontFamily: string;
   fontArchived: boolean;
+  /** One of the five default styles (Body, Title, Quote, Aside, Code): it cannot be edited or deleted. */
+  isDefault: boolean;
   createdAt: string;
   updatedAt: string;
 }

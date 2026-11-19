@@ -60,8 +60,8 @@ export async function createUser(ctx: JotContext, usernameInput: string, passwor
       );
       for (const f of manifest) insFont.run(fontIds.get(f.family), id, f.family, f.category, JSON.stringify(f.faces), created);
       const insStyle = ctx.db.prepare(
-        `INSERT INTO styles (id, user_id, name, font_id, size, bold, italic, underline, strike, text_color, highlight, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, NULL, ?, ?)`,
+        `INSERT INTO styles (id, user_id, name, font_id, size, bold, italic, underline, strike, text_color, highlight, created_at, updated_at, is_default)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, NULL, ?, ?, 1)`,
       );
       for (const s of STARTER_STYLES) {
         insStyle.run(newId(), id, s.name, fontIds.get(s.font), s.size, s.bold ? 1 : 0, s.italic ? 1 : 0, s.textColor, created, created);

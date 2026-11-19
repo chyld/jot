@@ -516,6 +516,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     highlight: string | null;
     created_at: string;
     updated_at: string;
+    is_default: number;
   };
   const STYLE_SELECT = `SELECT s.*, f.family AS family, f.archived_at AS font_archived
     FROM styles s JOIN fonts f ON f.id = s.font_id AND f.user_id = s.user_id`;
@@ -532,6 +533,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     strike: !!r.strike,
     textColor: r.text_color,
     highlight: r.highlight,
+    isDefault: r.is_default === 1,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   });
@@ -564,7 +566,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   app.put('/api/styles/:id', async (req) => {
     const userId = uid(req);
     const id = param(req, 'id');
-    if (!getStyle(userId, id)) throw notFound('Style not found.');
+    const existing = getStyle(userId, id);
+    if (!existing) throw notFound('Style not found.');
+    if (existing.is_default) throw bad(`${existing.name} is a default style and cannot be changed or deleted.`);
     const s = readStyle(req);
     db.prepare(
       `UPDATE styles SET name = ?, font_id = ?, size = ?, bold = ?, italic = ?, underline = ?, strike = ?, text_color = ?, highlight = ?, updated_at = ?
@@ -574,7 +578,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   });
 
   app.delete('/api/styles/:id', async (req, reply) => {
-    const r = db.prepare('DELETE FROM styles WHERE id = ? AND user_id = ?').run(param(req, 'id'), uid(req));
+    const existing = getStyle(uid(req), param(req, 'id'));
+    if (existing?.is_default) throw bad(`${existing.name} is a default style and cannot be changed or deleted.`);
+    const r = db.prepare('DELETE FROM styles WHERE id = ? AND user_id = ? AND is_default = 0').run(param(req, 'id'), uid(req));
     if (r.changes === 0) throw notFound('Style not found.');
     return reply.code(204).send();
   });

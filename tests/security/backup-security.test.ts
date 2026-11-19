@@ -25,6 +25,8 @@ beforeAll(async () => {
   const n = (await alice.post('/api/notes', { title: 'with photo', content: { type: 'doc', content: [{ type: 'image', attrs: { src: photo.url } }] } })).json.note;
   await alice.post(`/api/notes/${n.id}/tags`, { tag: 'kept' });
   await alice.post('/api/notes', { title: 'plain', content: doc('plain text') });
+  const lora = (await alice.get('/api/fonts')).json.fonts.find((f: any) => f.family === 'Lora');
+  await alice.post('/api/styles', { name: 'Mine', fontId: lora.id, size: 18 }); // the backup holds only own styles
   good = (await takeBackup(alice)).file;
   await alice.post('/api/notes', { title: 'current only', content: doc('now') });
 });
@@ -234,6 +236,19 @@ describe('contents that break Jot’s rules', () => {
         b.data.notes[0].deletedAt = '2026-11-01T00:00:00.000Z';
       }),
       /read-only/i,
+    );
+  });
+
+  it('a backup without one of the five default fonts is refused (the default styles need them)', async () => {
+    await refused(
+      edit((b) => {
+        const inter = b.data.fonts.find((f: any) => f.family === 'Inter');
+        b.data.fonts = b.data.fonts.filter((f: any) => f !== inter);
+        b.entries = b.entries.filter((e) => !e.name.startsWith(`fonts/${inter.id}/`));
+        b.data.styles = b.data.styles.filter((s: any) => s.fontId !== inter.id);
+        b.manifest.counts = { ...b.manifest.counts, fonts: b.data.fonts.length, styles: b.data.styles.length };
+      }),
+      /Inter/,
     );
   });
 

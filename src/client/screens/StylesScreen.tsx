@@ -38,6 +38,11 @@ export function StyleCard(props: { style: Style; onEdit: () => void; onDelete: (
           </li>
         )}
       </ul>
+      {s.isDefault ? (
+        <div className="card-actions">
+          <span className="muted small default-style">Default style</span>
+        </div>
+      ) : (
       <div className="card-actions">
         <button type="button" className="btn btn-sm" onClick={props.onEdit}>
           <Pencil size={14} /> Edit
@@ -57,6 +62,7 @@ export function StyleCard(props: { style: Style; onEdit: () => void; onDelete: (
           </button>
         )}
       </div>
+      )}
     </article>
   );
 }

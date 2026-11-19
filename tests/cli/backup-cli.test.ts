@@ -39,6 +39,7 @@ function makeVersion1(db: Database.Database) {
   }
   db.exec("DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.tag_id = tags.id)");
   db.exec('ALTER TABLE notes DROP COLUMN read_only');
+  db.exec('ALTER TABLE styles DROP COLUMN is_default');
   db.exec('DROP TABLE IF EXISTS restore_files');
   db.pragma('user_version = 1');
 }

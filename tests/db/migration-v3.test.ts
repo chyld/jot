@@ -23,7 +23,7 @@ function dump(db: Database.Database) {
     noteTags: rows('SELECT * FROM note_tags'),
     photos: rows('SELECT * FROM photos'),
     fonts: rows('SELECT * FROM fonts'),
-    styles: rows('SELECT * FROM styles'),
+    styles: rows('SELECT id, user_id, name, font_id, size, bold, italic, underline, strike, text_color, highlight, created_at, updated_at FROM styles'),
     sessions: rows('SELECT * FROM sessions'),
     fts: rows('SELECT note_id, user_id, title, body, tags FROM notes_fts'),
   };
@@ -49,8 +49,8 @@ describe('migration to version 3', () => {
 
   it('adds read_only (off for every existing note) and one read-only manual per account, and changes nothing else', () => {
     const db = openDatabase(file);
-    expect(SCHEMA_VERSION).toBe(3);
-    expect(db.pragma('user_version', { simple: true })).toBe(3);
+    // Opening runs every later migration too (version 4 flags the untouched starter styles).
+    expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
     const notes = db.prepare('SELECT * FROM notes').all() as any[];
     const manuals = notes.filter((n) => n.title === 'User manual');
     expect(notes.length).toBe(5);

@@ -252,9 +252,45 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
     archived again.
   - Archiving a font the user added, restoring it, and adding an archived family again
     work as before.
-- Starter styles are ordinary styles: a new user can delete each of them, and text
-  already stamped with a style is unchanged (it carries plain formatting, not a link to
-  the style). Nothing blocked this; a test now covers it.
+- **Default styles (owner request, reversing the earlier "starter styles are ordinary").**
+  Body, Title, Quote, Aside and Code are system styles.
+  - **Marking:** an `is_default` flag on the style record (schema version 4), never the
+    name, so a user's own "Body" stays editable.
+  - **Server:** edit, rename and delete are refused with 400 "<Name> is a default style
+    and cannot be changed or deleted.", for every user. A style that is created (New
+    style, or Save selection as style) is always ordinary, whatever the request says.
+  - **Styles screen:** shows "Default style" instead of Edit and Delete. The editor's
+    Styles dropdown and stamping are unchanged. Text stamped with a style is never touched.
+  - **Standard definitions:** the starter-pack table. Body and Title keep the Jet text
+    colour they were given.
+  - **Migration (version 4, one transaction, runs once).** For each user and each default
+    style:
+    - The starter style they were given (same name, and created at the same moment as the
+      account) is flagged. If it had been edited, it is set back to the standard
+      definition, and only then do its dates change.
+    - If it was deleted or renamed, it is created again.
+    - Every other style, including a renamed former starter and a user-made style with
+      the same name, is left exactly as it is.
+    - Tested against a copy of a database from the previous version
+      (`tests/fixtures/jot-v3.db`) with untouched, edited, renamed and deleted starter
+      styles and two user-made "Body" styles.
+  - One function, `ensureDefaultStyles`, guarantees "exactly one of each, standard, on the
+    user's font of that family". The migration and every personal restore use it.
+  - **Personal backup and restore rule.** Default styles are not user data.
+    - A personal backup holds only the user's own styles.
+    - A restore never touches the account's five default styles: they stay as they are,
+      moved onto the restored copy of their font, and then `ensureDefaultStyles` runs.
+      Every other style is replaced by the backup's.
+    - Default styles in a backup are skipped. That covers a style flagged `isDefault`
+      (Jot never writes one) and, in older backups, an old starter style: a default
+      style's name together with a creation time equal to the backup's starter font of
+      that style. That is the same "created with the account" rule as the migration.
+    - A user-made style called "Body" is restored as ordinary.
+    - A backup must hold the five default fonts. Old backups always do, since fonts can't
+      be deleted; a backup without them is refused.
+    - The manifest's style count still counts every style in `data.json`, skipped ones
+      included.
+  - Full system backups carry the flag in the database.
 - Catalogue cards preview each family by loading only the letters of its name from
   Google when the card scrolls into view. The user's own fonts, the pickers and notes
   always use Jot's private copies and never contact Google.

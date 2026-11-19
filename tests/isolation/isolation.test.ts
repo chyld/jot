@@ -168,7 +168,8 @@ describe('styles', () => {
   it('B cannot build a style on A’s font', async () => {
     const res = await bob.post('/api/styles', { name: 'Borrowed', fontId: font.id, size: 12 });
     expect(res.status).toBe(400);
-    const bobStyle = (await bob.get('/api/styles')).json.styles[0];
+    const bobFont = (await bob.get('/api/fonts')).json.fonts[0];
+    const bobStyle = (await bob.post('/api/styles', { name: 'Bob own', fontId: bobFont.id, size: 12 })).json.style;
     expect((await bob.put(`/api/styles/${bobStyle.id}`, { ...bobStyle, fontId: starterFont.id })).status).toBe(400);
   });
 });

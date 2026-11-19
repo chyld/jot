@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../src/server/app';
 import { tryLock } from '../../src/server/backup/lock';
+import { newId } from '../../src/server/ids';
 import { client, doc, GIF_1PX, makeTestEnv, newUser, PNG_1PX, type Client, type TestEnv } from '../helpers/setup';
 import { accountSnapshot, openBackup, packBackup, restore, stage, strayFiles, takeBackup } from '../helpers/backup';
 
@@ -70,7 +71,8 @@ describe('round trip', () => {
     const searchBefore = titles(await alice.get('/api/search?q=quartz'));
     const tagBefore = titles(await alice.get('/api/notes?tag=beta'));
     const { info, file } = await takeBackup(alice);
-    expect(info.counts).toEqual({ notes: 3, photos: 2, fonts: 6, styles: 5 });
+    // Styles: only the user's own (the five default styles are not user data).
+    expect(info.counts).toEqual({ notes: 3, photos: 2, fonts: 6, styles: 1 });
     expect(info.missing).toEqual([]);
     expect(info.name).toMatch(/^jot-backup-rt_alice-\d{8}-\d{6}\.tar$/);
 
@@ -79,7 +81,7 @@ describe('round trip', () => {
 
     const { staged, done } = await restore(alice, file);
     expect(staged.status, staged.body).toBe(201);
-    expect(staged.json.restore.summary).toMatchObject({ counts: { notes: 3, photos: 2, fonts: 6, styles: 5 }, adjustedNotes: 0, missing: [] });
+    expect(staged.json.restore.summary).toMatchObject({ counts: { notes: 3, photos: 2, fonts: 6, styles: 1 }, adjustedNotes: 0, missing: [] });
     expect(done.status, done.body).toBe(200);
 
     expect(snap(id)).toEqual(before);
@@ -104,9 +106,11 @@ describe('round trip', () => {
       ...(await a.get('/api/fonts')).json.fonts.map((f: any) => f.id),
       ...(await a.get('/api/styles')).json.styles.map((s: any) => s.id),
     ]);
+    // Default styles are system styles: each account keeps its own (with its own dates).
+    const own = (x: ReturnType<typeof snap>) => ({ ...x, styles: x.styles.filter((s) => !JSON.parse(s).is_default) });
     const before = snap(await idOf(a));
     expect((await restore(b, file)).done.status).toBe(200);
-    expect(snap(await idOf(b))).toEqual(before);
+    expect(own(snap(await idOf(b)))).toEqual(own(before));
     const bIds = [
       ...(await b.get('/api/notes')).json.notes.map((n: any) => n.id),
       ...(await b.get('/api/fonts')).json.fonts.map((f: any) => f.id),
@@ -190,6 +194,77 @@ describe('read-only notes', () => {
     expect(list.map((n: any) => n.title).sort()).toEqual(['old one', 'old two']);
     expect(list.every((n: any) => n.readOnly === false)).toBe(true);
     expect(strayFiles(db(), env.dataDir, id)).toEqual([]);
+  });
+});
+
+describe('default styles', () => {
+  const stylesOf = async (c: Client) => (await c.get('/api/styles')).json.styles as any[];
+  const defaultsOf = async (c: Client) => (await stylesOf(c)).filter((s) => s.isDefault).map((s) => `${s.name} ${s.fontFamily} ${s.size}`).sort();
+  const STANDARD = ['Aside Caveat 24', 'Body Inter 16', 'Code Fira Code 14', 'Quote Lora 20', 'Title Playfair Display 40'];
+
+  it('a backup holds only the user’s own styles; a restore keeps the account’s one set of defaults', async () => {
+    const c = await newUser(env, 'ds_new');
+    const inter = (await c.get('/api/fonts')).json.fonts.find((f: any) => f.family === 'Inter');
+    await c.post('/api/styles', { name: 'Body', fontId: inter.id, size: 22 }); // the user's own "Body"
+    await c.post('/api/styles', { name: 'Fancy', fontId: inter.id, size: 30, bold: true });
+    const defaultIds = (await stylesOf(c)).filter((s) => s.isDefault).map((s) => s.id).sort();
+    const { file } = await takeBackup(c);
+    const data = openBackup(file).data;
+    expect(data.styles.map((s: any) => s.name).sort()).toEqual(['Body', 'Fancy']);
+    expect(data.styles.every((s: any) => s.isDefault === undefined)).toBe(true);
+
+    await c.post('/api/styles', { name: 'Later', fontId: inter.id, size: 12 });
+    expect((await restore(c, file)).done.status).toBe(200);
+    const after = await stylesOf(c);
+    expect(await defaultsOf(c)).toEqual(STANDARD);
+    expect(after.filter((s) => s.isDefault).map((s) => s.id).sort()).toEqual(defaultIds); // the same five
+    expect(after.filter((s) => !s.isDefault).map((s) => `${s.name} ${s.size}`).sort()).toEqual(['Body 22', 'Fancy 30']);
+    // The defaults use the restored fonts.
+    const fonts = (await c.get('/api/fonts')).json.fonts;
+    for (const s of after) expect(fonts.find((f: any) => f.id === s.fontId)?.family).toBe(s.fontFamily);
+    // Restoring the same backup again never duplicates them.
+    expect((await restore(c, file)).done.status).toBe(200);
+    expect(await defaultsOf(c)).toEqual(STANDARD);
+    expect((await stylesOf(c)).length).toBe(7);
+  });
+
+  it('a backup made before default styles (starter styles as ordinary ones) restores with exactly one set', async () => {
+    const c = await newUser(env, 'ds_old');
+    const b = openBackup((await takeBackup(c)).file);
+    // As the previous version wrote it: format 2, the five starter styles included,
+    // created together with the account (= the starter fonts' creation time).
+    b.manifest.version = 2;
+    const fontOf = (family: string) => b.data.fonts.find((f: any) => f.family === family);
+    const created = fontOf('Inter').createdAt;
+    const st = (name: string, family: string, size: number, extra: object = {}, at = created) => ({
+      id: newId(), name, fontId: fontOf(family).id, size, bold: false, italic: false, underline: false, strike: false, textColor: null, highlight: null, createdAt: at, updatedAt: at, ...extra,
+    });
+    b.data.styles = [
+      st('Body', 'Inter', 30, { bold: true }), // an edited starter Body
+      st('My Title', 'Playfair Display', 40, { bold: true }), // a renamed starter
+      st('Quote', 'Lora', 20, { italic: true, textColor: 'Violet' }),
+      st('Aside', 'Caveat', 24, { textColor: 'Electric' }),
+      st('Code', 'Fira Code', 14, { textColor: 'Jade' }),
+      st('Body', 'Lora', 18, {}, '2026-12-01T00:00:00.000Z'), // a style the user made, called Body
+    ];
+    b.manifest.counts = { ...b.manifest.counts, styles: b.data.styles.length };
+    const r = await restore(c, packBackup(b));
+    expect(r.done.status, r.done.body).toBe(200);
+    expect(await defaultsOf(c)).toEqual(STANDARD);
+    const own = (await stylesOf(c)).filter((s) => !s.isDefault).map((s) => `${s.name} ${s.fontFamily} ${s.size}`).sort();
+    expect(own).toEqual(['Body Lora 18', 'My Title Playfair Display 40']);
+    // The restored ordinary ones stay editable.
+    const mine = (await stylesOf(c)).find((s) => s.name === 'My Title');
+    expect((await c.put(`/api/styles/${mine.id}`, { ...mine, size: 41 })).status).toBe(200);
+  });
+
+  it('a backup restored into another account leaves that account its own one set', async () => {
+    const a = await newUser(env, 'ds_from');
+    const b = await newUser(env, 'ds_into');
+    const bDefaults = (await stylesOf(b)).filter((s) => s.isDefault).map((s) => s.id).sort();
+    expect((await restore(b, (await takeBackup(a)).file)).done.status).toBe(200);
+    expect((await stylesOf(b)).filter((s) => s.isDefault).map((s) => s.id).sort()).toEqual(bDefaults);
+    expect((await stylesOf(b)).length).toBe(5);
   });
 });
 

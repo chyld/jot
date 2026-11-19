@@ -58,18 +58,15 @@ describe('starter pack', () => {
     const bStyles = (await bob.get('/api/styles')).json.styles;
     expect(aStyles.map((s: any) => s.id).filter((id: string) => bStyles.some((b: any) => b.id === id))).toEqual([]);
 
-    const body = aStyles.find((s: any) => s.name === 'Body');
-    await alice.put(`/api/styles/${body.id}`, { ...body, size: 18 });
-    expect((await bob.get('/api/styles')).json.styles.find((s: any) => s.name === 'Body').size).toBe(16);
   });
 
-  it('starter fonts are default fonts (not archivable); starter styles are ordinary and deletable', async () => {
+  it('starter fonts are default fonts (not archivable); starter styles are default styles (not editable or deletable)', async () => {
     const carol = await newUser(env, 'carol');
     const fonts = (await carol.get('/api/fonts')).json.fonts;
     const caveat = fonts.find((f: any) => f.family === 'Caveat');
     expect((await carol.post(`/api/fonts/${caveat.id}/archive`)).status).toBe(400);
     const aside = (await carol.get('/api/styles')).json.styles.find((s: any) => s.name === 'Aside');
-    expect((await carol.del(`/api/styles/${aside.id}`)).status).toBe(204);
+    expect((await carol.del(`/api/styles/${aside.id}`)).status).toBe(400);
   });
 });
 

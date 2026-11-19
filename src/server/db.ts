@@ -1,11 +1,13 @@
 // SQLite database: one file in the data folder. Every owned row carries user_id,
 // and every query in Jot filters by the logged-in user.
 import Database from 'better-sqlite3';
+import { ensureDefaultStyles } from './defaultStyles';
 import { addManual } from './manual';
+import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -143,6 +145,25 @@ function migrate(db: DB) {
       const at = now();
       for (const u of db.prepare('SELECT id FROM users ORDER BY created_at, id').all() as Array<{ id: string }>) addManual(db, u.id, at);
       db.pragma(`user_version = 3`);
+    })();
+  }
+  // Version 4: the five starter styles become default styles (flagged, not editable).
+  // Per user and style: the starter style they were given (same name, created with the
+  // account) is flagged and set back to its standard definition if it was edited; a
+  // deleted or renamed one is created again. Every other style is left as it is.
+  if (version < 4) {
+    db.transaction(() => {
+      db.exec('ALTER TABLE styles ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0');
+      const at = now();
+      const original = db.prepare('SELECT id FROM styles WHERE user_id = ? AND name = ? AND created_at = ? ORDER BY id LIMIT 1');
+      for (const u of db.prepare('SELECT id, created_at FROM users ORDER BY created_at, id').all() as Array<{ id: string; created_at: string }>) {
+        for (const def of STARTER_STYLES) {
+          const s = original.get(u.id, def.name, u.created_at) as { id: string } | undefined;
+          if (s) db.prepare('UPDATE styles SET is_default = 1 WHERE id = ?').run(s.id);
+        }
+        ensureDefaultStyles(db, u.id, at);
+      }
+      db.pragma(`user_version = 4`);
     })();
   }
 }

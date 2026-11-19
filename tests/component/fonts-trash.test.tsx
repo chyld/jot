@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-// Type 7 (component): default fonts have no Archive action on the Fonts screen; the
+// Type 7 (component): default fonts have no Archive action on the Fonts screen; default
+// styles have no Edit or Delete on the Styles screen; the
 // Trash screen's Empty trash button and its in-page confirmation.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DataProvider } from '../../src/client/data';
 import { FontsScreen } from '../../src/client/screens/FontsScreen';
+import { StylesScreen } from '../../src/client/screens/StylesScreen';
 import { TrashScreen } from '../../src/client/screens/TrashScreen';
 import './setup';
 
@@ -119,5 +121,37 @@ describe('Trash screen', () => {
     inProvider(<TrashScreen />);
     await screen.findByText('The trash is empty.');
     expect(screen.queryByRole('button', { name: 'Empty trash' })).toBeNull();
+  });
+});
+
+describe('Styles screen', () => {
+  const style = (name: string, isDefault: boolean) => ({
+    id: `s-${name}-${isDefault}`, name, fontId: 'f-Inter', fontFamily: 'Inter', fontArchived: false, size: 16, bold: false, italic: false,
+    underline: false, strike: false, textColor: null, highlight: null, isDefault, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+  });
+  beforeEach(() => {
+    handler = (url) => {
+      if (url === '/api/fonts') return json({ fonts: [font('Inter')] });
+      if (url === '/api/styles') return json({ styles: [style('Body', true), style('Quote', true), style('Body', false), style('Mine', false)] });
+      return json({ error: 'unexpected' }, 500);
+    };
+  });
+
+  it('shows a Default style note instead of Edit and Delete on default styles only', async () => {
+    inProvider(<StylesScreen />);
+    await waitFor(() => expect(screen.getAllByTestId('style-card').length).toBe(4));
+    const cards = screen.getAllByTestId('style-card');
+    const defaults = cards.filter((c) => c.textContent!.includes('Default style'));
+    expect(defaults.map((c) => c.getAttribute('aria-label')).sort()).toEqual(['Style Body', 'Style Quote']);
+    for (const c of defaults) {
+      expect(within(c).queryByRole('button', { name: /Edit/ })).toBeNull();
+      expect(within(c).queryByRole('button', { name: /Delete/ })).toBeNull();
+    }
+    const own = cards.filter((c) => !c.textContent!.includes('Default style'));
+    expect(own.map((c) => c.getAttribute('aria-label')).sort()).toEqual(['Style Body', 'Style Mine']);
+    for (const c of own) {
+      expect(within(c).getByRole('button', { name: /Edit/ })).toBeTruthy();
+      expect(within(c).getByRole('button', { name: /Delete/ })).toBeTruthy();
+    }
   });
 });

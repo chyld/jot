@@ -39,7 +39,7 @@ A "Backup" item in the left bar opens a screen with:
 
 ### 3.2 What it contains
 
-Everything the user owns: notes (title, content, tags, dates, whether each is in the trash, and whether each is read-only), every photo including unused ones, every font including archived ones with its files, and every style. It does not contain the username, the password, or anything belonging to another user.
+Everything the user owns: notes (title, content, tags, dates, whether each is in the trash, and whether each is read-only), every photo including unused ones, every font including archived ones with its files, and every style the user made. The five default styles are part of the system, not the user's data, so they are not in a personal backup. It does not contain the username, the password, or anything belonging to another user.
 
 ### 3.3 Format
 
@@ -66,6 +66,8 @@ Format version 2 records whether each note is read-only (`jot-spec.md` §3). A v
 ### 3.5 Restoring
 
 Restore **replaces**: afterwards the account holds what the backup holds. That includes read-only notes: every note the account has now, read-only ones included, is replaced (the safety backup keeps them), and every note comes back exactly as it was in the backup, read-only or not. A read-only note is never in the trash, so a backup with one there is refused.
+
+Default styles: a restore never touches the account's five default styles. They stay as they are (moved onto the restored copy of their font), and every other style is replaced by the backup's. Any default styles a backup holds are skipped: newer backups hold none, and backups made before default styles existed hold the old starter styles as ordinary styles, recognised by a default style's name together with being created with the account (the same moment as the backup's starter fonts). A style the user made, even one called "Body", is restored as an ordinary style. A backup must contain the five default fonts, which the default styles use. So after any restore the account has exactly one set of the five default styles.
 
 1. **Upload** to a staging folder. Nothing live is touched. An upload that is not confirmed is deleted when cancelled, after 24 hours, or at the next server start.
 2. **Check everything.** The restore is refused, with the reason shown, unless:

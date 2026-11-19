@@ -66,6 +66,7 @@ export function style(partial: Partial<Style> & { name: string; fontFamily: stri
     id: `s-${partial.name}`,
     fontId: `f-${partial.fontFamily.toLowerCase()}`,
     fontArchived: false,
+    isDefault: false,
     bold: false,
     italic: false,
     underline: false,
