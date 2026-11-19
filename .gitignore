@@ -9,3 +9,6 @@ e2e/playwright-report/
 
 # Screenshots of the owner's browser used as a design reference; kept local
 reference-screenshots/
+
+# Local settings (copy .env.example to .env)
+.env

@@ -17,6 +17,8 @@ services:
       DATA_DIR: /data
       # The address bots use for /mcp (see README: "Bots").
       JOT_PUBLIC_URL: ${JOT_PUBLIC_URL:-http://localhost:9003}
+      # Set to 1 when the web app itself is reached over HTTPS (see .env.example).
+      JOT_SECURE_COOKIES: ${JOT_SECURE_COOKIES:-}
     restart: unless-stopped
 
   # Test runner for test types 1-7 (vitest). Usage: ./test.sh
