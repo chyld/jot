@@ -84,6 +84,15 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 
 ## Editor and styles
 
+- **A new note opens ready to type.** Both New buttons create the note through one function, which
+  marks the new note's id in a set kept in the page's memory. When the editor has loaded
+  that note, it takes the mark (once) and puts the caret at the end of the body
+  (`editor.commands.focus('end')`). Focus is not set earlier, because it would be lost
+  when the editor replaces the loading screen. Not the title and not the Add tag box:
+  the owner asked to type straight into the body. Opening an existing note, following a
+  link to it or reloading it finds no mark, so the focus is left alone as before. Nothing
+  is typed or formatted: the first keystrokes are plain text, as with a click.
+
 - Font sizes are whole pixels from 6 to 200. Text with no size is 16 px Inter.
 - **Applying a style with nothing selected** stamps the whole current paragraph (and
   the formatting carries on while typing in an empty paragraph).
@@ -94,8 +103,27 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   but new styles and the font pickers only offer active fonts.
 - "Save selection as style…" opens the style form pre-filled from the formatting at the
   caret (falling back to Inter 16 px when the text has no font or size).
-- Colours outside the palette (for example from pasted text) are dropped when the note
-  is saved.
+- Colours outside the palette are dropped when the note is saved. (Pasted text carries no
+  colours at all; see the paste rules below.)
+- **Paste is always plain text** (owner request). One ProseMirror `handlePaste` decides
+  every paste. Ctrl+V and the browser's Paste menu both arrive as the same paste event.
+  - The clipboard's `text/plain` is pasted through ProseMirror's own plain-text path, so
+    pasting into a code block still keeps the text as code. If there is no plain text but
+    there is HTML, only the HTML's text is used (block elements become new lines).
+  - The clipboard's HTML is never parsed into the note, whether it came from another app,
+    a web page or Jot's own copy (styled text, headings, table cells). So no fonts, sizes,
+    colours, highlights, bold, italic, links, headings, lists, tables or images come from
+    the clipboard.
+  - Each line becomes a paragraph. Runs of blank lines are folded, so Jot's own copy of
+    two paragraphs (which puts a blank line between them) comes back as two paragraphs,
+    not three.
+  - The pasted text gets the formatting at the cursor, exactly as a typed character
+    would: the pending formatting if one was just switched on, else the marks at the
+    cursor. A link stops at its end, so pasting just after a link is not linked.
+  - Tiptap's paste rules (Markdown-style `**bold**`, `==highlight==`, … and URL
+    auto-linking on paste) and the link extension's "paste a URL over selected text makes
+    a link" are switched off, because they would turn pasted text into formatting. Typing
+    keeps its input rules (e.g. a URL typed then followed by a space still becomes a link).
 - Colour pickers (owner feedback) show swatches only: no colour names as visible text.
   Each swatch has its colour name as its accessible label and as a hover tooltip. The
   text colour picker's first swatch (a crossed-out square) is "Default text colour"; the
@@ -106,7 +134,21 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 
 ## Photos
 
-- Photos are added through Insert → Image (no paste or drag-and-drop of files).
+- Photos are added through Insert → Image or by pasting (owner request; dragging files
+  in is still not supported).
+  - **Paste an image:** when the clipboard has no usable text (nothing but white space)
+    and holds a file, that file is the photo. An image file wins over other files.
+  - JPEG, PNG, GIF and WebP pass a type check in the browser and are uploaded through the
+    same route as Insert → Image, so the server still decides the type from the file's
+    first bytes. The photo is inserted at the cursor as an ordinary Jot photo
+    (`/api/photos/<id>`), with the usual controls and corner handles.
+  - Any other type shows "Photos must be JPEG, PNG, GIF or WebP images." and nothing is
+    uploaded. A failed upload shows the server's reason. Either message appears in the
+    note's alert banner, and nothing is inserted.
+  - When the clipboard holds both text and an image (some apps put both), the text is
+    pasted, as plain text, and the image is ignored.
+  - An image that is only in the clipboard's HTML (an `<img>` with an external or `data:`
+    URL and no image file) is never inserted, since pasted HTML is never parsed.
 - A photo in a note can only point at Jot's own `/api/photos/<id>`; external and
   `data:` image URLs are removed when saving.
 - Resize: a width box with −/+ (20 px steps), an "Original size" button, and grab

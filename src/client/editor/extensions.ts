@@ -20,6 +20,7 @@ export function jotExtensions() {
       link: {
         openOnClick: false,
         autolink: true,
+        linkOnPaste: false, // pasted text never becomes a link (paste is plain text)
         defaultProtocol: 'https',
         protocols: ['http', 'https', 'mailto'],
         HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' },

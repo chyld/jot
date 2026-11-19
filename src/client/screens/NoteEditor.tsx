@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import { RotateCcw, Trash2 } from 'lucide-react';
@@ -12,8 +12,10 @@ import { blankStyle, StyleDialog } from '../components/StyleDialog';
 import { TagInput } from '../components/TagInput';
 import { useData } from '../data';
 import { jotExtensions } from '../editor/extensions';
+import { pasteProps, PHOTO_TYPE_MESSAGE, PHOTO_TYPES } from '../editor/paste';
 import { currentFormat } from '../editor/stamp';
 import { Toolbar } from '../editor/Toolbar';
+import { takeNewNote } from '../newNotes';
 import { homeHref, navigate } from '../router';
 
 const STATUS_TEXT: Record<SaveStatus, string> = {
@@ -63,19 +65,33 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   const [styleDraft, setStyleDraft] = useState<StyleInput | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  // A pasted image goes through the same upload as Insert → Image (set below, once pickImage exists).
+  const pasteFile = useRef<(file: File) => void>(() => {});
   const editor = useEditor({
     extensions: jotExtensions(),
+    // Pasted text is plain text: no Markdown-style or link rules on paste.
+    enablePasteRules: false,
     content: (restored?.content as Note['content'] | undefined) ?? note.content,
     editable: !trashed,
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
-    editorProps: { attributes: { class: 'note-body', 'aria-label': 'Note text', spellcheck: 'true' } },
+    editorProps: {
+      attributes: { class: 'note-body', 'aria-label': 'Note text', spellcheck: 'true' },
+      ...pasteProps((file) => pasteFile.current(file)),
+    },
     onUpdate: ({ editor }) => autosave.schedule({ content: editor.getJSON() }),
   });
 
   useEffect(() => {
     if (editor && editor.isEditable === trashed) editor.setEditable(!trashed);
   }, [editor, trashed]);
+
+  // A note just made with a New button: the caret goes into the body as soon as the
+  // editor holds this note, so typing starts there without a click. Existing notes are
+  // opened as before.
+  useEffect(() => {
+    if (editor && !trashed && takeNewNote(note.id)) editor.commands.focus('end');
+  }, [editor, note.id, trashed]);
 
   const saveSelectionAsStyle = (ed: Editor) => {
     const fmt = currentFormat(ed);
@@ -102,6 +118,11 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Could not upload the photo.');
     }
+  };
+
+  pasteFile.current = (file: File) => {
+    if (!PHOTO_TYPES.includes(file.type)) setMessage(PHOTO_TYPE_MESSAGE);
+    else void pickImage(file);
   };
 
   const tagChange = async (fn: () => Promise<{ note: Note }>) => {

@@ -1,6 +1,7 @@
 import { DatabaseBackup, LogOut, NotebookPen, Paintbrush, Plus, Trash2, Type } from 'lucide-react';
 import { api } from '../api';
 import { useData } from '../data';
+import { markNewNote } from '../newNotes';
 import { navigate } from '../router';
 
 function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode }) {
@@ -23,6 +24,7 @@ function RailLink(props: { to: string; label: string; active: boolean; children:
 
 export async function createAndOpenNote(bump: () => void) {
   const { note } = await api.createNote();
+  markNewNote(note.id); // its editor opens with the caret in the body
   bump();
   navigate(`/n/${note.id}`);
 }

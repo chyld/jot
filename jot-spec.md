@@ -46,6 +46,7 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - Created and updated dates are shown on each note.
 - Each note has its own URL.
 - New note button.
+- A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
 
 ### Trash
 
@@ -89,10 +90,13 @@ Shown only when relevant:
 - **Table controls** when the cursor is in a table: Tiptap's standard table features (add and remove rows and columns, header row, merge and split cells, column resize).
 - **Photo controls** when a photo is selected: resize, border size, border colour (swatches only, like the colour pickers).
 
+Pasting (Ctrl+V or the browser's Paste menu) always inserts plain text: all formatting from the clipboard is stripped (fonts, sizes, colours, highlights, bold, italic, links, headings, lists, tables), whether the text comes from another app, a web page or Jot itself. Lines are kept as paragraphs, and the pasted text takes the formatting at the cursor, as typed text would. Pasting an image is described in section 7.
+
 ## 7. Photos
 
 - Uploaded and stored by Jot; private to the user.
 - Standard image types: JPEG, PNG, GIF, WebP.
+- Added with Insert → Image, or by pasting: when the clipboard holds an image file (a screenshot, or an image copied from another app or web page) and no usable text, the image is uploaded like Insert → Image and inserted at the cursor as a normal Jot photo. A type other than JPEG, PNG, GIF or WebP, or a failed upload, shows a clear message and inserts nothing. An external or `data:` image URL is never inserted. If the clipboard holds both text and an image, the text is pasted.
 - No size limit and no cap on how many.
 - Resizable in the note: when a photo is selected, clearly visible grab handles appear on all four corners (accent-coloured squares with a white edge, with resize cursors). Dragging any corner resizes the photo keeping its aspect ratio, within 40–4000 px wide, and the width box in the photo controls stays in sync. The handles sit on the photo's corners at any border size.
 - Border from 0 px to 10 px; default 0 (no border).
