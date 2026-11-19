@@ -138,6 +138,7 @@ test.describe('paste as plain text', () => {
     expect(fromJot.html).toMatch(/data-pm-slice/); // really Jot's own rich copy
     await body(page).getByText('plain target').click({ delay: 60 });
     await page.keyboard.press('End');
+    await page.waitForTimeout(150); // ProseMirror reads a keyboard-moved cursor just after the key
     await paste(page, fromJot);
 
     // Copy a table cell's text, paste it into the bold paragraph: it becomes bold like typing would.
@@ -149,6 +150,7 @@ test.describe('paste as plain text', () => {
     expect(cell.html).toMatch(/<strong>CELLTWO<\/strong>/); // copied with its bold
     await body(page).getByText('BOLDTARGET').click({ delay: 60 });
     await page.keyboard.press('End');
+    await page.waitForTimeout(150); // ProseMirror reads a keyboard-moved cursor just after the key
     await paste(page, cell);
     await waitSaved(page);
 

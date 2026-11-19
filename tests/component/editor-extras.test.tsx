@@ -140,6 +140,11 @@ describe('links', () => {
       expect(ev.defaultPrevented).toBe(true);
       expect(editor.state.selection.toJSON()).toEqual(before);
     }
+    // The same on ordinary text.
+    const onText = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ctrlKey: true });
+    editor.view.dom.querySelector('p')!.dispatchEvent(onText);
+    expect(onText.defaultPrevented).toBe(true);
+    expect(editor.state.selection.toJSON()).toEqual(before);
     // A plain mousedown is left to ProseMirror (it places the cursor).
     const plain = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
     linkIn(editor).dispatchEvent(plain);

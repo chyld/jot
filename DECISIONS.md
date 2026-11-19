@@ -153,15 +153,19 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
     read-only note, means `window.open(href, '_blank', 'noopener,noreferrer')`.
   - The browser's own navigation is always prevented, so a plain click in an editable
     note only places the cursor.
-  - Ctrl/Cmd+mousedown on a link is also taken by the extension (owner bug report).
+  - Every Ctrl/Cmd+mousedown inside a note is taken by the extension (owner bug report,
+    first for links, then for all text).
     - ProseMirror treats a modifier click as "select the enclosing node". It used to
       node-select the whole paragraph, list item, cell, heading or quote, and the next
       keystroke replaced it.
     - Taking the mousedown (and preventing its default) means ProseMirror never sees it,
       so the selection stays exactly as it was and the editor's focus is unchanged.
-    - Ctrl+click on ordinary text still does ProseMirror's default (selects the
-      paragraph), as it did before links could be opened. Ctrl+click on a photo selects
-      nothing.
+    - So Ctrl/Cmd+click on ordinary text also leaves the selection unchanged; it no longer
+      selects the paragraph.
+    - Ctrl/Cmd+click on a photo no longer selects it (a plain click still does, with its
+      controls and handles).
+    - Keyboard shortcuts (Ctrl/Cmd+A, C, V, …) are untouched: this is only about mouse
+      buttons.
   - Only http(s) and mailto open (the server's sanitiser keeps no others).
   - The "Ctrl+click to open" hint is the link's tooltip, drawn when the link is shown
     and not stored with it. It uses Tiptap's Link, now a declared dependency

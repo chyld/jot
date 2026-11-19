@@ -107,21 +107,51 @@ for (const [where, wrap] of PLACES) {
   });
 }
 
-test('Ctrl+click on ordinary text and on a photo: what it does (unchanged by the link handling)', async ({ page }) => {
+const TEXT_PLACES: Array<[string, unknown, string]> = [
+  ['a paragraph', para(t('plain words here')), 'plain words here'],
+  ['a heading', { type: 'heading', attrs: { level: 2 }, content: [t('plain heading words')] }, 'plain heading words'],
+  ['a list item', { type: 'bulletList', content: [{ type: 'listItem', content: [para(t('plain item words'))] }] }, 'plain item words'],
+  ['a table cell', { type: 'table', content: [{ type: 'tableRow', content: [{ type: 'tableCell', content: [para(t('plain cell words'))] }, { type: 'tableCell', content: [para(t('other cell'))] }] }] }, 'plain cell words'],
+  ['a block quote', { type: 'blockquote', content: [para(t('plain quote words'))] }, 'plain quote words'],
+];
+
+for (const [where, block, words] of TEXT_PLACES) {
+  test(`Ctrl+click on ordinary text in ${where} never selects the block; typing afterwards replaces nothing`, async ({ page }) => {
+    await login(page, 'alice');
+    await open(page, { type: 'doc', content: [FIRST, block, para(t('last paragraph'))] });
+    const before = texts(await saved(page));
+    await body(page).getByText('first paragraph stays').click({ delay: 60 });
+    await page.keyboard.press('End');
+    await page.waitForTimeout(150);
+    const sel = await selectionState(page);
+    let tabs = 0;
+    page.context().on('page', () => tabs++);
+    await body(page).getByText(words, { exact: true }).click({ modifiers: ['Control'] });
+    await page.waitForTimeout(200);
+    expect(await selectionState(page)).toEqual(sel);
+    expect(sel.selectedNodes).toBe(0);
+    await page.keyboard.type('Q');
+    await waitSaved(page);
+    expect(texts(await saved(page))).toEqual(['first paragraph staysQ', ...before.slice(1)]);
+    expect(tabs).toBe(0);
+  });
+}
+
+test('photos: a plain click still selects one (controls and handles); Ctrl+click selects nothing; keyboard shortcuts still work', async ({ page }) => {
   await login(page, 'alice');
   const up = await page.request.post('/api/photos', { multipart: { file: { name: 'p.png', mimeType: 'image/png', buffer: makePng(200, 150) } } });
   const src = (await up.json()).photo.url;
   await open(page, { type: 'doc', content: [FIRST, para(t('plain words here')), { type: 'image', attrs: { src } }] });
-  let tabs = 0;
-  page.context().on('page', () => tabs++);
-  await body(page).getByText('plain words here').click({ modifiers: ['Control'] });
-  await page.waitForTimeout(300);
-  const onText = await selectionState(page);
   await body(page).locator('.jot-photo img').click({ modifiers: ['Control'] });
-  await page.waitForTimeout(300);
-  const onPhoto = await selectionState(page);
-  test.info().annotations.push({ type: 'ctrl+click on text', description: JSON.stringify(onText) });
-  test.info().annotations.push({ type: 'ctrl+click on photo', description: JSON.stringify(onPhoto) });
-  console.log('CTRL-CLICK TEXT', JSON.stringify(onText), 'PHOTO', JSON.stringify(onPhoto));
-  expect(tabs).toBe(0); // no tab opens for anything but a link
+  await page.waitForTimeout(200);
+  await expect(page.getByRole('toolbar', { name: 'Photo' })).toHaveCount(0);
+  await body(page).locator('.jot-photo img').click();
+  await expect(page.getByRole('toolbar', { name: 'Photo' })).toBeVisible();
+  await expect(body(page).locator('.jot-photo-handle')).toHaveCount(4);
+  // Ctrl+A selects everything, as before.
+  await body(page).getByText('plain words here').click({ delay: 60 });
+  await page.keyboard.press('Control+A');
+  await page.waitForTimeout(150);
+  expect((await selectionState(page)).text).toContain('first paragraph stays');
+  expect((await selectionState(page)).text).toContain('plain words here');
 });

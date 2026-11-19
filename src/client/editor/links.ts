@@ -1,4 +1,4 @@
-// Opening links in a note. Ctrl+click (Cmd+click on a Mac) opens the link in a new tab;
+// Opening links in a note, and keeping Ctrl/Cmd+clicks from selecting whole blocks. Ctrl+click (Cmd+click on a Mac) opens the link in a new tab;
 // a plain click places the cursor so the link text can be edited. In a read-only note
 // (nothing to edit) a plain click opens it. Only http, https and mailto links open (the
 // server's sanitiser keeps no others).
@@ -14,12 +14,12 @@ export const LinkOpener = Extension.create({
       new Plugin({
         props: {
           handleDOMEvents: {
-            // Ctrl/Cmd+mousedown on a link is ours: ProseMirror would select the whole
-            // paragraph (its modifier-click node selection), and the next keystroke would
-            // replace it. Taking the event here leaves the selection exactly as it was.
-            mousedown(view, event) {
-              const a = (event.target as Element | null)?.closest?.('a[href]');
-              if (!a || !view.dom.contains(a) || event.button !== 0 || !(event.ctrlKey || event.metaKey)) return false;
+            // Every Ctrl/Cmd+mousedown in a note is ours: ProseMirror would select the whole
+            // enclosing block (its modifier-click node selection: a paragraph, heading, list
+            // item, cell or quote), and the next keystroke would replace it. Taking the event
+            // here leaves the selection exactly as it was; on a link, the click then opens it.
+            mousedown(_view, event) {
+              if (event.button !== 0 || !(event.ctrlKey || event.metaKey)) return false;
               event.preventDefault();
               return true;
             },
