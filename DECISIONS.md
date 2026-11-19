@@ -139,6 +139,59 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 
 ## Editor and styles
 
+- **Clear formatting** is one Tiptap chain, so one transaction and one undo step.
+  - With nothing selected it first selects the current paragraph, and puts the cursor
+    back where it was afterwards.
+  - Tiptap's `clearNodes` turns headings, list items, task items, quotes and code blocks
+    into paragraphs. It cannot lift anything out of a table cell, so tables stay. Photos
+    are untouched.
+  - It then unsets textStyle (font, size, colour), highlight, bold, italic, underline,
+    strikethrough and inline code, but not links, and empties the "next typed" marks.
+  - It is disabled on read-only notes with the rest of the toolbar.
+- **Links**
+  - A small extension handles clicks on links inside the editor: Ctrl or Cmd, or a
+    read-only note, means `window.open(href, '_blank', 'noopener,noreferrer')`.
+  - The browser's own navigation is always prevented, so a plain click in an editable
+    note only places the cursor.
+  - Ctrl/Cmd+mousedown on a link is also taken by the extension (owner bug report).
+    - ProseMirror treats a modifier click as "select the enclosing node". It used to
+      node-select the whole paragraph, list item, cell, heading or quote, and the next
+      keystroke replaced it.
+    - Taking the mousedown (and preventing its default) means ProseMirror never sees it,
+      so the selection stays exactly as it was and the editor's focus is unchanged.
+    - Ctrl+click on ordinary text still does ProseMirror's default (selects the
+      paragraph), as it did before links could be opened. Ctrl+click on a photo selects
+      nothing.
+  - Only http(s) and mailto open (the server's sanitiser keeps no others).
+  - The "Ctrl+click to open" hint is the link's tooltip, drawn when the link is shown
+    and not stored with it. It uses Tiptap's Link, now a declared dependency
+    (`@tiptap/extension-link` 3.34.0, the version StarterKit already used), extended only
+    to add that tooltip.
+  - Typed web addresses become links through Tiptap's autolink on typing. Pasting stays
+    plain, since paste rules and link-on-paste are off.
+- **Writing area**
+  - The writing area has no maximum width, so it spans the window beside the left bar.
+  - The right margin marker sits outside the editor in a non-scrolling wrapper, so it
+    never moves, can't be selected, takes no clicks and is not printed. The text box's
+    right padding (the gutter, 56 px) is exactly the marker's distance from the right
+    edge, so text wraps at the line.
+  - Very long words also wrap there, rather than running past it.
+- **Scrollbars:** `::-webkit-scrollbar { width: 0 }` on every element hides vertical
+  scrollbars in Chromium and Safari and leaves horizontal ones (for example a wide table)
+  alone. Firefox has no per-axis setting, so there `scrollbar-width: none` hides both.
+  Scrolling is unaffected.
+- **Show invisibles**
+  - It is a ProseMirror decoration plugin: spaces and tabs are wrapped in spans, and line
+    breaks and paragraph ends get empty widgets. The glyphs (·, →, ↵, ¶) are drawn by CSS
+    `::after`, so they are not even text in the page.
+  - The note's JSON, the clipboard (copied from the document model), search and backups
+    never see them.
+  - The setting is stored in `localStorage` (`jot.showInvisibles`).
+  - It stays enabled on read-only notes through a per-button "always enabled" exception
+    to the disabled toolbar.
+  - Tiptap 3 keeps an empty paragraph after a final heading, so that paragraph shows a ¶
+    too.
+
 - **A new note opens ready to type.** Both New buttons create the note through one function, which
   marks the new note's id in a set kept in the page's memory. When the editor has loaded
   that note, it takes the mark (once) and puts the caret at the end of the body

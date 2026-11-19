@@ -92,13 +92,19 @@ The toolbar matches the screenshots, left to right:
 1. **Styles** dropdown: the user's styles previewed in their own look, then "Save selection as style…" and "Manage styles…"
 2. **Font** dropdown: the user's active (non-archived) fonts previewed in their own typeface, then "Browse fonts…"
 3. **Font size:** minus, number box, plus
-4. **Text colour** and **highlight colour**: colour swatches only, with no colour names as visible text (each swatch keeps an accessible label)
+4. **Text colour** and **highlight colour**: colour swatches only, with no colour names as visible text (each swatch keeps an accessible label); then **Clear formatting** (tooltip "Clear formatting"): with text selected it removes all formatting from the selection (font, size, text colour, highlight, bold, italic, underline, strikethrough, inline code) and turns headings, list items and block quotes in it back into normal paragraphs, keeping the text, links, tables and photos; with nothing selected it does the same to the current paragraph. Either way what is typed next is plain (the toolbar shows no style, Inter, 16). One undo step
 5. **Bold, italic, underline, strikethrough, inline code, link**
 6. **Heading** dropdown: Normal text, Heading 1, Heading 2, Heading 3
 7. **List** dropdown: Bullet list, Numbered list, Task list
 8. **Insert** dropdown: Horizontal line, Block quote, Table, Image
-9. **Undo** and **redo**
+9. **Undo** and **redo**, then **Show spaces, tabs and line ends** (a toggle): a muted dot for each space, an arrow for each tab, a return mark at a line break and ¶ at the end of each paragraph. Display only: nothing is added to the note, saved, copied, searched or backed up. Remembered per browser, and enabled on read-only notes too (it changes nothing)
 10. **Read-only** toggle (a lock): makes the note read-only after an in-page confirmation (section 3)
+
+The writing area uses the full width of the window beside the left bar. A right margin marker shows where lines wrap: a faint 1 px vertical line (#b4c88c) down the full height of the writing area at the right edge of the text, topped by a small downward-pointing accent-green (#4d7c0f) triangle just under the toolbar, with a gutter to its right. Text wraps exactly at the line. The marker stays put while the note scrolls and is never part of the note.
+
+Links: Ctrl+click (Cmd+click on a Mac) opens a link in a new tab (noopener, noreferrer); a plain click places the cursor so the link text can be edited, and the link shows the hint "Ctrl+click to open". In a read-only note a plain click opens it. A web address typed into a note (https://… followed by a space or Enter) becomes a link; links made with the link button behave the same. Only http, https and mailto links.
+
+No vertical scrollbar is drawn anywhere in Jot (pages, the editor, lists, menus, dialogs); scrolling with the wheel, trackpad, touch and keyboard still works.
 
 Shown only when relevant:
 

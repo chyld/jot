@@ -53,10 +53,15 @@ describe('read-only toggle', () => {
     expect(onMakeReadOnly).toHaveBeenCalledTimes(1);
   });
 
-  it('on a read-only note: every toolbar control is disabled and the toggle cannot turn it off', async () => {
+  it('on a read-only note: every toolbar control but Show invisibles is disabled and the toggle cannot turn it off', async () => {
     const { toolbar, onMakeReadOnly } = renderToolbar(true);
     const buttons = within(toolbar).getAllByRole('button');
-    for (const b of buttons) expect((b as HTMLButtonElement).disabled, b.getAttribute('aria-label') ?? b.textContent ?? '').toBe(true);
+    // Everything is off except showing invisible characters, which changes nothing.
+    for (const b of buttons) {
+      const label = b.getAttribute('aria-label') ?? b.textContent ?? '';
+      expect((b as HTMLButtonElement).disabled, label).toBe(label !== 'Show spaces, tabs and line ends');
+    }
+    expect(within(toolbar).getByRole('button', { name: 'Clear formatting' })).toBeTruthy();
     expect((within(toolbar).getByRole('textbox', { name: 'Font size' }) as HTMLInputElement).disabled).toBe(true);
     const lock = within(toolbar).getByRole('button', { name: 'Read-only' });
     expect(lock.getAttribute('aria-pressed')).toBe('true');

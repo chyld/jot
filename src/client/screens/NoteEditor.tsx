@@ -260,8 +260,15 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           onMakeReadOnly={makeReadOnly}
         />
       )}
-      <div className="note-scroll">
-        <EditorContent editor={editor} className="note-content" />
+      <div className="note-page">
+        <div className="note-scroll">
+          <EditorContent editor={editor} className="note-content" />
+        </div>
+        {/* The right margin: where lines wrap. Outside the editor, so never part of the note. */}
+        <div className="wrap-marker" data-testid="wrap-marker" aria-hidden="true">
+          <span className="wrap-marker-line" />
+          <span className="wrap-marker-triangle" />
+        </div>
       </div>
       {styleDraft && (
         <StyleDialog

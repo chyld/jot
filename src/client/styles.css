@@ -135,8 +135,14 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 .save-status.status-error { color: var(--danger); }
 .banner { display: flex; align-items: center; gap: 12px; padding: 8px 20px; background: var(--subtle); border-bottom: 1px solid var(--border); font-size: 14px; }
 .banner-error { background: var(--surface); border-color: var(--danger); color: var(--danger); }
+.note-page { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; --wrap-gutter: 56px; }
 .note-scroll { flex: 1; overflow: auto; }
-.note-content { padding: 28px 32px 80px; max-width: 980px; }
+/* The full width beside the left bar; text wraps at the right margin marker, with a gutter beyond it. */
+.note-content { padding: 28px var(--wrap-gutter) 80px 32px; }
+.wrap-marker { position: absolute; top: 0; bottom: 0; right: var(--wrap-gutter); width: 0; pointer-events: none; user-select: none; z-index: 2; }
+.wrap-marker-line { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: #b4c88c; }
+.wrap-marker-triangle { position: absolute; top: 0; left: 0.5px; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #4d7c0f; }
+@media print { .wrap-marker { display: none; } }
 
 /* tag input */
 .tag-input { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; }
@@ -354,3 +360,18 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .readonly-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--danger); color: var(--danger); font-size: 14px; }
 .readonly-confirm > span { flex: 1 1 360px; }
 .note-card-lock { color: var(--accent-dark); display: inline-flex; align-self: center; }
+
+/* No vertical scrollbars anywhere; scrolling by wheel, trackpad, touch and keyboard still works. */
+*::-webkit-scrollbar { width: 0; background: transparent; }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: none; } /* Firefox has no per-axis setting */
+}
+.note-body { overflow-wrap: anywhere; }
+
+/* Invisible characters (display only: drawn by CSS, never part of the note). */
+.inv-space, .inv-tab { position: relative; }
+.inv-space::after, .inv-tab::after, .inv-para::after, .inv-break::after { color: #9aa58a; pointer-events: none; user-select: none; font-family: Inter, system-ui, sans-serif; font-weight: 400; font-style: normal; }
+.inv-space::after { content: '·'; position: absolute; left: 50%; transform: translateX(-50%); }
+.inv-tab::after { content: '→'; position: absolute; left: 0; }
+.inv-para::after { content: '¶'; }
+.inv-break::after { content: '↵'; }

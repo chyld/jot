@@ -76,9 +76,11 @@ export function ToolButton(props: {
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
+  /** Stays enabled on a read-only note (it changes nothing). */
+  alwaysEnabled?: boolean;
   children: ReactNode;
 }) {
-  const off = useContext(ToolbarDisabled);
+  const off = useContext(ToolbarDisabled) && !props.alwaysEnabled;
   return (
     <button
       type="button"

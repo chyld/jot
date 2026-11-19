@@ -30,12 +30,15 @@ import {
   SeparatorHorizontal,
   Lock,
   LockOpen,
+  RemoveFormatting,
 } from 'lucide-react';
 import { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, MAX_FONT_SIZE, MIN_FONT_SIZE } from '../../shared/constants';
 import { findPalette, PALETTE } from '../../shared/palette';
 import type { Style } from '../../shared/styles';
 import type { Font } from '../../shared/types';
 import { Dropdown, MenuItem, ToolButton, ToolbarDisabled } from '../components/Dropdown';
+import { clearFormatting } from './clear';
+import { invisiblesOn, setInvisibles } from './invisibles';
 import { currentFormat, matchingStyle, quoteFamily, applyStyle, type CurrentFormat } from './stamp';
 import { PhotoControls } from './PhotoControls';
 import { TableControls } from './TableControls';
@@ -603,6 +606,16 @@ export interface ToolbarProps {
   onMakeReadOnly?: () => Promise<void> | void;
 }
 
+/** Shows spaces, tabs and line ends. It changes nothing, so it stays enabled on read-only notes. */
+function InvisiblesToggle(props: { editor: Editor }) {
+  const on = useEditorState({ editor: props.editor, selector: ({ editor }) => invisiblesOn(editor) }) as boolean;
+  return (
+    <ToolButton label="Show spaces, tabs and line ends" active={on} alwaysEnabled onClick={() => setInvisibles(props.editor, !on)}>
+      <Pilcrow size={ICON} />
+    </ToolButton>
+  );
+}
+
 /** The lock at the end of the toolbar. Turning it on asks once more; the web app cannot turn it off. */
 function ReadOnlyToggle(props: { readOnly: boolean; onRequest: () => void }) {
   return (
@@ -672,6 +685,9 @@ export function Toolbar(props: ToolbarProps) {
         <div className="tb-group">
           <TextColorDropdown editor={editor} />
           <HighlightDropdown editor={editor} />
+          <ToolButton label="Clear formatting" onClick={() => clearFormatting(editor)}>
+            <RemoveFormatting size={ICON} />
+          </ToolButton>
         </div>
         <span className="tb-sep" />
         <MarkButtons editor={editor} />
@@ -683,6 +699,8 @@ export function Toolbar(props: ToolbarProps) {
         </div>
         <span className="tb-sep" />
         <UndoRedo editor={editor} />
+        <span className="tb-sep" />
+        <InvisiblesToggle editor={editor} />
         {props.onMakeReadOnly && (
           <>
             <span className="tb-sep" />
