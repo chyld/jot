@@ -1,0 +1,11 @@
+data/
+data-*/
+node_modules/
+dist/
+.test-data/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+
+# Screenshots of the owner's browser used as a design reference; kept local
+reference-screenshots/

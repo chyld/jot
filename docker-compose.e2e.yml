@@ -1,0 +1,22 @@
+# Override used by tests/e2e.sh: the real app container, not published on the host
+# (so it can run next to your own Jot on 9003), plus a Playwright runner.
+services:
+  app:
+    ports: !reset []
+    networks:
+      default:
+        # Not "app": Chrome forces HTTPS for the HSTS-preloaded .app domain.
+        aliases: [jot-app]
+  e2e:
+    build:
+      context: ./e2e
+    image: jot-e2e:latest
+    user: "${JOT_UID:-1000}:${JOT_GID:-1000}"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://jot-app:9003
+      E2E_PASSWORD: ${E2E_PASSWORD:-e2e password 1}
+    volumes:
+      - ./e2e/test-results:/e2e/test-results

@@ -1,0 +1,394 @@
+// Personal backup and restore (backup-spec.md §3.1): back up and download, restore from
+// a file after a summary and typing RESTORE, and the safety backups Jot took before
+// each restore.
+import { useEffect, useState } from 'react';
+import { Check, Copy, Download, RotateCcw, ShieldCheck, Terminal, Trash2, Upload } from 'lucide-react';
+import type { BackupInfo, RestoreSummary, SafetyBackup } from '../../shared/types';
+import { api } from '../api';
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+export function formatBytes(n: number): string {
+  if (n < 1024) return plural(n, 'byte');
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let v = n / 1024;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(1)} ${units[i]}`;
+}
+
+const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+
+function startDownload(href: string, name: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = name;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function MissingList(props: { missing: BackupInfo['missing']; intro: string }) {
+  if (props.missing.length === 0) return null;
+  return (
+    <div className="backup-warning">
+      <p>{props.intro}</p>
+      <ul>
+        {props.missing.map((m) => (
+          <li key={m.name}>{m.what}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function BackUpSection() {
+  const [busy, setBusy] = useState(false);
+  const [made, setMade] = useState<BackupInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const backUp = async () => {
+    setBusy(true);
+    setError(null);
+    setMade(null);
+    try {
+      const { backup } = await api.makeBackup();
+      setMade(backup);
+      startDownload(api.backupUrl(backup.id), backup.name);
+    } catch (err) {
+      setError(errorText(err, 'The backup failed.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="card backup-section" aria-labelledby="backup-make">
+      <h2 id="backup-make">Back up my data</h2>
+      <p className="muted">Downloads one file with all your notes (including the trash), tags, photos, fonts and styles.</p>
+      <div>
+        <button type="button" className="btn btn-primary" onClick={() => void backUp()} disabled={busy}>
+          <Download size={16} /> Back up my data
+        </button>
+      </div>
+      {busy && <p className="muted" role="status">Making the backup…</p>}
+      {made && (
+        <p role="status">
+          Downloading <strong>{made.name}</strong> ({formatBytes(made.size)}): {plural(made.counts.notes, 'note')}, {plural(made.counts.photos, 'photo')},{' '}
+          {plural(made.counts.fonts, 'font')}, {plural(made.counts.styles, 'style')}.
+        </p>
+      )}
+      {made && <MissingList missing={made.missing} intro="These were already lost before this backup was made, so they are not in it:" />}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function RestoreSection(props: { onRestored: () => void; onSafetyChange: () => void }) {
+  const [phase, setPhase] = useState<'idle' | 'checking' | 'ready' | 'restoring'>('idle');
+  const [staged, setStaged] = useState<{ id: string; summary: RestoreSummary } | null>(null);
+  const [typed, setTyped] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [inputKey, setInputKey] = useState(0);
+
+  const reset = () => {
+    setStaged(null);
+    setTyped('');
+    setPhase('idle');
+    setInputKey((k) => k + 1);
+  };
+  const choose = async (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    setStaged(null);
+    setPhase('checking');
+    try {
+      const { restore } = await api.stageRestore(file);
+      setStaged(restore);
+      setPhase('ready');
+    } catch (err) {
+      setError(errorText(err, 'This file could not be checked.'));
+      reset();
+    }
+  };
+  const cancel = async () => {
+    if (staged) await api.cancelRestore(staged.id).catch(() => {});
+    reset();
+  };
+  const restore = async () => {
+    if (!staged || typed !== 'RESTORE') return;
+    setPhase('restoring');
+    setError(null);
+    try {
+      await api.confirmRestore(staged.id);
+      props.onRestored();
+    } catch (err) {
+      setError(errorText(err, 'The restore failed. Your data was not changed.'));
+      props.onSafetyChange();
+      reset();
+    }
+  };
+
+  const s = staged?.summary;
+  return (
+    <section className="card backup-section" aria-labelledby="backup-restore">
+      <h2 id="backup-restore">Restore from a backup</h2>
+      <p className="muted">
+        A restore replaces all your notes, tags, photos, fonts and styles with the ones in the backup. Jot first takes a safety backup of what
+        you have now.
+      </p>
+      <label className="file-pick">
+        <span className="btn">
+          <Upload size={16} /> Backup file
+        </span>
+        <input
+          key={inputKey}
+          type="file"
+          accept=".tar,application/x-tar"
+          disabled={phase === 'checking' || phase === 'restoring'}
+          onChange={(e) => void choose(e.currentTarget.files?.[0])}
+        />
+      </label>
+      {phase === 'checking' && (
+        <p className="muted" role="status">
+          Checking the backup…
+        </p>
+      )}
+      {s && (
+        <div className="restore-summary">
+          <p>
+            This backup was made on <strong>{when(s.createdAt)}</strong>. It holds:
+          </p>
+          <ul className="restore-counts">
+            <li>{plural(s.counts.notes, 'note')}</li>
+            <li>{plural(s.counts.photos, 'photo')}</li>
+            <li>{plural(s.counts.fonts, 'font')}</li>
+            <li>{plural(s.counts.styles, 'style')}</li>
+          </ul>
+          {s.adjustedNotes > 0 && (
+            <p>
+              {s.adjustedNotes === 1 ? '1 note will be adjusted' : `${s.adjustedNotes} notes will be adjusted`}: content Jot does not allow (such as
+              scripts) is removed.
+            </p>
+          )}
+          <MissingList missing={s.missing} intro="These files were already missing when the backup was made; they come back without their file:" />
+          <p className="restore-warning">
+            Restoring replaces everything you have now. Links to individual notes stop working, because every note gets a new address.
+          </p>
+          <label className="restore-confirm">
+            Type RESTORE to confirm
+            <input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} disabled={phase === 'restoring'} />
+          </label>
+          <div className="card-actions">
+            <button type="button" className="btn btn-danger" disabled={typed !== 'RESTORE' || phase === 'restoring'} onClick={() => void restore()}>
+              <RotateCcw size={16} /> Restore
+            </button>
+            <button type="button" className="btn" disabled={phase === 'restoring'} onClick={() => void cancel()}>
+              Cancel
+            </button>
+          </div>
+          {phase === 'restoring' && (
+            <p className="muted" role="status">
+              Restoring… keep this tab open.
+            </p>
+          )}
+        </div>
+      )}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function SafetyItem(props: { backup: SafetyBackup; onDelete: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const b = props.backup;
+  return (
+    <li className="card safety-item">
+      <div className="safety-text">
+        <strong>Before the restore on {when(b.createdAt)}</strong>
+        <span className="muted small">
+          {b.name} · {formatBytes(b.size)}
+        </span>
+      </div>
+      <div className="card-actions">
+        <a className="btn btn-sm" href={api.safetyBackupUrl(b.name)} download={b.name}>
+          <Download size={14} /> Download
+        </a>
+        {confirming ? (
+          <>
+            <button type="button" className="btn btn-sm btn-danger" onClick={props.onDelete}>
+              Confirm: delete
+            </button>
+            <button type="button" className="btn btn-sm" onClick={() => setConfirming(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn btn-sm" onClick={() => setConfirming(true)}>
+            <Trash2 size={14} /> Delete
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function SafetySection(props: { version: number }) {
+  const [list, setList] = useState<SafetyBackup[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = () =>
+    api.safetyBackups().then(
+      (r) => setList(r.backups),
+      () => setList([]),
+    );
+  useEffect(() => {
+    void load();
+  }, [props.version]);
+  return (
+    <section className="card backup-section" aria-labelledby="backup-safety">
+      <h2 id="backup-safety">
+        <ShieldCheck size={18} /> Safety backups
+      </h2>
+      <p className="muted">Jot takes one automatically before each restore. Jot never deletes them; you can.</p>
+      {list?.length === 0 && <p className="muted">No safety backups yet.</p>}
+      {list && list.length > 0 && (
+        <ul className="safety-list">
+          {list.map((b) => (
+            <SafetyItem
+              key={b.name}
+              backup={b}
+              onDelete={async () => {
+                setError(null);
+                try {
+                  await api.deleteSafetyBackup(b.name);
+                } catch (err) {
+                  setError(errorText(err, 'Could not delete it.'));
+                }
+                await load();
+              }}
+            />
+          ))}
+        </ul>
+      )}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** A command in a copyable monospace block. */
+function Command(props: { children: string }) {
+  const [copied, setCopied] = useState<'yes' | 'no' | null>(null);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(props.children);
+      setCopied('yes');
+    } catch {
+      setCopied('no'); // e.g. no clipboard access over plain http: the text can still be selected
+    }
+    setTimeout(() => setCopied(null), 2000);
+  };
+  return (
+    <div className="cli-command">
+      <code>{props.children}</code>
+      <button type="button" className="btn btn-sm cli-copy" aria-label={`Copy: ${props.children}`} title="Copy" onClick={() => void copy()}>
+        {copied === 'yes' ? <Check size={14} /> : <Copy size={14} />} {copied === 'yes' ? 'Copied' : copied === 'no' ? 'Select and copy' : 'Copy'}
+      </button>
+    </div>
+  );
+}
+
+/** The full system backup is done with the CLI on the server; this only explains how (backup-spec.md §4). */
+export const SYSTEM_COMMANDS = {
+  backup: 'docker compose exec app jot backup',
+  verify: 'docker compose exec app jot verify /data/backups/jot-backup-YYYYMMDD-HHMMSS.tar',
+  restore: [
+    'docker compose stop app',
+    'mv data data-old',
+    'mkdir -p data/backups',
+    'cp data-old/backups/jot-backup-YYYYMMDD-HHMMSS.tar data/backups/',
+    'docker compose run --rm app jot restore /data/backups/jot-backup-YYYYMMDD-HHMMSS.tar',
+    'docker compose up -d',
+  ],
+};
+
+function SystemBackupSection() {
+  const c = SYSTEM_COMMANDS;
+  return (
+    <section className="card backup-section system-backup" aria-labelledby="backup-system">
+      <h2 id="backup-system">
+        <Terminal size={18} /> Full system backup (command line)
+      </h2>
+      <p>
+        A full system backup holds every user’s data plus the accounts. It is run on the server by whoever manages Jot, and cannot be done from
+        the web app.
+      </p>
+      <p className="muted">
+        Run these in the folder that holds Jot’s <code>docker-compose.yml</code>. Replace <code>jot-backup-YYYYMMDD-HHMMSS.tar</code> with the
+        file name <code>jot backup</code> printed.
+      </p>
+      <ol className="cli-steps">
+        <li>
+          <strong>Back up.</strong>
+          <Command>{c.backup}</Command>
+          <p className="muted">
+            The file lands in <code>data/backups</code> (inside the container: <code>/data/backups</code>), with a <code>.sha256</code> file beside it.
+            A backup left in <code>data/backups</code> is on the same disk as the data, so copy it to another disk. Or write it there directly with{' '}
+            <code>--out &lt;folder&gt;</code>, where the folder is a path inside the container that is mounted from the other disk.
+          </p>
+        </li>
+        <li>
+          <strong>Check a backup.</strong>
+          <Command>{c.verify}</Command>
+          <p className="muted">
+            Give the path as the container sees it: <code>/data/backups/…</code>. It changes nothing.
+          </p>
+        </li>
+        <li>
+          <strong>Restore the whole system.</strong> Stop the app, move the old data folder aside, create an empty one with the backup file in its{' '}
+          <code>backups</code> folder (where the container can read it), restore, and start the app:
+          <Command>{c.restore[0]}</Command>
+          <Command>{c.restore[1]}</Command>
+          <Command>{c.restore[2]}</Command>
+          <Command>{c.restore[3]}</Command>
+          <Command>{c.restore[4]}</Command>
+          <Command>{c.restore[5]}</Command>
+          <p className="muted">
+            Everyone signs in again afterwards. The old data stays untouched in <code>data-old</code> until you delete it.
+          </p>
+        </li>
+      </ol>
+    </section>
+  );
+}
+
+export function BackupScreen(props: { onRestored?: () => void }) {
+  const [safetyVersion, setSafetyVersion] = useState(0);
+  // After a restore the whole app reloads: every note has a new address.
+  const onRestored = props.onRestored ?? (() => window.location.assign('/'));
+  return (
+    <div className="screen backup-screen">
+      <div className="screen-head">
+        <h1>Backup</h1>
+      </div>
+      <BackUpSection />
+      <RestoreSection onRestored={onRestored} onSafetyChange={() => setSafetyVersion((v) => v + 1)} />
+      <SafetySection version={safetyVersion} />
+      <SystemBackupSection />
+    </div>
+  );
+}

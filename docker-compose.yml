@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    image: jot:latest
+    # Run as the host user so files in ./data are not owned by root.
+    # Override with JOT_UID / JOT_GID if your host user is not 1000:1000.
+    user: "${JOT_UID:-1000}:${JOT_GID:-1000}"
+    ports:
+      - "9003:9003"
+    volumes:
+      # Bind mount (not a Docker volume). JOT_DATA_PATH is only overridden by the test scripts.
+      - ${JOT_DATA_PATH:-./data}:/data
+    environment:
+      PORT: "9003"
+      DATA_DIR: /data
+    restart: unless-stopped
+
+  # Test runner for test types 1-7 (vitest). Usage: ./test.sh
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: dev
+    image: jot-dev:latest
+    user: "${JOT_UID:-1000}:${JOT_GID:-1000}"
+    environment:
+      HOME: /tmp
+      DATA_DIR: /tmp/jot-data

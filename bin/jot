@@ -1,0 +1,3 @@
+#!/bin/sh
+# Jot user administration CLI. Run with: docker compose exec app jot <command>
+exec node --import tsx /app/src/cli/main.ts "$@"
