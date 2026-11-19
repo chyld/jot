@@ -1,5 +1,6 @@
 // The "User manual": a read-only note every account has (new accounts get it with the
-// starter pack; existing accounts got it once, from the schema version 3 migration).
+// starter pack; existing accounts got it once, from the schema version 3 migration, and
+// its text was brought up to date once by the version 5 migration).
 // Its text uses the starter styles (stamped as plain formatting, as applying a style
 // does) and headings; each command is in a code block, exactly as it works.
 import { findPalette } from '../shared/palette';
@@ -37,17 +38,17 @@ export function manualDoc(): TiptapDoc {
       p('How to keep your notes safe, and how to get them back. This note is read-only, so it always stays as it is.'),
 
       h(2, 'Backing up your own data'),
-      p('Open Backup in the left bar and choose Back up my data. Jot makes one file, named jot-backup-<your name>-<date>.tar, and your browser downloads it.'),
+      p('Open Account in the left bar and choose Back up my data. Jot makes one file, named jot-backup-<your name>-<date>.tar, and your browser downloads it.'),
       p('The file holds all your notes (including the ones in the trash), their tags, your photos, your fonts and your styles. It does not hold your password, or anything of anyone else’s. Keep a copy somewhere safe, such as another disk.'),
       p('Good to know: after a restore every note gets a new address, so links or bookmarks to single notes stop working.', QUOTE),
 
       h(2, 'Restoring your own data'),
       steps(
-        'Open Backup in the left bar. Under Restore from a backup, choose Backup file and pick your backup file.',
+        'Open Account in the left bar. Under Restore from a backup, choose Backup file and pick your backup file.',
         'Read the summary: when the backup was made, and how many notes, photos, fonts and styles it holds.',
         'Type RESTORE in the box and choose Restore.',
       ),
-      p('A restore replaces everything you have now with what is in the backup. Before it does, Jot automatically takes a safety backup of your current data. You find it on the Backup screen under Safety backups, where you can download or delete it. Jot never deletes it for you.'),
+      p('A restore replaces everything you have now with what is in the backup. Before it does, Jot automatically takes a safety backup of your current data. You find it on the Account page under Safety backups, where you can download or delete it. Jot never deletes it for you.'),
 
       h(2, 'Full system backup (for whoever runs the server)'),
       p('A full system backup holds every user’s data plus the accounts. It is done on the server, not in the web app. Run these commands in the folder that holds Jot’s docker-compose.yml, and replace ' + FILE + ' with the file name jot backup printed.'),
@@ -73,6 +74,26 @@ export function manualDoc(): TiptapDoc {
       p('This manual is a read-only note too.', ASIDE),
     ],
   };
+}
+
+/**
+ * Replaces the text of every account's User manual note with the current one (schema
+ * version 5). The manual is the read-only note titled "User manual" tagged "manual";
+ * only its content, its plain text and its search-index text change.
+ */
+export function refreshManuals(db: DB) {
+  const doc = manualDoc();
+  const text = docText(doc);
+  const manuals = db
+    .prepare(
+      `SELECT n.id FROM notes n WHERE n.title = ? AND n.read_only = 1
+         AND EXISTS (SELECT 1 FROM note_tags nt JOIN tags t ON t.id = nt.tag_id WHERE nt.note_id = n.id AND t.name = ?)`,
+    )
+    .all(MANUAL_TITLE, MANUAL_TAG) as Array<{ id: string }>;
+  for (const { id } of manuals) {
+    db.prepare('UPDATE notes SET content = ?, body_text = ? WHERE id = ?').run(JSON.stringify(doc), text, id);
+    db.prepare('UPDATE notes_fts SET body = ? WHERE note_id = ?').run(text, id);
+  }
 }
 
 /** Gives a user the manual note (read-only, tagged "manual", in the search index). The caller runs this in a transaction. */

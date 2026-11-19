@@ -107,7 +107,7 @@ export async function readArchive(file: string, opts: ReadOptions): Promise<Arch
     if (m.format === 'jot-personal-backup' || m.format === 'jot-system-backup') {
       throw new BackupError(
         m.format === 'jot-personal-backup'
-          ? 'This is a personal backup. Restore it in the web app, on the Backup screen.'
+          ? 'This is a personal backup. Restore it in the web app, on the Account page.'
           : 'This is a full system backup, not a personal backup. It can only be restored with the jot restore command.',
       );
     }

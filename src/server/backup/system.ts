@@ -325,7 +325,7 @@ export async function restoreSystemBackup(dataDir: string, file: string, appUrls
     if ((await leftovers(dataDir)).length) throw new BackupError('The data folder is not empty.');
     // 2. Check the backup as verify does.
     const info = await verifyBackup(file);
-    if (info.kind !== 'system') throw new BackupError('This is a personal backup. Restore it in the web app, on the Backup screen.');
+    if (info.kind !== 'system') throw new BackupError('This is a personal backup. Restore it in the web app, on the Account page.');
 
     // 3. Extract into the data folder, every file created fresh, then force it all to disk.
     const extracted: string[] = [];

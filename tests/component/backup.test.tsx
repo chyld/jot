@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-// Type 7 (component): the Backup screen, the Backup item in the left bar, and unsaved
+// Type 7 (component): the Account page (with the backup and restore parts), the Account
+// item in the left bar, and unsaved
 // edits kept in the browser until the server confirms them (backup-spec.md §3.1, §5).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAutosave } from '../../src/client/autosave';
-import { BackupScreen } from '../../src/client/screens/BackupScreen';
+import { AccountScreen } from '../../src/client/screens/AccountScreen';
 import { Sidebar } from '../../src/client/components/Sidebar';
 import { DataProvider, useData } from '../../src/client/data';
 import { clearAllUnsaved, loadUnsaved, resumeUnsaved, storeUnsaved, unsavedKey } from '../../src/client/unsaved';
@@ -144,20 +145,31 @@ describe('unsaved edits', () => {
 });
 
 describe('left bar', () => {
-  it('has a Backup item above Trash', () => {
+  it('has an Account item above Trash', () => {
     handler = (url) => (url.includes('fonts') ? json({ fonts: [] }) : json({ styles: [] }));
     render(
       <DataProvider user={{ id: 'u', username: 'alice' }} onLogout={() => {}}>
-        <Sidebar path="/backup" />
+        <Sidebar path="/account" />
       </DataProvider>,
     );
     const labels = screen.getAllByRole('link').map((a) => a.getAttribute('aria-label'));
-    expect(labels).toEqual(['Jot home: all notes', 'Fonts', 'Styles', 'Backup', 'Trash']);
-    expect(screen.getByRole('link', { name: 'Backup' }).getAttribute('aria-current')).toBe('page');
+    expect(labels).toEqual(['Jot home: all notes', 'Fonts', 'Styles', 'Account', 'Trash']);
+    const account = screen.getByRole('link', { name: 'Account' });
+    expect(account.getAttribute('href')).toBe('/account');
+    expect(account.getAttribute('title')).toBe('Account');
+    expect(account.getAttribute('aria-current')).toBe('page');
   });
 });
 
-describe('Backup screen', () => {
+// The Account page, inside the app's data (it shows the logged-in user's name).
+const renderAccount = (props: { onRestored?: () => void } = {}) =>
+  render(
+    <DataProvider user={{ id: 'u1', username: 'alice' }} onLogout={() => {}}>
+      <AccountScreen {...props} />
+    </DataProvider>,
+  );
+
+describe('Account page', () => {
   const SUMMARY = {
     createdAt: '2026-11-17T08:30:00.000Z',
     counts: { notes: 3, photos: 2, fonts: 6, styles: 5 },
@@ -169,6 +181,8 @@ describe('Backup screen', () => {
     safety = [{ name: 'jot-safety-20261118-090503-0a1b2c3d.tar', size: 2048, createdAt: '2026-11-18T09:05:03.000Z' }];
     handler = (url, init) => {
       const m = init.method ?? 'GET';
+      if (url === '/api/fonts') return json({ fonts: [] });
+      if (url === '/api/styles') return json({ styles: [] });
       if (url === '/api/safety-backups' && m === 'GET') return json({ backups: safety });
       if (url.startsWith('/api/safety-backups/') && m === 'DELETE') {
         safety = [];
@@ -183,11 +197,13 @@ describe('Backup screen', () => {
     };
   });
 
-  it('has the three parts, and only those', async () => {
-    render(<BackupScreen />);
+  it('shows the username at the top, then the three backup parts, and only those', async () => {
+    renderAccount();
+    expect(screen.getByRole('heading', { name: 'Account', level: 1 })).toBeTruthy();
+    expect(screen.getByTestId('account-username').textContent).toBe('alice');
+    expect(document.body.textContent).not.toMatch(/password/i); // no account settings
     expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-labelledby'))).toEqual(['backup-make', 'backup-restore', 'backup-safety']);
     expect(document.body.textContent).not.toMatch(/full system backup|command line|docker compose/i);
-    expect(screen.getByRole('heading', { name: 'Backup' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Back up my data' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Restore from a backup' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Safety backups' })).toBeTruthy();
@@ -198,7 +214,7 @@ describe('Backup screen', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
       clicked.push(this.getAttribute('href')!);
     });
-    render(<BackupScreen />);
+    renderAccount();
     await userEvent.click(screen.getByRole('button', { name: 'Back up my data' }));
     await waitFor(() => expect(clicked).toEqual(['/api/backup/b1']));
     expect(screen.getByText(/jot-backup-alice-20261118-100000\.tar/)).toBeTruthy();
@@ -208,7 +224,7 @@ describe('Backup screen', () => {
 
   it('restores only after showing the summary and RESTORE is typed', async () => {
     const onRestored = vi.fn();
-    render(<BackupScreen onRestored={onRestored} />);
+    renderAccount({ onRestored: onRestored });
     const file = new File([new Uint8Array([1, 2, 3])], 'my.tar', { type: 'application/x-tar' });
     await userEvent.upload(screen.getByLabelText('Backup file'), file);
     const region = screen.getByRole('region', { name: 'Restore from a backup' });
@@ -231,7 +247,7 @@ describe('Backup screen', () => {
   });
 
   it('cancels a restore', async () => {
-    render(<BackupScreen onRestored={() => {}} />);
+    renderAccount({ onRestored: () => {} });
     await userEvent.upload(screen.getByLabelText('Backup file'), new File([new Uint8Array([1])], 'b.tar'));
     await waitFor(() => screen.getByRole('button', { name: 'Cancel' }));
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -242,14 +258,14 @@ describe('Backup screen', () => {
   it('shows why a backup was refused', async () => {
     const base = handler;
     handler = (url, init) => (url === '/api/restore' ? json({ error: 'This backup is damaged: data.json does not match its checksum.' }, 400) : base(url, init));
-    render(<BackupScreen onRestored={() => {}} />);
+    renderAccount({ onRestored: () => {} });
     await userEvent.upload(screen.getByLabelText('Backup file'), new File([new Uint8Array([1])], 'b.tar'));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/damaged/));
     expect(screen.queryByRole('button', { name: 'Restore' })).toBeNull();
   });
 
   it('lists safety backups to download or delete', async () => {
-    render(<BackupScreen />);
+    renderAccount();
     const region = screen.getByRole('region', { name: 'Safety backups' });
     const link = await waitFor(() => screen.getByRole('link', { name: /Download/ }));
     expect(link.getAttribute('href')).toBe('/api/safety-backups/jot-safety-20261118-090503-0a1b2c3d.tar');

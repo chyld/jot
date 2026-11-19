@@ -19,31 +19,35 @@ export function TagInput(props: {
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  // Adds go to the server one at a time, in order, so fast typing never loses a tag.
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const queued = useRef(new Set<string>());
 
-  const submit = async () => {
+  const submit = () => {
     const input = inputRef.current;
-    if (!input || busy) return;
+    if (!input) return;
     const raw = input.value;
     if (!raw.trim()) return;
     const r = normalizeTag(raw);
     if (!r.ok) {
-      setError(r.error);
+      setError(r.error); // the text stays for correction
       return;
     }
     setError(null);
-    if (props.tags.includes(r.tag)) {
-      input.value = '';
-      return;
-    }
-    setBusy(true);
-    try {
-      const serverError = await props.onAdd(r.tag);
-      if (serverError) setError(serverError);
-      else if (input.value === raw) input.value = '';
-    } finally {
-      setBusy(false);
-    }
+    input.value = ''; // free at once for the next tag
+    if (props.tags.includes(r.tag) || queued.current.has(r.tag)) return;
+    queued.current.add(r.tag);
+    queue.current = queue.current.then(async () => {
+      try {
+        const serverError = await props.onAdd(r.tag);
+        if (serverError) {
+          setError(serverError);
+          if (!input.value) input.value = raw; // give the text back if nothing new was typed
+        }
+      } finally {
+        queued.current.delete(r.tag);
+      }
+    });
   };
 
   return (
@@ -75,9 +79,12 @@ export function TagInput(props: {
           autoComplete="off"
           onInput={() => error && setError(null)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ',') {
+            // Tab with text adds the tag like Enter and keeps the cursor here for the next
+            // one; Tab on an empty box (and Shift+Tab, always) moves focus on as usual.
+            const tabWithText = e.key === 'Tab' && !e.shiftKey && e.currentTarget.value.trim() !== '';
+            if (e.key === 'Enter' || e.key === ',' || tabWithText) {
               e.preventDefault();
-              void submit();
+              submit();
             } else if (e.key === 'Escape') {
               e.currentTarget.value = '';
               setError(null);

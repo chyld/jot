@@ -69,6 +69,9 @@ describe('User manual', () => {
       'docker compose exec app jot unlock-note NOTE_ID',
     ]);
     const s = textOf(manualDoc());
+    expect(s).not.toMatch(/Backup screen|Open Backup|Backup in the left bar/);
+    expect(s).toContain('Open Account in the left bar');
+    expect(s).toContain('on the Account page under Safety backups');
     for (const words of ['RESTORE', 'Safety backups', 'data/backups', 'same disk', '--out', 'sign in again', 'data-old', '/n/NOTE_ID']) {
       expect(s).toContain(words);
     }

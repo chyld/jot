@@ -4,7 +4,7 @@ import { api, setUnauthorizedHandler } from './api';
 import { Sidebar } from './components/Sidebar';
 import { DataProvider } from './data';
 import { match, navigate, useLocation } from './router';
-import { BackupScreen } from './screens/BackupScreen';
+import { AccountScreen } from './screens/AccountScreen';
 import { FontsScreen } from './screens/FontsScreen';
 import { Login } from './screens/Login';
 import { NotesScreen } from './screens/NotesScreen';
@@ -19,7 +19,7 @@ function Screen(props: { path: string; search: URLSearchParams }) {
   if (note) return <NoteScreen noteId={note.id} />;
   if (p === '/fonts') return <FontsScreen />;
   if (p === '/styles') return <StylesScreen />;
-  if (p === '/backup') return <BackupScreen />;
+  if (p === '/account') return <AccountScreen />;
   if (p === '/trash') return <TrashScreen />;
   return (
     <div className="screen">

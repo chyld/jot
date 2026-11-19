@@ -16,6 +16,87 @@ describe('TagInput', () => {
     return { onAdd, onRemove, input: screen.getByRole('textbox', { name: 'Add tag' }) };
   }
 
+  describe('Tab', () => {
+    function withNeighbours(onAdd = vi.fn<(tag: string) => Promise<string | null>>(async () => null)) {
+      render(
+        <>
+          <button>before</button>
+          <TagInput tags={[]} onAdd={onAdd} onRemove={vi.fn()} />
+          <button>after</button>
+        </>,
+      );
+      return { onAdd, input: screen.getByRole('textbox', { name: 'Add tag' }) as HTMLInputElement };
+    }
+
+    it('adds the tag like Enter (lowercased), clears the box and keeps the cursor in it', async () => {
+      const { onAdd, input } = withNeighbours();
+      await userEvent.click(input);
+      await userEvent.keyboard('Styles{Tab}');
+      expect(onAdd).toHaveBeenCalledWith('styles');
+      expect(input.value).toBe('');
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('takes three tags separated by Tab', async () => {
+      const { onAdd, input } = withNeighbours();
+      await userEvent.click(input);
+      await userEvent.keyboard('one{Tab}Two{Tab}three{Tab}');
+      expect(onAdd.mock.calls.map((c) => c[0])).toEqual(['one', 'two', 'three']);
+      expect(input.value).toBe('');
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('keeps up with fast typing while the server is slow: each tag is added in order and the box is free at once', async () => {
+      const resolvers: Array<() => void> = [];
+      const onAdd = vi.fn<(tag: string) => Promise<string | null>>(() => new Promise((r) => resolvers.push(() => r(null))));
+      const { input } = withNeighbours(onAdd);
+      await userEvent.click(input);
+      await userEvent.keyboard('first{Tab}');
+      expect(input.value).toBe('');
+      await userEvent.keyboard('second{Tab}third{Enter}');
+      expect(input.value).toBe('');
+      expect(document.activeElement).toBe(input);
+      // One at a time, in order.
+      expect(onAdd.mock.calls.map((c) => c[0])).toEqual(['first']);
+      for (let i = 0; i < 3; i++) {
+        await act(async () => resolvers[i]());
+      }
+      expect(onAdd.mock.calls.map((c) => c[0])).toEqual(['first', 'second', 'third']);
+    });
+
+    it('when the server refuses a tag, its message shows and the text comes back to the empty box', async () => {
+      const { input } = withNeighbours(vi.fn(async () => 'Server said no.'));
+      await userEvent.click(input);
+      await userEvent.keyboard('refused{Tab}');
+      expect(await screen.findByRole('alert')).toBeTruthy();
+      expect(screen.getByRole('alert').textContent).toBe('Server said no.');
+      expect(input.value).toBe('refused');
+    });
+
+    it('on an invalid tag shows the message, keeps the text and the focus', async () => {
+      const { onAdd, input } = withNeighbours();
+      await userEvent.click(input);
+      await userEvent.keyboard('to-do{Tab}');
+      expect(onAdd).not.toHaveBeenCalled();
+      expect(screen.getByRole('alert').textContent!.length).toBeGreaterThan(5);
+      expect(input.value).toBe('to-do');
+      expect(document.activeElement).toBe(input);
+    });
+
+    it('on an empty box moves the focus on as usual; Shift+Tab is never intercepted', async () => {
+      const { onAdd, input } = withNeighbours();
+      await userEvent.click(input);
+      await userEvent.tab();
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'after' }));
+      await userEvent.click(input);
+      await userEvent.keyboard('half');
+      await userEvent.tab({ shift: true });
+      expect(document.activeElement).not.toBe(input);
+      expect(onAdd).not.toHaveBeenCalled();
+      expect(input.value).toBe('half');
+    });
+  });
+
   it('shows the note’s tags', () => {
     setup(['demo', 'fonts']);
     expect(screen.getByText('#demo')).toBeTruthy();

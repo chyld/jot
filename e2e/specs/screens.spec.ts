@@ -21,7 +21,7 @@ test('every screen renders', async ({ page }) => {
   for (const [label, heading] of [
     ['Fonts', 'Fonts'],
     ['Styles', 'Styles'],
-    ['Backup', 'Backup'],
+    ['Account', 'Account'],
     ['Trash', 'Trash'],
   ]) {
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: label }).click();
@@ -29,7 +29,9 @@ test('every screen renders', async ({ page }) => {
     if (label === 'Fonts') await expect(page.getByTestId('catalog-card').first()).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: `test-results/screens/${label.toLowerCase()}.png` });
   }
-  // There is no separate Tags page any more.
-  await page.goto('/tags');
-  await expect(page.getByRole('heading', { name: 'Not found', level: 1 })).toBeVisible();
+  // There is no separate Tags page any more, and Backup became the Account page.
+  for (const gone of ['/tags', '/backup']) {
+    await page.goto(gone);
+    await expect(page.getByRole('heading', { name: 'Not found', level: 1 })).toBeVisible();
+  }
 });

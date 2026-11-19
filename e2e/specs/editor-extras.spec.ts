@@ -191,7 +191,7 @@ test('no element shows a vertical scrollbar, yet long notes, lists and menus sti
   // The home page and the other screens.
   await goHome(page);
   expect(await scrollbars()).toEqual([]);
-  for (const name of ['Fonts', 'Styles', 'Backup', 'Trash']) {
+  for (const name of ['Fonts', 'Styles', 'Account', 'Trash']) {
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name }).click();
     await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
     expect(await scrollbars(), name).toEqual([]);

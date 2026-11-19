@@ -29,7 +29,7 @@ The container runs as `1000:1000` by default; if your user differs, run with
 
 ## Backup and restore
 
-Each user can back up and restore their own data on the **Backup** screen in the web
+Each user can back up and restore their own data on the **Account** page in the web
 app. For the whole system, use the CLI (see `backup-spec.md`):
 
 ```sh

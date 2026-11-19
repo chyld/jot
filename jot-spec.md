@@ -212,9 +212,9 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
 | Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
-| Backup | Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. (The full system backup is described in the User manual note, not on this screen) |
+| Account (`/account`) | The logged-in user's username at the top, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
 
-A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) and the New note button; at the bottom: Fonts, Styles, Backup, Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.
+A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) and the New note button; at the bottom: Fonts, Styles, Account (a person icon), Trash and log out. It has no notes icon and no tags icon; the home page's tag filter is the only way to browse by tag.
 
 ---
 

@@ -1,10 +1,12 @@
-// Personal backup and restore (backup-spec.md §3.1): back up and download, restore from
-// a file after a summary and typing RESTORE, and the safety backups Jot took before
-// each restore.
+// The Account page: the logged-in user's name, then personal backup and restore
+// (backup-spec.md §3.1): back up and download, restore from a file after a summary and
+// typing RESTORE, and the safety backups Jot took before each restore. There are no
+// account settings: user administration is the command line's.
 import { useEffect, useState } from 'react';
-import { Download, RotateCcw, ShieldCheck, Trash2, Upload } from 'lucide-react';
+import { Download, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from 'lucide-react';
 import type { BackupInfo, RestoreSummary, SafetyBackup } from '../../shared/types';
 import { api } from '../api';
+import { useData } from '../data';
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -290,15 +292,20 @@ function SafetySection(props: { version: number }) {
   );
 }
 
-export function BackupScreen(props: { onRestored?: () => void }) {
+export function AccountScreen(props: { onRestored?: () => void }) {
+  const { user } = useData();
   const [safetyVersion, setSafetyVersion] = useState(0);
   // After a restore the whole app reloads: every note has a new address.
   const onRestored = props.onRestored ?? (() => window.location.assign('/'));
   return (
     <div className="screen backup-screen">
       <div className="screen-head">
-        <h1>Backup</h1>
+        <h1>Account</h1>
       </div>
+      <p className="account-user">
+        <UserRound size={20} />
+        <span data-testid="account-username">{user.username}</span>
+      </p>
       <BackUpSection />
       <RestoreSection onRestored={onRestored} onSafetyChange={() => setSafetyVersion((v) => v + 1)} />
       <SafetySection version={safetyVersion} />

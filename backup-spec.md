@@ -31,7 +31,7 @@ One more rule: **only one backup or restore runs at a time, across the whole sys
 
 ### 3.1 Screen
 
-A "Backup" item in the left bar opens a screen with:
+An "Account" item in the left bar opens the Account page (`/account`): the logged-in user's username at the top, then:
 
 - **Back up my data:** builds a backup and downloads it.
 - **Restore from a backup:** choose a file, see a summary (date made, counts of notes, photos, fonts and styles, and anything that will be adjusted), then confirm by typing RESTORE, or cancel.

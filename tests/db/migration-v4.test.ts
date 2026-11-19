@@ -32,7 +32,9 @@ const stylesOf = (db: Database.Database, username: string) =>
       `SELECT s.*, f.family FROM styles s JOIN fonts f ON f.id = s.font_id JOIN users u ON u.id = s.user_id WHERE u.username = ? ORDER BY s.name, s.created_at`,
     )
     .all(username) as any[];
-const notes = (db: Database.Database) => db.prepare('SELECT id, content, updated_at FROM notes ORDER BY id').all().map((r) => JSON.stringify(r));
+// The User manual notes are left out: version 5 updates their text (tested in migration-v5).
+const notes = (db: Database.Database) =>
+  db.prepare("SELECT id, content, updated_at FROM notes WHERE NOT (title = 'User manual' AND read_only = 1) ORDER BY id").all().map((r) => JSON.stringify(r));
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), 'jot-mig4-'));
@@ -62,9 +64,9 @@ describe('migration to version 4', () => {
   });
   afterAll(() => db.close());
 
-  it('is version 4', () => {
-    expect(SCHEMA_VERSION).toBe(4);
-    expect(db.pragma('user_version', { simple: true })).toBe(4);
+  it('is migrated (through version 4, and any later ones)', () => {
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(4);
+    expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
   });
 
   it('every user has exactly the five default styles with their standard definitions', () => {

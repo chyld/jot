@@ -96,6 +96,34 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
     The manual's own tests keep it.
 - **The Backup page** went back to three cards (owner request). The full system backup
   instructions now live in the User manual note instead.
+- **Account page (owner request).** The Backup screen became the Account page at
+  `/account`.
+  - It shows the username at the top, then the same three parts, working as before.
+  - `/backup` shows Not found, like other removed routes.
+  - The left-bar item in the same place is now "Account" with a person icon.
+  - There are no account settings: user administration stays on the command line.
+  - The words "Backup screen" and "Open Backup in the left bar" changed everywhere: the
+    UI, the CLI and restore messages for a personal backup, the docs and the User manual.
+  - Schema version 5 replaces the text of every existing User manual note.
+    - The manual is the read-only note titled "User manual" tagged `manual`. A writable
+      note with that title, or a read-only note with another title, is not touched.
+    - Only its content, plain text and search-index text change: same note, id, tags,
+      dates and read-only flag.
+    - Tested against a copy of a version-4 database (`tests/fixtures/jot-v4.db`).
+  - A personal backup made earlier still holds the manual text it had. Restoring it
+    brings that text back, as a restore brings back what the backup holds.
+- **Tab in the Add tag box (owner request).** With text in the box, Tab does exactly what
+  Enter does: the same check and lowercase conversion, the same message. Its default is
+  prevented, so the cursor stays in the box for the next tag; an invalid tag keeps its
+  text and shows the message. Tab on an empty box, and Shift+Tab always, keep the
+  browser's normal focus move, so no one is trapped.
+  - Typing several tags quickly exposed a race, for Enter as well. The box used to stay
+    filled (and busy) until the server answered, so a second tag typed in the meantime
+    was appended to the first and its key was ignored.
+  - Now the box is cleared as soon as a tag passes the check, and the adds go to the
+    server one at a time, in order.
+  - If the server refuses one, its message shows and its text comes back into the box,
+    if the box is still empty.
 
 - **Empty trash (owner request)** is one route, `DELETE /api/trash`, answering
   `{ deleted: n }`.
@@ -584,7 +612,7 @@ locks, no extra CLI commands, no admin role). Where the spec is silent:
   - Type 5: system round trip, guards, failed and killed restores, verify, missing files,
     backups while writing, the lock after a crash, the lock shared with the web app.
   - Type 6: crash at every step, tidy-up after a committed restore, schema version 2.
-  - Type 7: Backup screen, left bar, unsaved edits.
+  - Type 7: Account page (backup parts), left bar, unsaved edits.
   - Type 8: back up, delete, restore; old tab; unsaved edit through a reload; another user.
   - Type 9: `jot backup`/`verify` in the container, restore guards (also from a `run`
     container), and the owner's full restore procedure.

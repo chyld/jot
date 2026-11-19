@@ -4,8 +4,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { body, goHome, login, newNote, typeInBody, uniq, waitSaved } from './helpers';
 
 async function openBackup(page: Page) {
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Backup' }).click();
-  await expect(page.getByRole('heading', { name: 'Backup', level: 1 })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Account' }).click();
+  await expect(page.getByRole('heading', { name: 'Account', level: 1 })).toBeVisible();
+  await expect(page.getByTestId('account-username')).toHaveText('carol');
 }
 
 async function download(page: Page): Promise<string> {

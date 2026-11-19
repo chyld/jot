@@ -31,7 +31,6 @@ describe('Toolbar', () => {
       'Increase font size',
       'Text colour',
       'Highlight colour',
-      'Clear formatting',
       'Bold',
       'Italic',
       'Underline',
@@ -43,6 +42,7 @@ describe('Toolbar', () => {
       'Insert',
       'Undo',
       'Redo',
+      'Clear formatting',
       'Show spaces, tabs and line ends',
     ]);
   });

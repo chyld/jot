@@ -2,12 +2,12 @@
 // and every query in Jot filters by the logged-in user.
 import Database from 'better-sqlite3';
 import { ensureDefaultStyles } from './defaultStyles';
-import { addManual } from './manual';
+import { addManual, refreshManuals } from './manual';
 import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -164,6 +164,14 @@ function migrate(db: DB) {
         ensureDefaultStyles(db, u.id, at);
       }
       db.pragma(`user_version = 4`);
+    })();
+  }
+  // Version 5: the Backup screen became the Account page; each existing User manual note
+  // gets the updated text (same note, id, tags, dates and read-only flag).
+  if (version < 5) {
+    db.transaction(() => {
+      refreshManuals(db);
+      db.pragma(`user_version = 5`);
     })();
   }
 }

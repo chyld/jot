@@ -93,12 +93,12 @@ describe('Clear formatting', () => {
     expect(currentFormat(editor)).toMatchObject({ fontFamily: null, size: null, bold: false });
   });
 
-  it('is a toolbar button right after the highlight colour, with its tooltip', async () => {
+  it('is a toolbar button after undo/redo, just left of the invisibles toggle, with its tooltip', async () => {
     const editor = makeEditor(DOC);
     render(<Toolbar editor={editor} styles={STYLES} fonts={FONTS} onSaveSelectionAsStyle={vi.fn()} onManageStyles={vi.fn()} onBrowseFonts={vi.fn()} onPickImage={vi.fn()} />);
     const toolbar = screen.getByRole('toolbar', { name: 'Formatting' });
     const labels = within(toolbar).getAllByRole('button').map((b) => b.getAttribute('aria-label'));
-    expect(labels[labels.indexOf('Highlight colour') + 1]).toBe('Clear formatting');
+    expect(labels.slice(labels.indexOf('Redo') + 1, labels.indexOf('Redo') + 3)).toEqual(['Clear formatting', 'Show spaces, tabs and line ends']);
     const button = within(toolbar).getByRole('button', { name: 'Clear formatting' });
     expect(button.getAttribute('title')).toBe('Clear formatting');
     editor.commands.setTextSelection({ from: 1, to: 5 });
