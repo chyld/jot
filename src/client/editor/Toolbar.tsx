@@ -685,9 +685,6 @@ export function Toolbar(props: ToolbarProps) {
         <div className="tb-group">
           <TextColorDropdown editor={editor} />
           <HighlightDropdown editor={editor} />
-          <ToolButton label="Clear formatting" onClick={() => clearFormatting(editor)}>
-            <RemoveFormatting size={ICON} />
-          </ToolButton>
         </div>
         <span className="tb-sep" />
         <MarkButtons editor={editor} />
@@ -700,7 +697,12 @@ export function Toolbar(props: ToolbarProps) {
         <span className="tb-sep" />
         <UndoRedo editor={editor} />
         <span className="tb-sep" />
-        <InvisiblesToggle editor={editor} />
+        <div className="tb-group">
+          <ToolButton label="Clear formatting" onClick={() => clearFormatting(editor)}>
+            <RemoveFormatting size={ICON} />
+          </ToolButton>
+          <InvisiblesToggle editor={editor} />
+        </div>
         {props.onMakeReadOnly && (
           <>
             <span className="tb-sep" />
