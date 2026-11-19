@@ -7,6 +7,7 @@ Google Fonts and named text styles. See `jot-spec.md` for the specification and
 ## Run
 
 ```sh
+mkdir -p data                       # so the folder belongs to you, not root
 docker compose up -d --build        # serves http://localhost:9003
 ```
 
@@ -45,8 +46,12 @@ docker compose up -d
 ## Deploying on a server
 
 1. Clone the repository, copy `.env.example` to `.env` and set `JOT_PUBLIC_URL`.
-2. `docker compose up -d --build`
-3. Create the first account: `docker compose exec app jot create-user <name>`. A new
+2. Create the data folder yourself, before the first start: `mkdir data`. If it is
+   missing, Docker creates it owned by root and Jot stops with "cannot write to its data
+   folder". If that has happened: `docker compose down`, then
+   `sudo chown -R "$(id -u):$(id -g)" data`, then start again.
+3. `docker compose up -d --build`
+4. Create the first account: `docker compose exec app jot create-user <name>`. A new
    deployment has no accounts and no notes, because `data` is not in the repository. To
    bring an existing system across instead, see "Backup and restore" below.
 
