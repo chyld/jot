@@ -290,6 +290,16 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   The reason: the flag could stay set when opening the new note failed (anything but a
   404), which left the New buttons dead and the keyboard swallowed until a reload. With
   no flag there is nothing to get stuck.
+- **Delete empty notes (owner request).** Two routes: `GET /api/empty-notes` answers
+  `{ count }` and `DELETE /api/empty-notes` answers `{ trashed }`.
+  - Empty is judged on the server from the saved note: blank title (after trimming), no
+    tags, and a body made only of paragraphs with nothing in them. Read-only, Inbox and
+    trashed notes are left out. An edit not saved yet does not count, so a note being
+    typed in another tab is safe once its first save lands.
+  - The notes go to the trash (not deleted for good), in one transaction, so a mistake is
+    undone from the Trash screen. There is no Undo button for the batch.
+  - The owner chose the header button (left of + New) with a confirmation: the same
+    second-click pattern as Empty trash, shown as a banner under the header.
 - **A new note opens ready to type.** Both New buttons create the note through one function, which
   marks the new note's id in a set kept in the page's memory. When the editor has loaded
   that note, it takes the mark (once) and puts the caret at the end of the body

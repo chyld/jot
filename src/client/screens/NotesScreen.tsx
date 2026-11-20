@@ -3,7 +3,7 @@
 // (/?tag=name) so a tag name clicked anywhere can open the home page filtered.
 // Opening a note goes to its own full-screen editor page.
 import { useEffect, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import type { NoteSummary, Tag } from '../../shared/types';
 import { api } from '../api';
 import { NoteCard, useNow } from '../components/NoteCard';
@@ -48,6 +48,34 @@ export function NotesScreen(props: { tag: string | null }) {
   useEffect(() => {
     api.tags().then((r) => setTags(r.tags), () => setTags([]));
   }, [notesVersion]);
+  // Empty notes (no title, no body, no tags): the header offers to trash them all, after a
+  // second click that confirms.
+  const [emptyCount, setEmptyCount] = useState(0);
+  const [confirmingEmpty, setConfirmingEmpty] = useState(false);
+  const [emptyBusy, setEmptyBusy] = useState(false);
+  const [emptyDone, setEmptyDone] = useState<number | null>(null);
+  useEffect(() => {
+    api.emptyNotes().then((r) => setEmptyCount(r.count), () => setEmptyCount(0));
+  }, [notesVersion]);
+  useEffect(() => {
+    if (emptyCount === 0) setConfirmingEmpty(false);
+  }, [emptyCount]);
+  const deleteEmpty = async () => {
+    setEmptyBusy(true);
+    setTrashError(null);
+    try {
+      const r = await api.trashEmptyNotes();
+      setEmptyDone(r.trashed);
+      setConfirmingEmpty(false);
+      setTrashed(null);
+      bumpNotes();
+    } catch (e) {
+      setTrashError(e instanceof Error ? e.message : 'Could not delete the empty notes.');
+    } finally {
+      setEmptyBusy(false);
+    }
+  };
+  const notesWord = (n: number) => (n === 1 ? '1 empty note' : `${n} empty notes`);
   // A tag no live note uses any more (or a mistyped URL) stops filtering.
   useEffect(() => {
     if (tag && tags && !tags.some((t) => t.name === tag)) navigate(homeHref(null), { replace: true });
@@ -83,6 +111,17 @@ export function NotesScreen(props: { tag: string | null }) {
           <Search size={16} />
           <input type="search" placeholder="Search notes" aria-label="Search notes" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
+        {emptyCount > 0 && (
+          <button
+            type="button"
+            className="btn"
+            aria-label={`Delete ${notesWord(emptyCount)}`}
+            title={`Move ${notesWord(emptyCount)} to the trash`}
+            onClick={() => (setEmptyDone(null), setConfirmingEmpty(true))}
+          >
+            <Trash2 size={16} /> Delete {emptyCount} empty
+          </button>
+        )}
         <NewNoteLink className="btn btn-primary" bump={bumpNotes} onError={setNewError}>
           <Plus size={16} /> New
         </NewNoteLink>
@@ -95,6 +134,25 @@ export function NotesScreen(props: { tag: string | null }) {
       {trashError && (
         <div role="alert" className="banner banner-error">
           {trashError}
+        </div>
+      )}
+      {confirmingEmpty && (
+        <div className="banner undo-banner delete-empty-confirm" role="group" aria-label="Delete empty notes">
+          <span>{notesWord(emptyCount)} will move to the trash.</span>
+          <button type="button" className="btn btn-sm btn-danger" disabled={emptyBusy} onClick={() => void deleteEmpty()}>
+            Confirm: delete empty
+          </button>
+          <button type="button" className="btn btn-sm" disabled={emptyBusy} onClick={() => setConfirmingEmpty(false)}>
+            Cancel
+          </button>
+        </div>
+      )}
+      {emptyDone !== null && (
+        <div role="status" className="banner undo-banner" data-testid="empty-deleted">
+          <span>Moved {notesWord(emptyDone)} to the trash.</span>
+          <button type="button" className="btn btn-sm" onClick={() => setEmptyDone(null)}>
+            Dismiss
+          </button>
         </div>
       )}
       {trashed && (

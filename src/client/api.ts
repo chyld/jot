@@ -73,6 +73,8 @@ export const api = {
   restore: (id: string) => request<{ note: Note }>('POST', `/api/trash/${encodeURIComponent(id)}/restore`, {}),
   purge: (id: string) => request<void>('DELETE', `/api/trash/${encodeURIComponent(id)}`),
   emptyTrash: () => request<{ deleted: number }>('DELETE', '/api/trash'),
+  emptyNotes: () => request<{ count: number }>('GET', '/api/empty-notes'),
+  trashEmptyNotes: () => request<{ trashed: number }>('DELETE', '/api/empty-notes'),
 
   uploadPhoto: (file: File) => {
     const fd = new FormData();

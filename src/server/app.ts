@@ -294,6 +294,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return { note };
   });
 
+  // Empty notes (no title, no body, no tags): how many, and move them all to the trash.
+  app.get('/api/empty-notes', async (req) => ({ count: notes.countEmptyNotes(db, uid(req)) }));
+  app.delete('/api/empty-notes', async (req) => ({ trashed: notes.trashEmptyNotes(db, uid(req)) }));
+
   // Read-only is one way: the web app can turn it on, never off (only `jot unlock-note`).
   app.post('/api/notes/:id/read-only', async (req) => {
     const r = notes.makeReadOnly(db, uid(req), param(req, 'id'));

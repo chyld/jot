@@ -203,6 +203,49 @@ export function trashNote(db: DB, userId: string, id: string): Note | null | 're
   })();
 }
 
+/** A body with nothing in it: only paragraphs that hold no text and no other node. */
+function isEmptyContent(json: string): boolean {
+  try {
+    const nodes = (JSON.parse(json) as TiptapDoc).content ?? [];
+    return nodes.every((n) => n.type === 'paragraph' && !n.content?.length);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The user's empty notes: live, on the home page (not in the inbox), not read-only, with
+ * no title, no tags and nothing in the body (a photo, a table or a rule is something).
+ */
+function emptyNoteIds(db: DB, userId: string): string[] {
+  const rows = db
+    .prepare(
+      `SELECT n.id, n.title, n.content FROM notes n
+        WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 AND n.read_only = 0
+          AND NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id)`,
+    )
+    .all(userId) as Array<{ id: string; title: string; content: string }>;
+  return rows.filter((r) => r.title.trim() === '' && isEmptyContent(r.content)).map((r) => r.id);
+}
+
+export function countEmptyNotes(db: DB, userId: string): number {
+  return emptyNoteIds(db, userId).length;
+}
+
+/** Moves every empty note of the user to the trash, in one transaction. Returns how many. */
+export function trashEmptyNotes(db: DB, userId: string): number {
+  return db.transaction(() => {
+    const ids = emptyNoteIds(db, userId);
+    const t = now();
+    const trash = db.prepare('UPDATE notes SET deleted_at = ? WHERE id = ? AND user_id = ?');
+    for (const id of ids) {
+      trash.run(t, id, userId);
+      reindexNote(db, id);
+    }
+    return ids.length;
+  })();
+}
+
 /** Restores a trashed note. Returns null unless the user has this note in the trash. */
 export function restoreNote(db: DB, userId: string, id: string): Note | null {
   return db.transaction(() => {
