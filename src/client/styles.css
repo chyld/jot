@@ -233,10 +233,31 @@ select.ctx-input { width: auto; }
 .note-body pre code { background: none; color: inherit; padding: 0; }
 .note-body a { color: #0a47ff; text-decoration: underline; }
 .note-body mark { border-radius: 2px; padding: 0 1px; }
-.note-body ul[data-type='taskList'] { list-style: none; padding-left: 4px; }
-.note-body ul[data-type='taskList'] li { display: flex; gap: 8px; align-items: flex-start; }
-.note-body ul[data-type='taskList'] li > label { margin-top: 0.25em; }
-.note-body ul[data-type='taskList'] li > div { flex: 1; }
+/* Lists: item text starts 28px in from the paragraph edge at every level and in every list
+   type (24px clipped a two-digit "10."); bullets and numbers hang in that gutter, and a
+   checkbox (16px + 12px gap) fills it. */
+.note-body ul, .note-body ol { margin: 0 0 0.5em; padding-left: 28px; }
+.note-body li ul, .note-body li ol { margin: 4px 0 0; } /* nested: no gap after it */
+.note-body li + li { margin-top: 4px; }
+.note-body li p { margin: 0; }
+/* Numbers by depth: 1. a. i. and round again (to nine levels). A list with its own type keeps it. */
+.note-body ol:not([type]) { list-style-type: decimal; }
+.note-body ol ol:not([type]) { list-style-type: lower-alpha; }
+.note-body ol ol ol:not([type]) { list-style-type: lower-roman; }
+.note-body ol ol ol ol:not([type]) { list-style-type: decimal; }
+.note-body ol ol ol ol ol:not([type]) { list-style-type: lower-alpha; }
+.note-body ol ol ol ol ol ol:not([type]) { list-style-type: lower-roman; }
+.note-body ol ol ol ol ol ol ol:not([type]) { list-style-type: decimal; }
+.note-body ol ol ol ol ol ol ol ol:not([type]) { list-style-type: lower-alpha; }
+.note-body ol ol ol ol ol ol ol ol ol:not([type]) { list-style-type: lower-roman; }
+.note-body ul[data-type='taskList'] { list-style: none; padding-left: 0; }
+/* A task list's own items only (Tiptap's task-item view gives the li no data-type), so bullet
+   and numbered items nested inside one keep their markers. Baseline alignment keeps the box
+   on the first line whatever its font size. */
+.note-body ul[data-type='taskList'] > li { display: flex; gap: 12px; align-items: baseline; }
+.note-body ul[data-type='taskList'] > li > label { flex: none; display: flex; align-items: baseline; }
+.note-body ul[data-type='taskList'] > li > label > input { width: 16px; height: 16px; margin: 0; position: relative; top: 2px; }
+.note-body ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }
 .note-body table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0.8em 0; overflow: hidden; }
 .note-body th, .note-body td { border: 1px solid #d5d9df; padding: 8px 10px; vertical-align: top; position: relative; min-width: 50px; }
 .note-body th { background: #f6f7f9; text-align: left; font-weight: 600; }

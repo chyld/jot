@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // Type 7 (component): Clear formatting, opening links, and showing invisible characters.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -225,5 +226,50 @@ describe('show invisible characters', () => {
     await userEvent.click(toggle);
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(editor.view.dom.querySelectorAll('.inv-para').length).toBe(textblocks(editor));
+  });
+});
+
+describe('numbered lists', () => {
+  const item = (text: string, ...more: any[]) => ({ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }, ...more] });
+  const ol = (attrs: any, ...items: any[]) => ({ type: 'orderedList', attrs, content: items });
+
+  it('writes an explicit type, including "1", so the depth styles (1. a. i.) leave it alone', () => {
+    const editor = makeEditor({ type: 'doc', content: [ol({}, item('outer', ol({ type: '1' }, item('explicit')), ol({ type: 'A', start: 3 }, item('upper'))))] });
+    const lists = [...editor.view.dom.querySelectorAll('ol')];
+    expect(lists.map((l) => l.getAttribute('type'))).toEqual([null, '1', 'A']);
+    expect(lists[2].getAttribute('start')).toBe('3');
+    expect(lists[0].hasAttribute('start')).toBe(false);
+    // The attribute still reads back into the same type.
+    const json = editor.getJSON() as any;
+    expect(json.content[0].content[0].content[1].attrs).toMatchObject({ type: '1' });
+  });
+});
+
+describe('task list styling', () => {
+  // The selector styles.css lays task items out with (checkbox in the gutter, text at 28px).
+  // Tiptap's task-item node view builds the li without data-type, so it must not rely on it.
+  const TASK_ITEM = "ul[data-type='taskList'] > li";
+  const para = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
+  const task = (text: string, ...more: any[]) => ({ type: 'taskItem', attrs: { checked: false }, content: [para(text), ...more] });
+  const tasks = (...items: any[]) => ({ type: 'taskList', content: items });
+  const bullets = (...texts: string[]) => ({ type: 'bulletList', content: texts.map((t) => ({ type: 'listItem', content: [para(t)] })) });
+
+  it('is the selector styles.css uses', () => {
+    const css = readFileSync('src/client/styles.css', 'utf8'); // tests run from the project root
+    expect(css).toContain(`.note-body ${TASK_ITEM} { display: flex;`);
+    expect(css).toContain(`.note-body ${TASK_ITEM} > label > input {`);
+  });
+
+  it('matches every task item in the editor, nested ones too, and no bullet item inside a task', () => {
+    const editor = makeEditor({ type: 'doc', content: [tasks(task('top', tasks(task('nested task')), bullets('bullet in task')), task('second'))] });
+    const matched = [...editor.view.dom.querySelectorAll(TASK_ITEM)];
+    expect(matched.map((li) => li.querySelector(':scope > div > p')?.textContent)).toEqual(['top', 'nested task', 'second']);
+    for (const li of matched) {
+      expect(li.querySelector(':scope > label > input[type="checkbox"]')).not.toBeNull();
+      expect(li.querySelector(':scope > div')).not.toBeNull();
+    }
+    const bullet = [...editor.view.dom.querySelectorAll('li')].find((li) => li.textContent === 'bullet in task')!;
+    expect(bullet).toBeDefined();
+    expect(bullet.matches(TASK_ITEM)).toBe(false);
   });
 });

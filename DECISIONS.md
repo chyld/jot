@@ -325,6 +325,34 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 - Table controls offer Tiptap's standard commands: add/delete column, add/delete row,
   header row, header column, merge cells, split cell and delete table. Columns resize by
   dragging their border.
+- **Lists line up (owner request).** Bullet and numbered lists used the browser's 40 px
+  indent while task lists had their own 4 px, so task text started about 15 px left of the
+  others. Now all three share one rule in `styles.css`:
+  - Item text starts 28 px in from the paragraph edge, and each nested level steps in
+    another 28 px, mixed nesting included. 24 px was tried first, but a two-digit `10.` is
+    27 px wide in 16 px Inter and stuck out past the paragraph edge. Three digits (`100.`)
+    still hang about 9 px into the page margin, which is wide enough not to clip them.
+  - Bullets and numbers hang in that gutter. A checkbox is 16 px with a 12 px gap, so its
+    text lands on the same 28 px.
+  - Bullets keep the browser's disc, circle, square. Numbers go 1. a. i. by numbered-list
+    depth and round again (written out to nine levels; deeper stays i.). A list with its
+    own `type` (1 a A i I, which the server allows) keeps it. Tiptap leaves `type="1"` out
+    of the page, so it could not be told from "no type"; Jot's numbered list
+    (`extensions.ts`) writes it.
+  - Items are 4 px apart, paragraphs inside items have no margin, the whole list has a
+    paragraph's spacing after it, and a nested list adds no gap after itself.
+  - The checkbox sits on the first line's baseline (2 px below it, to centre on the
+    capitals), so it stays with the text whether that line is 10 px or 40 px. Measured
+    the same in Chromium, Firefox and WebKit on a test page.
+  - The task-item rules now match only a task list's own items,
+    `ul[data-type='taskList'] > li`. They used to match every `li` inside a task list,
+    which hid the bullets and numbers of lists nested in a task. They cannot key on the
+    item's `data-type="taskItem"`: Tiptap's task-item node view builds the `li` in the
+    editor without it (it only has `data-checked`). `tests/component/editor-extras.test.tsx`
+    checks the selector against the editor's real DOM.
+  - Note text is only drawn by the editor (read-only notes and printing use the same
+    `.note-body` styles); cards show plain preview text, and backups and the agent's
+    Markdown carry no styling, so nothing else needed changing.
 
 ## Photos
 
