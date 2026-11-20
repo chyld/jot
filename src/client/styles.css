@@ -235,7 +235,7 @@ select.ctx-input { width: auto; }
 .note-body mark { border-radius: 2px; padding: 0 1px; }
 /* Lists: item text starts 28px in from the paragraph edge at every level and in every list
    type (24px clipped a two-digit "10."); bullets and numbers hang in that gutter, and a
-   checkbox (16px + 12px gap) fills it. */
+   checkbox (4px in, 16px wide, 8px gap) sits beside its text like they do. */
 .note-body ul, .note-body ol { margin: 0 0 0.5em; padding-left: 28px; }
 .note-body li ul, .note-body li ol { margin: 4px 0 0; } /* nested: no gap after it */
 .note-body li + li { margin-top: 4px; }
@@ -250,11 +250,11 @@ select.ctx-input { width: auto; }
 .note-body ol ol ol ol ol ol ol:not([type]) { list-style-type: decimal; }
 .note-body ol ol ol ol ol ol ol ol:not([type]) { list-style-type: lower-alpha; }
 .note-body ol ol ol ol ol ol ol ol ol:not([type]) { list-style-type: lower-roman; }
-.note-body ul[data-type='taskList'] { list-style: none; padding-left: 0; }
+.note-body ul[data-type='taskList'] { list-style: none; padding-left: 4px; }
 /* A task list's own items only (Tiptap's task-item view gives the li no data-type), so bullet
    and numbered items nested inside one keep their markers. Baseline alignment keeps the box
    on the first line whatever its font size. */
-.note-body ul[data-type='taskList'] > li { display: flex; gap: 12px; align-items: baseline; }
+.note-body ul[data-type='taskList'] > li { display: flex; gap: 8px; align-items: baseline; }
 .note-body ul[data-type='taskList'] > li > label { flex: none; display: flex; align-items: baseline; }
 .note-body ul[data-type='taskList'] > li > label > input { width: 16px; height: 16px; margin: 0; position: relative; top: 2px; }
 .note-body ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }

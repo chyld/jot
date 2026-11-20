@@ -332,8 +332,10 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
     another 28 px, mixed nesting included. 24 px was tried first, but a two-digit `10.` is
     27 px wide in 16 px Inter and stuck out past the paragraph edge. Three digits (`100.`)
     still hang about 9 px into the page margin, which is wide enough not to clip them.
-  - Bullets and numbers hang in that gutter. A checkbox is 16 px with a 12 px gap, so its
-    text lands on the same 28 px.
+  - Bullets and numbers hang in that gutter. A checkbox is 16 px wide, 4 px in from the
+    paragraph edge with an 8 px gap, so its text lands on the same 28 px and the box sits
+    beside its text the way a bullet or number does (owner feedback: flush at the edge
+    with a 12 px gap, it looked detached from the other markers).
   - Bullets keep the browser's disc, circle, square. Numbers go 1. a. i. by numbered-list
     depth and round again (written out to nine levels; deeper stays i.). A list with its
     own `type` (1 a A i I, which the server allows) keeps it. Tiptap leaves `type="1"` out
