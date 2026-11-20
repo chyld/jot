@@ -1,6 +1,6 @@
 // Log in and log out; wrong password is refused.
 import { expect, test } from '@playwright/test';
-import { login, PASSWORD } from './helpers';
+import { login, logout, PASSWORD } from './helpers';
 
 test('log in and log out; a wrong password is refused', async ({ page }) => {
   await page.goto('/');
@@ -20,7 +20,7 @@ test('log in and log out; a wrong password is refused', async ({ page }) => {
   expect(session?.httpOnly).toBe(true);
   expect(await page.evaluate(() => document.cookie)).not.toContain('jot_session');
 
-  await page.getByRole('button', { name: /^Log out/ }).click();
+  await logout(page);
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
   expect((await page.request.get('/api/notes')).status()).toBe(401);

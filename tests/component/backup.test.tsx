@@ -153,7 +153,7 @@ describe('left bar', () => {
       </DataProvider>,
     );
     const labels = screen.getAllByRole('link').map((a) => a.getAttribute('aria-label'));
-    expect(labels).toEqual(['Jot home: all notes', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account', 'Trash']);
+    expect(labels).toEqual(['Jot home: all notes', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Trash', 'Account']);
     const account = screen.getByRole('link', { name: 'Account' });
     expect(account.getAttribute('href')).toBe('/account');
     expect(account.getAttribute('title')).toBe('Account');

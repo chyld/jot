@@ -3,7 +3,7 @@
 // typing RESTORE, and the safety backups Jot took before each restore. There are no
 // account settings: user administration is the command line's.
 import { useEffect, useState } from 'react';
-import { Bot as BotIcon, Copy, Download, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from 'lucide-react';
+import { Bot as BotIcon, Copy, Download, LogOut, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from 'lucide-react';
 import { relativeTime } from '../../shared/time';
 import type { BackupInfo, Bot, RestoreSummary, SafetyBackup } from '../../shared/types';
 import { api } from '../api';
@@ -444,7 +444,7 @@ function BotsSection() {
 }
 
 export function AccountScreen(props: { onRestored?: () => void }) {
-  const { user } = useData();
+  const { user, logout } = useData();
   const [safetyVersion, setSafetyVersion] = useState(0);
   // After a restore the whole app reloads: every note has a new address.
   const onRestored = props.onRestored ?? (() => window.location.assign('/'));
@@ -452,6 +452,10 @@ export function AccountScreen(props: { onRestored?: () => void }) {
     <div className="screen backup-screen">
       <div className="screen-head">
         <h1>Account</h1>
+        <span className="grow" />
+        <button type="button" className="btn" aria-label={`Log out ${user.username}`} onClick={() => void logout()}>
+          <LogOut size={16} /> Log out
+        </button>
       </div>
       <p className="account-user">
         <UserRound size={20} />

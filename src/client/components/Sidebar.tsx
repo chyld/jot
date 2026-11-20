@@ -1,4 +1,4 @@
-import { Inbox, LogOut, NotebookPen, Paintbrush, Plus, Tags, Trash2, Type, UserRound } from 'lucide-react';
+import { Inbox, NotebookPen, Paintbrush, Plus, Tags, Trash2, Type, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useData } from '../data';
@@ -26,7 +26,7 @@ function RailLink(props: { to: string; label: string; active: boolean; children:
 export { createAndOpenNote } from '../newNotes';
 
 export function Sidebar(props: { path: string }) {
-  const { bumpNotes, logout, user, inboxCount, reloadInbox } = useData();
+  const { bumpNotes, inboxCount, reloadInbox } = useData();
   const [newError, setNewError] = useState<string | null>(null);
   const p = props.path;
   // The count is fetched again on every move between screens (bots write at any time).
@@ -69,15 +69,12 @@ export function Sidebar(props: { path: string }) {
       <RailLink to="/styles" label="Styles" active={p === '/styles'}>
         <Paintbrush size={20} />
       </RailLink>
-      <RailLink to="/account" label="Account" active={p === '/account'}>
-        <UserRound size={20} />
-      </RailLink>
       <RailLink to="/trash" label="Trash" active={p === '/trash'}>
         <Trash2 size={20} />
       </RailLink>
-      <button type="button" className="rail-btn" aria-label={`Log out ${user.username}`} title={`Log out (${user.username})`} onClick={() => void logout()}>
-        <LogOut size={20} />
-      </button>
+      <RailLink to="/account" label="Account" active={p === '/account'}>
+        <UserRound size={20} />
+      </RailLink>
       {newError && (
         <div role="alert" className="rail-error" onClick={() => setNewError(null)}>
           {newError}

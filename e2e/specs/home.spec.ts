@@ -31,7 +31,7 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   // The left bar: logo, new note, then fonts, styles, backup, trash and log out. No notes or tags icon.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account', 'Trash', 'Log out alice']);
+  expect(controls).toEqual(['Jot home: all notes', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Trash', 'Account']);
   await goHome(page);
 
   // Home: search, New, tag filter and the list, no editor.

@@ -35,6 +35,10 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   highlighted on the home page, and the New note button; at the bottom: Fonts, Styles,
   Trash and Log out. There is no notes icon. (A Tags item was added later; see "Tags page,
   card trash button and a slimmer left bar".)
+- **Log out moved to the Account page (owner request).** The left bar no longer has a
+  log out button; its bottom group is Fonts, Styles, Trash, then Account last. Log out is
+  a button in the Account page's heading row, with the same accessible name as before
+  ("Log out <username>").
 
 ## Accounts, sessions and the CLI
 

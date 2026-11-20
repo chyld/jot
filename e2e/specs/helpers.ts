@@ -17,6 +17,12 @@ export async function login(page: Page, username: string, password = PASSWORD) {
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible();
 }
 
+/** Log out lives on the Account page (the person icon at the bottom of the left bar). */
+export async function logout(page: Page) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Account' }).click();
+  await page.getByRole('button', { name: /^Log out/ }).click();
+}
+
 export async function newNote(page: Page, title: string) {
   const before = page.url();
   await page.getByRole('button', { name: 'New note' }).click();
