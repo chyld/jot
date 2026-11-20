@@ -121,7 +121,10 @@ test('the writing area fills the window, with a fixed right margin marker where 
     expect(line.x).toBeLessThan(pane.x + pane.width - 24);
     expect(line.x).toBeGreaterThan(pane.x + pane.width - 80);
     expect(Math.abs(line.y - (toolbar.y + toolbar.height))).toBeLessThan(2);
-    expect(Math.abs(line.y + line.height - (pane.y + pane.height))).toBeLessThan(2);
+    // ... down to the status line, which sits at the bottom of the pane below the writing area.
+    const status = (await page.getByLabel('Note status').boundingBox())!;
+    expect(Math.abs(line.y + line.height - status.y)).toBeLessThan(2);
+    expect(Math.abs(status.y + status.height - (pane.y + pane.height))).toBeLessThan(2);
     // The triangle sits on the line just under the toolbar.
     expect(Math.abs(tri.x + tri.width / 2 - (line.x + 0.5))).toBeLessThan(1.5);
     expect(Math.abs(tri.y - (toolbar.y + toolbar.height))).toBeLessThan(2);

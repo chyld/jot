@@ -1,7 +1,8 @@
-// Type 3 (unit): Google Fonts request building and response parsing, plus relative time.
-import { describe, expect, it } from 'vitest';
+// Type 3 (unit): Google Fonts request building and response parsing, plus relative time
+// and short dates.
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { css2FamilyParam, parseGoogleCss, isValidFamilyName } from '../../src/server/fonts';
-import { relativeTime } from '../../src/shared/time';
+import { relativeTime, shortDate } from '../../src/shared/time';
 
 describe('css2FamilyParam (which faces to download)', () => {
   it('asks for regular and bold, upright and italic, when available', () => {
@@ -89,5 +90,29 @@ describe('relativeTime', () => {
   });
   it('treats future times as just now', () => {
     expect(relativeTime(ago(-10_000), now)).toBe('just now');
+  });
+});
+
+describe('shortDate (in the viewer\'s time zone)', () => {
+  // Node reads TZ again whenever it changes, so this file can pin one.
+  const saved = process.env.TZ;
+  beforeAll(() => {
+    process.env.TZ = 'America/Los_Angeles';
+  });
+  afterAll(() => {
+    if (saved === undefined) delete process.env.TZ;
+    else process.env.TZ = saved;
+  });
+
+  it('shows the local date, not the UTC one', () => {
+    // 5:38 PM on Nov 19 in California is already Nov 20 in UTC.
+    const iso = '2026-11-20T01:38:00Z';
+    expect(new Date(iso).getTimezoneOffset()).toBe(480); // the pin took effect (PST)
+    expect(shortDate(iso)).toBe('Nov 19, 2026');
+    expect(relativeTime(iso, new Date('2027-01-05T12:00:00Z'))).toBe('Nov 19, 2026');
+  });
+
+  it('keeps a local new year in the old year', () => {
+    expect(shortDate('2027-01-01T03:00:00Z')).toBe('Dec 31, 2026');
   });
 });

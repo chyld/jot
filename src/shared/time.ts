@@ -14,8 +14,9 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
   return shortDate(iso);
 }
 
-/** "Jan 2, 2026" */
+/** "Jan 2, 2026", in the viewer's own time zone (a note made at 5:38 PM on Nov 19 in
+ * California is "Nov 19", not the UTC date). Only the web app shows it. */
 export function shortDate(iso: string): string {
   const d = new Date(iso);
-  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }

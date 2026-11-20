@@ -198,6 +198,32 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 - Covered by `tests/api/tags-delete.test.ts`, `tests/component/tags-trash-card.test.tsx`
   and `e2e/specs/tags-page.spec.ts`.
 
+## Note status line and local dates (owner request)
+
+- **Status line.** A `<footer aria-label="Note status">` under the note page, so the header
+  wraps less. The save status, dates, Read-only and "From <bot>" labels moved there from the
+  header (same test ids and `role="status"`); the title, tags, Keep and trash stay in the header.
+  - Word and character counts come from the editor's text, not its HTML: words are runs of
+    non-space characters (paragraphs are separated, so words do not join across them);
+    characters are the text's code points, spaces included, with nothing counted between
+    paragraphs. Photos count as nothing. They update on every change to the body.
+  - Order: counts, save status, labels; dates at the right. The counts come first so a save
+    starting never moves them. While idle the save status is empty and takes no room; once
+    it says something it keeps room for "Unsaved changes", so the labels after it stay put.
+  - The bar is `user-select: none`. Otherwise Chrome's triple click on the body's last
+    paragraph of a read-only note extended the selection to the start of the next block (the
+    bar), and only a line break ended up selected.
+  - One row at any width: nothing wraps; "Created …" truncates, then is hidden below a
+    560 px wide bar (a container query), and the updated time stays.
+  - Hidden in print, like the wrap marker.
+- **Dates in the viewer's time zone.** `shortDate` used the UTC date, so a note made at
+  5:38 PM on Nov 19 in California said "Created Nov 20". It now uses the browser's local
+  date. Only the web app uses it (the note's dates, and `relativeTime` for times over 30
+  days in the notes list, Trash and the Account page); the server, MCP output and backups
+  do not, and keep their ISO timestamps unchanged.
+- Covered by `tests/unit/fonts-time.test.ts` (TZ pinned to America/Los_Angeles),
+  `tests/component/note-status.test.tsx` (the real NoteEditor) and `e2e/specs/note-status.spec.ts`.
+
 ## Editor and styles
 
 - **Clear formatting** is one Tiptap chain, so one transaction and one undo step.

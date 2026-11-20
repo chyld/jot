@@ -44,7 +44,7 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - A note has a title, a body and tags.
 - No folders and no inbox; tags are the only organisation.
 - Notes list shows title, preview text, tags and relative time ("3 min ago").
-- Created and updated dates are shown on each note.
+- Created and updated dates are shown on each note, in the status line (section 6). Dates are in the viewer's own time zone.
 - Each note has its own URL.
 - New note button.
 - A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
@@ -95,7 +95,9 @@ Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write note
 
 ## 6. Editor
 
-Built on Tiptap. Opening a note shows the editor full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list is shown beside it.
+Built on Tiptap. Opening a note shows the editor full screen (everything except the left bar): a header with the title, tags, the Keep button (Inbox notes) and the trash button, then the toolbar, the note page and a status line. No notes list is shown beside it.
+
+The **status line** is a thin bar (28 px, muted 12.5 px text, a line above it) pinned at the bottom of the note screen, under the writing area; it stays put while the note scrolls. Left to right: the word count and character count of the note body ("21 words", "1 character"; counted from the text, spaces included, updated as you type), the save status (nothing while there is nothing to save), the Read-only label and the "From <bot>" label when they apply; at the right, "Created <date> · Updated <relative time>". It is always one row: when the window is narrow, "Created …" shortens and then goes, keeping the updated time. It is shown on trashed and read-only notes too, is not printed, and its text cannot be selected.
 
 The toolbar matches the screenshots, left to right:
 

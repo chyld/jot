@@ -151,7 +151,20 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 .wrap-marker { position: absolute; top: 0; bottom: 0; right: var(--wrap-gutter); width: 0; pointer-events: none; user-select: none; z-index: 2; }
 .wrap-marker-line { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: #b4c88c; }
 .wrap-marker-triangle { position: absolute; top: 0; left: 0.5px; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #4d7c0f; }
-@media print { .wrap-marker { display: none; } }
+/* The status line: always one 28 px row under the writing area. When it runs out of room
+   "Created …" truncates and then goes (the updated time stays); nothing wraps. Not
+   selectable: a triple click on the note's last paragraph would otherwise run into it. */
+.note-status { flex-shrink: 0; display: flex; align-items: center; gap: 14px; height: 28px; padding: 0 20px; border-top: 1px solid var(--border); background: var(--app-bg); font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; container-type: inline-size; user-select: none; }
+.note-status > * { flex-shrink: 0; }
+/* After the counts, so they never move. Saying something, it is wide enough for "Unsaved
+   changes" (the labels after it stay put while saving); empty, it takes no room. */
+.note-status .save-status { min-width: 96px; }
+.note-status .save-status:empty { min-width: 0; margin-left: -14px; }
+.note-status .read-only-badge, .note-status .bot-badge { font-size: 12px; padding: 1px 7px; gap: 4px; }
+.note-status .note-dates { flex-shrink: 1; min-width: 0; margin-left: auto; display: flex; gap: 0.3em; overflow: hidden; }
+.note-created { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@container (max-width: 560px) { .note-created { display: none; } }
+@media print { .wrap-marker, .note-status { display: none; } }
 
 /* tag input */
 .tag-input { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; }

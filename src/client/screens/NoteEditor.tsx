@@ -26,6 +26,17 @@ const STATUS_TEXT: Record<SaveStatus, string> = {
   error: 'Not saved',
 };
 
+/** Words and characters of the note body, from the editor's text (not its HTML). */
+function textCounts(editor: Editor | null): { words: number; chars: number } {
+  if (!editor) return { words: 0, chars: 0 };
+  const words = editor.getText({ blockSeparator: '\n' }).split(/\s+/).filter(Boolean).length;
+  // Characters as typed, spaces included; nothing is counted between paragraphs.
+  const chars = Array.from(editor.state.doc.textContent).length;
+  return { words, chars };
+}
+
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+
 export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
   const [note, setNote] = useState<Note | null>(null);
   const [missing, setMissing] = useState(false);
@@ -87,9 +98,12 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
       ...pasteProps((file) => pasteFile.current(file)),
     },
     onUpdate: ({ editor }) => {
+      setCounts(textCounts(editor));
       if (!lockedRef.current) autosave.schedule({ content: editor.getJSON() });
     },
   });
+  // The status line's counts follow the body as it changes (the editor itself does not re-render).
+  const [counts, setCounts] = useState(() => textCounts(editor));
 
   useEffect(() => {
     if (editor && editor.isEditable === locked) editor.setEditable(!locked);
@@ -229,11 +243,6 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           onRemove={(tag) => void tagChange(() => api.removeTag(note.id, tag)).catch(() => {})}
         />
         <div className="note-meta">
-          {note.botName && (
-            <span className="bot-badge" data-testid="note-bot" title={`Written by the bot ${note.botName}`}>
-              <Bot size={14} /> From {note.botName}
-            </span>
-          )}
           {note.inbox && !trashed && !readOnly && (
             <button
               type="button"
@@ -254,17 +263,6 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
               <Check size={14} /> Keep
             </button>
           )}
-          {readOnly && (
-            <span className="read-only-badge" data-testid="read-only-indicator" title="This note is read-only. It can only be made writable again from the command line on the server.">
-              <Lock size={14} /> Read-only
-            </span>
-          )}
-          <span data-testid="save-status" className={`save-status status-${autosave.status}`} role="status">
-            {STATUS_TEXT[autosave.status]}
-          </span>
-          <span className="note-dates" data-testid="note-dates">
-            Created {shortDate(note.createdAt)} · Updated {relativeTime(note.updatedAt, now)}
-          </span>
           {!locked && (
             <button
               type="button"
@@ -339,6 +337,29 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           <span className="wrap-marker-triangle" />
         </div>
       </div>
+      {/* One row under the writing area: the note's size, how the save is going and its dates. */}
+      <footer className="note-status" aria-label="Note status">
+        <span data-testid="word-count">{plural(counts.words, 'word')}</span>
+        <span data-testid="char-count">{plural(counts.chars, 'character')}</span>
+        <span data-testid="save-status" className={`save-status status-${autosave.status}`} role="status">
+          {STATUS_TEXT[autosave.status]}
+        </span>
+        {readOnly && (
+          <span className="read-only-badge" data-testid="read-only-indicator" title="This note is read-only. It can only be made writable again from the command line on the server.">
+            <Lock size={12} /> Read-only
+          </span>
+        )}
+        {note.botName && (
+          <span className="bot-badge" data-testid="note-bot" title={`Written by the bot ${note.botName}`}>
+            <Bot size={12} /> From {note.botName}
+          </span>
+        )}
+        <span className="note-dates" data-testid="note-dates">
+          {/* When room runs out "Created …" shortens and then goes, so the line never wraps. */}
+          <span className="note-created">Created {shortDate(note.createdAt)} ·</span>{' '}
+          <span>Updated {relativeTime(note.updatedAt, now)}</span>
+        </span>
+      </footer>
       {styleDraft && (
         <StyleDialog
           title="Save selection as style"
