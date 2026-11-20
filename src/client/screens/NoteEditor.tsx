@@ -15,7 +15,7 @@ import { jotExtensions } from '../editor/extensions';
 import { pasteProps, PHOTO_TYPE_MESSAGE, PHOTO_TYPES } from '../editor/paste';
 import { currentFormat } from '../editor/stamp';
 import { Toolbar } from '../editor/Toolbar';
-import { clearOpenNote, dropNewNote, setOpenNote, takeNewNote } from '../newNotes';
+import { takeNewNote } from '../newNotes';
 import { homeHref, navigate } from '../router';
 
 const STATUS_TEXT: Record<SaveStatus, string> = {
@@ -51,7 +51,6 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
     };
   }, [props.noteId]);
   if (missing) {
-    dropNewNote(props.noteId);
     return (
       <div className="empty-state">
         <p>This note does not exist.</p>
@@ -114,48 +113,11 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   // opened as before.
   useEffect(() => {
     if (!editor || locked) return;
-    const typed = takeNewNote(note.id);
-    if (!typed) return;
-    // Focus now (not on the next frame), then type what was held, in order.
+    if (!takeNewNote(note.id)) return;
+    // Focus now (not on the next frame).
     editor.commands.setTextSelection(editor.state.doc.content.size - 1);
     editor.view.focus();
-    let run = '';
-    const flush = () => {
-      if (run) editor.view.dispatch(editor.state.tr.insertText(run));
-      run = '';
-    };
-    for (const k of typed) {
-      if (k === '\n') {
-        flush();
-        editor.commands.splitBlock();
-      } else run += k;
-    }
-    flush();
   }, [editor, note.id, locked]);
-
-  // Tell the New buttons about this note, judged from what is on screen now (not a saved
-  // copy): a completely empty note is reused instead of making another one.
-  const titleRef = useRef(title);
-  titleRef.current = title;
-  const noteRef = useRef(note);
-  noteRef.current = note;
-  useEffect(() => {
-    if (!editor) return;
-    const open = {
-      isEmpty: () =>
-        !titleRef.current.trim() &&
-        editor.isEmpty &&
-        noteRef.current.tags.length === 0 &&
-        !noteRef.current.readOnly &&
-        noteRef.current.deletedAt === null,
-      focusBody: () => {
-        editor.commands.setTextSelection(editor.state.doc.content.size - 1);
-        editor.view.focus();
-      },
-    };
-    setOpenNote(open);
-    return () => clearOpenNote(open);
-  }, [editor]);
 
   const makeReadOnly = async () => {
     setMessage(null);

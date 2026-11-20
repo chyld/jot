@@ -1,8 +1,7 @@
 // A New button that is also a link to /new (the bookmarkable address, see App.tsx).
 //
-// A plain click, Enter or Space creates the note in place through createAndOpenNote, with
-// all the New-button rules (one intent, one note; an empty open note is reused). Because
-// it is a real link, it can also be dragged to the bookmarks bar, copied, or opened in a
+// A plain click, Enter or Space creates the note in place through createAndOpenNote; every
+// activation makes a note. Because it is a real link, it can also be dragged to the bookmarks bar, copied, or opened in a
 // new tab (middle-click, Ctrl/Cmd/Shift-click), and there /new makes the note.
 import { createAndOpenNote } from '../newNotes';
 

@@ -283,27 +283,13 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   - Tiptap 3 keeps an empty paragraph after a final heading, so that paragraph shows a ¶
     too.
 
-- **One intent creates one note (owner bug report).** The left-bar + and the home page's
-  + New share one in-flight flag (`src/client/newNotes.ts`).
-  - Set when either is activated, cleared once the new note's editor is ready, or when the
-    create (or opening the note) fails, with the error shown.
-  - While it is set, further clicks, double-clicks, Enter and Space are ignored, never
-    queued. Focus leaves the button at once.
-  - Keys typed meanwhile are held and then typed into the body in order: characters,
-    Enter as a new paragraph, Backspace removing the last held key. Keys with Ctrl, Cmd or
-    Alt pass through untouched.
-  - The editor takes focus synchronously (not on the next frame), so no key falls in
-    between.
-  - No timers: a press after the new note is open creates another note.
-  - The flag alone cannot stop clicks 150 ms apart: a new note is ready about 90–110 ms
-    after the click, so each later click comes after the note is open.
-  - The owner's decision is one deterministic rule, no timers. If the note open in the
-    editor is completely empty, a New button puts the cursor in its body instead of
-    making another note. Empty means no title, no body (`editor.isEmpty`), no tags, not
-    read-only and not trashed, judged from the editor's live state (the title box and the
-    document on screen), not the saved copy.
-  - The editor registers that check while it is open. A new note is made only when no
-    note is open, or the open one has something in it.
+- **No rules for New (owner decision, replacing "one intent creates one note").** Every
+  activation of a New button creates a note. The in-flight flag, the held keystrokes, the
+  blur of the button and the reuse of an empty open note are all removed, so a
+  double-click makes two notes and keys typed before the editor is ready are not kept.
+  The reason: the flag could stay set when opening the new note failed (anything but a
+  404), which left the New buttons dead and the keyboard swallowed until a reload. With
+  no flag there is nothing to get stuck.
 - **A new note opens ready to type.** Both New buttons create the note through one function, which
   marks the new note's id in a set kept in the page's memory. When the editor has loaded
   that note, it takes the mark (once) and puts the caret at the end of the body
@@ -313,12 +299,11 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   link to it or reloading it finds no mark, so the focus is left alone as before. Nothing
   is typed or formatted: the first keystrokes are plain text, as with a click.
 - **The /new address (bookmark).** A small screen in `App.tsx` calls the same
-  `createAndOpenNote` as the New buttons, with two options the buttons do not pass.
+  `createAndOpenNote` as the New buttons, with one option the buttons do not pass.
   - `replace`: the note's address replaces `/new` (`history.replaceState`), so `/new` is
     never in the history. Back and Refresh land on the note, not on `/new`.
-  - `reuse: false`: it always makes a new note, even if an empty one is open.
   - React StrictMode runs effects twice in development; a ref lets only the first run
-    create (the in-flight flag would also refuse the second).
+    create.
   - Logged out, `/new` goes to `/login?next=%2Fnew` and back to `/new` after logging in.
     `next` is honoured only when it is exactly `/new` (an allow-list, so no open redirect
     and no other address changes behaviour); anything else goes to `/` as before.
@@ -328,8 +313,7 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   `NewNoteLink`: an `<a href="/new" role="button">`, so tests and screen readers still find
   a button, and the browser's link actions (drag to bookmarks, copy address, open in a new
   tab) reach `/new`. A plain left click and Enter are intercepted and Space is handled by
-  hand (links ignore it), all calling `createAndOpenNote` as before, so the New-button
-  rules, including reusing an empty open note, are unchanged. Clicks with a modifier key
+  hand (links ignore it), all calling `createAndOpenNote` as before. Clicks with a modifier key
   or another mouse button are left to the browser.
 
 - Font sizes are whole pixels from 6 to 200. Text with no size is 16 px Inter.

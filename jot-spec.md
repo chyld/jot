@@ -48,9 +48,9 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - Each note has its own URL.
 - New note button.
 - A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
-- One intent creates one note. While a new note is being created and opened, further presses of either New button (click, double-click, Enter, Space) are ignored, and keys typed meanwhile go into the new note's body in order. If the note open in the editor is completely empty (no title, no body, no tags, not read-only, not in the trash, as it is on screen at that moment), a New button does not create another note: it puts the cursor in that note's body. A new note is created only when no note is open or the open note has something in it.
-- The address `/new` (for a bookmark) always makes a new note and opens it ready to type, as a New button does, showing "Creating note…" meanwhile. It never reuses an empty note. The address becomes the note's own (`/n/<id>`) in place of `/new`, so Back and Refresh never make a second note. Logged out, `/new` goes to the login page and the note is made after logging in. If the create fails, the page shows the error and a Try again button.
-- Both New buttons are links to `/new`: they can be dragged to the bookmarks bar, copied, or opened in a new tab (middle-click, Ctrl/Cmd/Shift-click), where `/new` makes the note. A plain click, Enter or Space behaves as described above, in place.
+- Every press of a New button creates a note. Nothing is guarded or reused: a double-click makes two notes, and pressing New in an empty note makes another.
+- The address `/new` (for a bookmark) always makes a new note and opens it ready to type, as a New button does, showing "Creating note…" meanwhile. The address becomes the note's own (`/n/<id>`) in place of `/new`, so Back and Refresh never make a second note. Logged out, `/new` goes to the login page and the note is made after logging in. If the create fails, the page shows the error and a Try again button.
+- Both New buttons are links to `/new`: they can be dragged to the bookmarks bar, copied, or opened in a new tab (middle-click, Ctrl/Cmd/Shift-click), where `/new` makes the note. A plain click, Enter or Space makes the note in place.
 
 ### Read-only notes
 

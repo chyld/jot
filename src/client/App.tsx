@@ -26,7 +26,7 @@ function NewNoteScreen() {
   const [error, setError] = useState<string | null>(null);
   const create = () => {
     setError(null);
-    void createAndOpenNote(bumpNotes, { replace: true, reuse: false }).then(setError);
+    void createAndOpenNote(bumpNotes, { replace: true }).then(setError);
   };
   useEffect(() => {
     if (started.current) return;

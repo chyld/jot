@@ -68,8 +68,7 @@ const renderApp = () =>
     </StrictMode>,
   );
 
-/** On the new note's address with its editor open. The editor taking the new note also
- *  releases the in-flight guard kept in newNotes.ts, which the next test needs. */
+/** On the new note's address with its editor open. */
 async function opened() {
   await waitFor(() => expect(location.pathname).toBe('/n/n1'));
   await waitFor(() => expect(document.querySelector('article[data-note-id="n1"] .note-body')).not.toBeNull());
