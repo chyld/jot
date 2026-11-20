@@ -2,8 +2,8 @@ import { Inbox, LogOut, NotebookPen, Paintbrush, Plus, Tags, Trash2, Type, UserR
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useData } from '../data';
-import { createAndOpenNote } from '../newNotes';
 import { navigate } from '../router';
+import { NewNoteLink } from './NewNoteLink';
 
 function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode; title?: string }) {
   return (
@@ -48,9 +48,9 @@ export function Sidebar(props: { path: string }) {
       >
         <NotebookPen size={20} />
       </a>
-      <button type="button" className="rail-new" aria-label="New note" title="New note" onClick={() => void createAndOpenNote(bumpNotes).then(setNewError)}>
+      <NewNoteLink className="rail-new" label="New note" bump={bumpNotes} onError={setNewError}>
         <Plus size={20} />
-      </button>
+      </NewNoteLink>
       <RailLink to="/inbox" label="Inbox" title={`Inbox: ${inboxCount} ${inboxCount === 1 ? 'note' : 'notes'} from bots`} active={p === '/inbox'}>
         <span className="rail-inbox">
           <Inbox size={20} />

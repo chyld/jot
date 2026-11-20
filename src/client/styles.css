@@ -90,6 +90,7 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 .rail-logo:hover { background: var(--rail-hover); }
 .rail-logo.is-home { background: var(--rail-active); color: var(--rail-active-icon); }
 .rail-new { width: 36px; height: 36px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-text); cursor: pointer; display: grid; place-items: center; }
+a.rail-new, a.btn { text-decoration: none; }
 .rail-new:hover { background: var(--accent-dark); }
 .rail-btn { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--rail-icon); border: 0; background: transparent; cursor: pointer; text-decoration: none; }
 .rail-btn:hover { background: var(--rail-hover); }
@@ -360,7 +361,7 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 
 /* links and selected states in the chrome */
-.screen a:not(.note-card-link):not(.tag-chip):not(.tag-chip-sm), .empty-state a { color: var(--accent); }
+.screen a:not(.note-card-link):not(.tag-chip):not(.tag-chip-sm):not(.btn-primary), .empty-state a { color: var(--accent); }
 .menu-item.is-active { background: var(--accent); color: var(--accent-text); }
 .menu-item.is-active .style-preview { background-color: transparent; }
 

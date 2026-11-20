@@ -13,6 +13,10 @@
 // body. That stops bursts the flag alone cannot (the editor is ready before the next
 // click), and nobody needs a second empty note while sitting in an empty one.
 //
+// The /new address (App.tsx) creates through here too, with `replace` (the address /new
+// is replaced by the note's, so Back and Refresh never come back to /new) and `reuse`
+// off (it always makes a new note).
+//
 // The editor puts the caret in the body of a note marked here once it has loaded it.
 // Reopening a note later (or reloading it) finds no mark and leaves the focus alone.
 import { api } from './api';
@@ -59,11 +63,15 @@ function finish(): string[] {
 
 /**
  * Creates a note and opens it; ignored while another is being created. Returns an error
- * message if the create failed (the guard is then released).
+ * message if the create failed (the guard is then released). `replace` replaces the
+ * current address instead of adding one; `reuse: false` never reuses an empty open note.
  */
-export async function createAndOpenNote(bump: () => void): Promise<string | null> {
+export async function createAndOpenNote(
+  bump: () => void,
+  opts: { replace?: boolean; reuse?: boolean } = {},
+): Promise<string | null> {
   if (creating) return null;
-  if (openNote?.isEmpty()) {
+  if (opts.reuse !== false && openNote?.isEmpty()) {
     openNote.focusBody(); // reuse the empty note that is already open
     return null;
   }
@@ -75,7 +83,7 @@ export async function createAndOpenNote(bump: () => void): Promise<string | null
     const { note } = await api.createNote();
     fresh.add(note.id);
     bump();
-    navigate(`/n/${note.id}`);
+    navigate(`/n/${note.id}`, { replace: opts.replace });
     return null;
   } catch (err) {
     finish();

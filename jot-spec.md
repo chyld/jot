@@ -49,6 +49,8 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - New note button.
 - A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
 - One intent creates one note. While a new note is being created and opened, further presses of either New button (click, double-click, Enter, Space) are ignored, and keys typed meanwhile go into the new note's body in order. If the note open in the editor is completely empty (no title, no body, no tags, not read-only, not in the trash, as it is on screen at that moment), a New button does not create another note: it puts the cursor in that note's body. A new note is created only when no note is open or the open note has something in it.
+- The address `/new` (for a bookmark) always makes a new note and opens it ready to type, as a New button does, showing "Creating note…" meanwhile. It never reuses an empty note. The address becomes the note's own (`/n/<id>`) in place of `/new`, so Back and Refresh never make a second note. Logged out, `/new` goes to the login page and the note is made after logging in. If the create fails, the page shows the error and a Try again button.
+- Both New buttons are links to `/new`: they can be dragged to the bookmarks bar, copied, or opened in a new tab (middle-click, Ctrl/Cmd/Shift-click), where `/new` makes the note. A plain click, Enter or Space behaves as described above, in place.
 
 ### Read-only notes
 
@@ -218,7 +220,7 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 
 | Screen | Contents |
 |---|---|
-| Login | Username, password |
+| Login | Username, password. Any address goes here when logged out, and to the home page after logging in, except `/new`, which is kept (section 3) |
 | Notes (home page) | Search box, New button, a tag filter (chips for the user's tags; choosing one filters the list; "All" clears it) and the notes list. Each note card has a trash button that moves the note to the trash at once, with Undo (read-only notes have none). No editor beside the list. Clicking a tag's name on a note opens this page with that tag selected |
 | Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it. A read-only note shows a "Read-only" indicator and cannot be edited |
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |

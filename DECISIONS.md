@@ -312,6 +312,25 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   the owner asked to type straight into the body. Opening an existing note, following a
   link to it or reloading it finds no mark, so the focus is left alone as before. Nothing
   is typed or formatted: the first keystrokes are plain text, as with a click.
+- **The /new address (bookmark).** A small screen in `App.tsx` calls the same
+  `createAndOpenNote` as the New buttons, with two options the buttons do not pass.
+  - `replace`: the note's address replaces `/new` (`history.replaceState`), so `/new` is
+    never in the history. Back and Refresh land on the note, not on `/new`.
+  - `reuse: false`: it always makes a new note, even if an empty one is open.
+  - React StrictMode runs effects twice in development; a ref lets only the first run
+    create (the in-flight flag would also refuse the second).
+  - Logged out, `/new` goes to `/login?next=%2Fnew` and back to `/new` after logging in.
+    `next` is honoured only when it is exactly `/new` (an allow-list, so no open redirect
+    and no other address changes behaviour); anything else goes to `/` as before.
+  - No server change: the server already answers unknown GET addresses with `index.html`,
+    and `GET /new` changes nothing. The note is made by the page's `POST /api/notes`.
+- **The New buttons are links to /new (owner request).** Both render through
+  `NewNoteLink`: an `<a href="/new" role="button">`, so tests and screen readers still find
+  a button, and the browser's link actions (drag to bookmarks, copy address, open in a new
+  tab) reach `/new`. A plain left click and Enter are intercepted and Space is handled by
+  hand (links ignore it), all calling `createAndOpenNote` as before, so the New-button
+  rules, including reusing an empty open note, are unchanged. Clicks with a modifier key
+  or another mouse button are left to the browser.
 
 - Font sizes are whole pixels from 6 to 200. Text with no size is 16 px Inter.
 - **Applying a style with nothing selected** stamps the whole current paragraph (and

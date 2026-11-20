@@ -7,7 +7,7 @@ import { Plus, Search } from 'lucide-react';
 import type { NoteSummary, Tag } from '../../shared/types';
 import { api } from '../api';
 import { NoteCard, useNow } from '../components/NoteCard';
-import { createAndOpenNote } from '../newNotes';
+import { NewNoteLink } from '../components/NewNoteLink';
 import { useData } from '../data';
 import { homeHref, navigate } from '../router';
 
@@ -83,9 +83,9 @@ export function NotesScreen(props: { tag: string | null }) {
           <Search size={16} />
           <input type="search" placeholder="Search notes" aria-label="Search notes" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <button type="button" className="btn btn-primary" onClick={() => void createAndOpenNote(bumpNotes).then(setNewError)}>
+        <NewNoteLink className="btn btn-primary" bump={bumpNotes} onError={setNewError}>
           <Plus size={16} /> New
-        </button>
+        </NewNoteLink>
       </div>
       {newError && (
         <div role="alert" className="banner banner-error">
