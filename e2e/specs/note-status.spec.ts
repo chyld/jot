@@ -71,8 +71,8 @@ test('read-only notes show the status line with the read-only label', async ({ p
   await expect(bar.getByTestId('word-count')).toHaveText(/^\d+ words?$/);
 });
 
-// A short title used to keep a 140 px wide field, leaving a wide gap before the first tag.
-test('the first tag sits right beside a short title', async ({ page }) => {
+// The title field used to be at least 140 px wide, leaving a wide gap before the first tag.
+test('the first tag sits right beside a short or empty title', async ({ page }) => {
   await login(page, 'carol');
   await newNote(page, 'Hi');
   const input = page.getByRole('textbox', { name: 'Add tag' });
@@ -84,7 +84,11 @@ test('the first tag sits right beside a short title', async ({ page }) => {
   };
   expect((await title.boundingBox())!.width).toBeLessThan(60);
   expect(await gap()).toBeLessThan(20);
-  // An empty title still shows all of "Untitled".
+  // An empty title is as wide as "Untitled", fully shown, with the tags right beside it too.
   await title.fill('');
-  expect((await title.boundingBox())!.width).toBeGreaterThanOrEqual(100);
+  const w = (await title.boundingBox())!.width;
+  expect(w).toBeGreaterThan(80);
+  expect(w).toBeLessThan(125);
+  expect(await title.evaluate((el: HTMLInputElement) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect(await gap()).toBeLessThan(20);
 });

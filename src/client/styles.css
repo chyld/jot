@@ -138,9 +138,8 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 /* ---------------------------------------------------------------- note */
 .note { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .note-header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; flex-wrap: wrap; background: var(--app-bg); }
-/* As wide as its text, so the tags sit right beside a short title; an empty title keeps room for "Untitled". */
+/* As wide as its text (or as "Untitled" when empty), so the tags sit right beside it. */
 .note-title { font-size: 24px; font-weight: 700; border: 0; background: transparent; outline: 0; field-sizing: content; min-width: 1ch; max-width: 560px; padding: 4px 0; }
-.note-title:placeholder-shown { min-width: 140px; }
 .note-title::placeholder { color: var(--muted); opacity: 0.7; }
 .note-meta { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
 .save-status.status-error { color: var(--danger); }
