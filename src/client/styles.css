@@ -305,7 +305,8 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .trash-item { display: flex; align-items: center; gap: 16px; }
 .trash-text { flex: 1; min-width: 0; }
 .trash-item .card-actions { margin-top: 0; }
-.tag-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+/* The Tags page. (.tag-list is the row of tags in a note's header.) */
+.tags-page-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
 .tag-item { display: flex; align-items: center; gap: 16px; padding: 10px 16px; flex-wrap: wrap; }
 .tag-item .tag-chip { padding: 3px 10px; }
 .tag-item .tag-chip:hover { background: var(--tag-text); color: #fff; }

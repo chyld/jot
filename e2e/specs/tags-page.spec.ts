@@ -85,3 +85,24 @@ test('the Tags page counts notes per tag and deletes a tag after a confirmation'
   await expect(list.getByText(`#${tag}`)).toHaveCount(0);
   await expect(page.getByRole('group', { name: 'Filter by tag' }).getByRole('button', { name: `#${tag}` })).toHaveCount(0);
 });
+
+// The Tags page's list once shared a class name with this row and stacked it in a column.
+test('a note’s tags sit in one row beside the title, with Add tag after them', async ({ page }) => {
+  await login(page, 'carol');
+  await newNote(page, 'Row of tags');
+  const names = ['a', 'alpha', 'b'].map((n) => uniq(n));
+  for (const n of names) await addTag(page, n);
+
+  const boxes = [];
+  for (const n of names) boxes.push((await page.getByRole('list', { name: 'Tags' }).getByText(`#${n}`, { exact: true }).boundingBox())!);
+  const input = (await page.getByRole('textbox', { name: 'Add tag' }).boundingBox())!;
+  const mid = (b: { y: number; height: number }) => b.y + b.height / 2;
+
+  for (const b of boxes) expect(Math.abs(mid(b) - mid(boxes[0]))).toBeLessThan(3);
+  expect(Math.abs(mid(input) - mid(boxes[0]))).toBeLessThan(6);
+  // Side by side without overlapping (tags are shown by name, not in the order added).
+  boxes.sort((p, q) => p.x - q.x);
+  expect(boxes[1].x).toBeGreaterThan(boxes[0].x + boxes[0].width);
+  expect(boxes[2].x).toBeGreaterThan(boxes[1].x + boxes[1].width);
+  expect(input.x).toBeGreaterThan(boxes[2].x + boxes[2].width);
+});

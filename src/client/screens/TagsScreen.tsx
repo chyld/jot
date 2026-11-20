@@ -97,7 +97,7 @@ export function TagsScreen() {
         {tags && <span className="muted">{tags.length === 1 ? '1 tag' : `${tags.length} tags`}</span>}
       </div>
       {tags?.length === 0 && <p className="muted">No tags yet. Add tags to a note while editing it.</p>}
-      <ul className="tag-list" data-testid="tag-list">
+      <ul className="tags-page-list" data-testid="tag-list">
         {tags?.map((t) => (
           // Deleting changes the notes' tags, so every list of notes loads again.
           <TagItem key={t.name} tag={t} onDeleted={bumpNotes} />
