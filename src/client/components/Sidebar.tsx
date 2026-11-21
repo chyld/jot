@@ -1,11 +1,90 @@
-import { Inbox, NotebookPen, Paintbrush, Plus, Tags, Type, UserRound } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { Inbox, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, Plus, Tags, Type, UserRound } from 'lucide-react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSections } from '../currentSection';
 import { useData } from '../data';
 import { navigate } from '../router';
 import { NewNoteLink } from './NewNoteLink';
 import { SectionSquare } from './SectionMarks';
+
+const RAIL_STORAGE_KEY = 'jot.railCollapsed';
+
+function readStoredCollapsed(): boolean {
+  try {
+    return localStorage.getItem(RAIL_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+interface RailContextValue {
+  collapsed: boolean;
+  setCollapsed: (next: boolean) => void;
+  toggle: () => void;
+}
+
+const RailContext = createContext<RailContextValue>({
+  collapsed: false,
+  setCollapsed: () => {},
+  toggle: () => {},
+});
+
+export function RailProvider(props: { children: React.ReactNode }) {
+  const [collapsed, setCollapsedState] = useState<boolean>(readStoredCollapsed);
+
+  const setCollapsed = useCallback((next: boolean) => {
+    setCollapsedState(next);
+    try {
+      localStorage.setItem(RAIL_STORAGE_KEY, next ? '1' : '0');
+    } catch {
+      // Ignore storage errors (private browsing / restricted storage).
+    }
+  }, []);
+
+  const toggle = useCallback(() => {
+    setCollapsedState((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(RAIL_STORAGE_KEY, next ? '1' : '0');
+      } catch {
+        // Ignore storage errors.
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '\\') {
+        e.preventDefault();
+        toggle();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [toggle]);
+
+  return <RailContext.Provider value={{ collapsed, setCollapsed, toggle }}>{props.children}</RailContext.Provider>;
+}
+
+export function useRail() {
+  return useContext(RailContext);
+}
+
+export function RailExpandButton(props: { className?: string }) {
+  const { collapsed, setCollapsed } = useRail();
+  if (!collapsed) return null;
+  return (
+    <button
+      type="button"
+      className={`rail-expand-btn ${props.className ?? ''}`}
+      aria-label="Expand sidebar"
+      title="Expand sidebar (Ctrl+\)"
+      onClick={() => setCollapsed(false)}
+    >
+      <PanelLeftOpen size={18} />
+    </button>
+  );
+}
 
 function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode; title?: string; className?: string }) {
   return (
@@ -30,14 +109,19 @@ export { createAndOpenNote } from '../newNotes';
 export function Sidebar(props: { path: string }) {
   const { bumpNotes, inboxCount, reloadInbox } = useData();
   const { current } = useSections();
+  const { collapsed, setCollapsed } = useRail();
   const [newError, setNewError] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
   const p = props.path;
   // The count is fetched again on every move between screens (bots write at any time).
   useEffect(() => {
     void reloadInbox();
   }, [p, reloadInbox]);
+  useEffect(() => {
+    if (navRef.current) navRef.current.inert = collapsed;
+  }, [collapsed]);
   return (
-    <nav className="rail" aria-label="Main">
+    <nav ref={navRef} className={`rail ${collapsed ? 'is-collapsed' : ''}`} aria-label="Main" aria-hidden={collapsed || undefined}>
       <a
         href="/"
         className={`rail-logo ${p === '/' ? 'is-home' : ''}`}
@@ -79,6 +163,15 @@ export function Sidebar(props: { path: string }) {
       <RailLink to="/account" label="Account" active={p === '/account'}>
         <UserRound size={20} />
       </RailLink>
+      <button
+        type="button"
+        className="rail-btn rail-collapse-btn"
+        aria-label="Collapse sidebar"
+        title="Collapse sidebar (Ctrl+\)"
+        onClick={() => setCollapsed(true)}
+      >
+        <PanelLeftClose size={18} />
+      </button>
       {newError && (
         <div role="alert" className="rail-error" onClick={() => setNewError(null)}>
           {newError}

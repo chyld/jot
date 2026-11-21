@@ -10,6 +10,7 @@ import { useAutosave, type SaveStatus } from '../autosave';
 import { useNow } from '../components/NoteCard';
 import { blankStyle, StyleDialog } from '../components/StyleDialog';
 import { NoteSection } from '../components/NoteSection';
+import { RailExpandButton } from '../components/Sidebar';
 import { TagInput } from '../components/TagInput';
 import { setCurrentSection, useSections } from '../currentSection';
 import { useData } from '../data';
@@ -229,6 +230,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   return (
     <article className="note" aria-label="Note" data-note-id={note.id}>
       <header className="note-header">
+        <RailExpandButton />
         <input
           className="note-title"
           spellCheck={false}

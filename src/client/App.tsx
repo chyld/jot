@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { User } from '../shared/types';
 import { api, setUnauthorizedHandler } from './api';
-import { Sidebar } from './components/Sidebar';
+import { RailExpandButton, RailProvider, Sidebar, useRail } from './components/Sidebar';
 import { DataProvider, useData } from './data';
 import { createAndOpenNote } from './newNotes';
 import { match, navigate, useLocation } from './router';
@@ -71,6 +71,20 @@ function Screen(props: { path: string; search: URLSearchParams }) {
   );
 }
 
+function AppShell(props: { path: string; search: URLSearchParams }) {
+  const { collapsed } = useRail();
+  const isNote = Boolean(match('/n/:id', props.path));
+  return (
+    <div className={`app ${collapsed ? 'is-rail-collapsed' : ''}`}>
+      <Sidebar path={props.path} />
+      <main className="main">
+        {!isNote && <RailExpandButton className="rail-expand-float" />}
+        <Screen path={props.path} search={props.search} />
+      </main>
+    </div>
+  );
+}
+
 export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const { path, search } = useLocation();
@@ -97,12 +111,9 @@ export function App() {
   if (user === null) return <Login onLogin={setUser} />;
   return (
     <DataProvider key={user.id} user={user} onLogout={() => setUser(null)}>
-      <div className="app">
-        <Sidebar path={path} />
-        <main className="main">
-          <Screen path={path} search={search} />
-        </main>
-      </div>
+      <RailProvider>
+        <AppShell path={path} search={search} />
+      </RailProvider>
     </DataProvider>
   );
 }
