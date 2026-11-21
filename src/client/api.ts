@@ -84,6 +84,7 @@ export const api = {
   createSection: (s: { id: string; name: string; colour: SectionColour }) => request<{ section: Section }>('POST', '/api/sections', s),
   updateSection: (id: string, s: { name: string; colour: SectionColour }) =>
     request<{ section: Section }>('PATCH', `/api/sections/${encodeURIComponent(id)}`, s),
+  deleteSection: (id: string) => request<{ moved: number }>('DELETE', `/api/sections/${encodeURIComponent(id)}`),
 
   trash: () => request<{ notes: NoteSummary[] }>('GET', inSection('/api/trash')),
   restore: (id: string) => request<{ note: Note }>('POST', `/api/trash/${encodeURIComponent(id)}/restore`, {}),

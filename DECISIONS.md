@@ -933,3 +933,17 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   control). Switching is done with Open on a Sections page card. The current card's mark is
   shortened to "Current" so Edit, the mark and Trash fit on one line. The e2e helpers switch
   and open the trash through the Sections page.
+- **Deleting a section; the "Current" corner tag (owner request, draft 10).** This reverses
+  "sections cannot be deleted". `DELETE /api/sections/:id` (owner only; unknown ID 404;
+  Default refused with 400 "The Default section cannot be deleted.") moves every note of the
+  section to Default in one transaction (one `UPDATE notes SET section_id`, so trashed notes
+  land in Default's trash, Inbox and read-only notes move too, and nothing else about a note
+  changes, not even its updated date), then removes the section row; it answers
+  `{ moved: n }`. The ID can be used again afterwards. The Edit dialog has a danger Delete
+  (not for Default) that swaps the buttons for an in-dialog confirmation ("Delete Bob's Work?
+  Its 3 notes and 2 trashed notes move to Default.", built by `deleteSectionMessage` in the
+  shared rules from the card's counts, naming Default by its current name), with "Keep it"
+  and "Delete section". Deleting the current section makes Default current. Personal backup
+  needs no change: it saves the sections that exist and a restore replaces them. The current
+  card's button-row mark became a small uppercase "Current" pill in the card's top-right
+  corner; that card's buttons are Edit and Trash.

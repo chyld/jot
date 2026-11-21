@@ -131,17 +131,23 @@ describe('the section link in the left bar', () => {
 });
 
 describe('the Sections page', () => {
-  it('shows one card per section with its name, ID, number of notes, Edit and Open or “Current”', async () => {
+  it('shows one card per section with its name, ID, number of notes, Edit and Open, or a “Current” tag', async () => {
     localStorage.setItem(KEY, 'work');
     inApp(<SectionsScreen />);
     const card = await screen.findByRole('listitem', { name: "Bob's Work" });
     expect(card.textContent).toContain('ID: work');
     expect(card.textContent).toContain('2 notes');
-    expect(within(card).getByText('Current', { exact: true })).toBeTruthy();
+    // The current card's tag sits in its top-right corner, not in the button row.
+    const tag = within(card).getByText('Current', { exact: true });
+    expect(tag.className).toBe('section-current');
+    expect(tag.parentElement).toBe(card);
+    expect(card.querySelector('.card-actions')!.textContent).not.toContain('Current');
+    expect(within(card).queryByRole('button', { name: "Open Bob's Work" })).toBeNull();
     expect((card as HTMLElement).style.getPropertyValue('--accent')).toBe('#1d4ed8'); // its own colours
     const other = screen.getByRole('listitem', { name: 'Recipes' });
     expect(other.textContent).toContain('0 notes');
-    expect(within(other).queryByRole('button', { name: /delete/i })).toBeNull();
+    expect(within(other).queryByText('Current', { exact: true })).toBeNull();
+    expect(within(other).queryByRole('button', { name: /delete/i })).toBeNull(); // Delete is in the Edit dialog
     await userEvent.click(within(other).getByRole('button', { name: 'Open Recipes' }));
     expect(localStorage.getItem(KEY)).toBe('recipe');
     expect(location.pathname).toBe('/');
@@ -213,6 +219,76 @@ describe('the Sections page', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ name: 'Cooking', colour: 'slate' });
     expect(await screen.findByRole('listitem', { name: 'Cooking' })).toBeTruthy();
+  });
+});
+
+describe('deleting a section', () => {
+  const deleteHandler = () => {
+    handler = (url, init) => {
+      if (!url.startsWith('/api/sections/') || init.method !== 'DELETE') return null;
+      const id = decodeURIComponent(url.slice('/api/sections/'.length));
+      sections = sections.filter((s) => s.id !== id);
+      return json({ moved: 2 });
+    };
+  };
+
+  it('Edit offers Delete, which asks first and says what happens to the notes', async () => {
+    deleteHandler();
+    sections[1] = { ...sections[1], noteCount: 3, trashCount: 2 };
+    inApp(<SectionsScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: "Edit Bob's Work" }));
+    const dialog = screen.getByRole('dialog', { name: "Edit Bob's Work" });
+    const del = within(dialog).getByRole('button', { name: 'Delete' });
+    expect(del.className).toContain('btn-danger');
+    await userEvent.click(del);
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false); // not yet
+    const confirm = within(dialog).getByRole('group', { name: "Delete Bob's Work" });
+    expect(confirm.textContent).toContain("Delete Bob's Work? Its 3 notes and 2 trashed notes move to Default.");
+    // Backing out keeps the section.
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Keep it' }));
+    expect(within(dialog).queryByRole('group', { name: "Delete Bob's Work" })).toBeNull();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete section' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(calls.filter((c) => c.method === 'DELETE').map((c) => c.url)).toEqual(['/api/sections/work']);
+    await waitFor(() => expect(screen.queryByRole('listitem', { name: "Bob's Work" })).toBeNull()); // the list refreshed
+    expect(screen.getByRole('listitem', { name: 'Recipes' })).toBeTruthy();
+  });
+
+  it('deleting the current section makes Default current', async () => {
+    deleteHandler();
+    localStorage.setItem(KEY, 'recipe');
+    inApp(<SectionsScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit Recipes' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit Recipes' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(dialog.textContent).toContain('Delete Recipes? Its 2 trashed notes move to Default.');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete section' }));
+    await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Recipes' })).toBeNull());
+    expect(localStorage.getItem(KEY)).toBe('default');
+    expect(within(screen.getByRole('listitem', { name: 'Default' })).getByText('Current', { exact: true })).toBeTruthy();
+  });
+
+  it('shows the server’s error in the dialog', async () => {
+    handler = (url, init) => (url === '/api/sections/work' && init.method === 'DELETE' ? json({ error: 'Something went wrong.' }, 500) : null);
+    inApp(<SectionsScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: "Edit Bob's Work" }));
+    const dialog = screen.getByRole('dialog', { name: "Edit Bob's Work" });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete section' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toContain('Something went wrong.');
+    expect(screen.getByRole('listitem', { name: "Bob's Work" })).toBeTruthy();
+  });
+
+  it('Default’s Edit dialog has no Delete', async () => {
+    inApp(<SectionsScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit Default' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit Default' });
+    expect(within(dialog).queryByRole('button', { name: /delete/i })).toBeNull();
+    // Nor when creating a section.
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'New section' }));
+    expect(within(screen.getByRole('dialog', { name: 'New section' })).queryByRole('button', { name: /delete/i })).toBeNull();
   });
 });
 

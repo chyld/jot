@@ -1,8 +1,8 @@
 // Type 3 (unit): the shared section rules (sections-spec.md §1): the ID follows the tag
 // rules, the name is 1 to 60 characters, and the colour is one of six; and the section
-// list's note and trash counts.
+// list's note and trash counts; what the delete confirmation says.
 import { describe, expect, it } from 'vitest';
-import { isSectionColour, normalizeSectionId, normalizeSectionName, SECTION_COLOURS } from '../../src/shared/sections';
+import { deleteSectionMessage, isSectionColour, normalizeSectionId, normalizeSectionName, SECTION_COLOURS } from '../../src/shared/sections';
 import { THEMES } from '../../src/client/theme';
 import { now, openDatabase } from '../../src/server/db';
 import { createNote, trashNote } from '../../src/server/notes';
@@ -63,5 +63,20 @@ describe('the section list', () => {
       ['work', 0, 3],
     ]);
     db.close();
+  });
+});
+
+describe('the delete confirmation', () => {
+  const msg = (noteCount: number, trashCount: number, defaultName = 'Default') => deleteSectionMessage({ name: "Bob's Work", noteCount, trashCount }, defaultName);
+  it('says how many notes and trashed notes move to Default', () => {
+    expect(msg(3, 2)).toBe("Delete Bob's Work? Its 3 notes and 2 trashed notes move to Default.");
+    expect(msg(1, 1)).toBe("Delete Bob's Work? Its 1 note and 1 trashed note move to Default.");
+    expect(msg(1, 0)).toBe("Delete Bob's Work? Its 1 note moves to Default.");
+    expect(msg(0, 1)).toBe("Delete Bob's Work? Its 1 trashed note moves to Default.");
+    expect(msg(0, 4)).toBe("Delete Bob's Work? Its 4 trashed notes move to Default.");
+    expect(msg(0, 0)).toBe("Delete Bob's Work? It has no notes.");
+  });
+  it('names Default by its current name', () => {
+    expect(msg(2, 0, 'Home')).toBe("Delete Bob's Work? Its 2 notes move to Home.");
   });
 });

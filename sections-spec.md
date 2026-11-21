@@ -1,6 +1,6 @@
 # Jot — sections specification
 
-- **Status:** draft 9 (2026-11-20): draft 7, cut down for simplicity on the owner's instruction, plus the trash moved onto the Sections page (draft 8) and the left bar's section menu replaced by a plain link to the Sections page (draft 9). Built.
+- **Status:** draft 10 (2026-11-20): draft 7, cut down for simplicity on the owner's instruction, plus the trash moved onto the Sections page (draft 8), the left bar's section menu replaced by a plain link to the Sections page (draft 9), and deleting a section plus the current card's corner tag (draft 10). Built.
 - **Adds to:** `jot-spec.md`, `agent-spec.md`, `backup-spec.md`. Where this document and those disagree, this one wins; section 11 lists what it changes.
 - **In one line:** every note belongs to one section (such as Work or Recipes); the user is always "in" one section, sees only its notes, and the whole interface takes that section's colour.
 - **Mockups:** https://claude.ai/artifact/BKEFkADCqCtakTeydTRNNb. The owner chose **A2** (Sections page as cards), **B1** (a section button in the left bar; its menu was later replaced by a link to the Sections page, section 3) and **C2** (whole interface tinted).
@@ -14,7 +14,8 @@
 - A top-level area of a user's notes: "Work", "Recipes". Sections are per user.
 - **Every note belongs to exactly one section.**
 - Every user has a **Default** section, created with the account.
-- Sections can be renamed and recoloured. **They cannot be deleted.**
+- Sections can be renamed, recoloured and deleted. **Default can never be deleted.**
+- **Deleting a section** moves every note in it to Default: its notes become Default's notes and its trashed notes go to Default's trash (they stay trashed); Inbox and read-only notes move too. Only each note's section changes. Then the section is gone. It is one transaction.
 - Tags, fonts and styles are unchanged and shared by all of a user's sections.
 
 | Field | Rules |
@@ -49,11 +50,12 @@ Sections are listed with Default first, then in the order they were created.
 
 ## 4. The Sections page (mockup A2), `/sections`
 
-- One card per section, drawn in that section's own colours: its name, its ID, its number of notes, an **Edit** button, **Open** (or a "Current" mark on the current section's card) and a **Trash** button, all on one line.
+- One card per section, drawn in that section's own colours: its name, its ID, its number of notes, an **Edit** button, **Open** and a **Trash** button, all on one line.
+- The current section's card has no Open: its buttons are Edit and Trash, and a small **"Current" tag** sits in the card's top-right corner (a small uppercase pill: Soft background, Accent dark text).
 - **Trash** shows a trash-can icon and the number of the section's trashed notes ("Trash 2", and "Trash 0" when it is empty). Clicking it makes the section current and opens the Trash screen (`/trash`), which shows that section's trash.
 - A **+ New section** card opens a dialog: Name, ID and Colour. The dialog says the ID cannot be changed later. Errors (empty name, invalid ID, ID already used) are shown in the dialog.
 - **Edit** opens the same dialog with the ID fixed: the name and colour can be changed.
-- There is no Delete.
+- For every section but Default, the Edit dialog also has a **Delete** button (danger red). It first asks in the dialog, saying what will happen ("Delete Bob's Work? Its 3 notes and 2 trashed notes move to Default."); confirming deletes the section (section 1) and the list refreshes. If it was the current section, Default becomes current. Default's dialog has no Delete, and the server refuses to delete it (`DELETE /api/sections/:id`; an unknown ID is 404).
 
 ## 5. Colour (mockup C2)
 
@@ -108,7 +110,7 @@ Each part has one job, so sections can be understood, tested and changed on thei
 
 | Part | Its one job |
 |---|---|
-| Sections module (server) | Owns the `sections` table and every section rule: validation, list, create, rename, recolour, the Default section |
+| Sections module (server) | Owns the `sections` table and every section rule: validation, list, create, rename, recolour, delete, the Default section |
 | Notes module (server) | Same shape as today. The functions behind the screens in section 2 take a section and add it to their queries |
 | Shared rules | ID and name validation and the list of colours, used by server and client, as the tag rules are today |
 | Theme (client) | One file maps each colour name to its eight values and sets them as CSS variables. Components use only the variables |
@@ -121,14 +123,15 @@ The server checks that a section belongs to the logged-in user, as it does for e
 
 All nine existing test types still apply. The new tests:
 
-- **Isolation:** one user can never see, use or change another user's sections, including when both have a section with the same ID.
-- **Sections:** create, rename, recolour; ID rules; duplicate ID refused; ID cannot be changed; no way to delete.
+- **Isolation:** one user can never see, use, change or delete another user's sections, including when both have a section with the same ID.
+- **Sections:** create, rename, recolour; ID rules; duplicate ID refused; ID cannot be changed.
+- **Deleting:** a deleted section's notes move to Default and its trashed notes to Default's trash, changing only their section; Default cannot be deleted; an unknown section is 404; the Edit dialog's Delete asks first and is not shown for Default; the current card's "Current" tag.
 - **Scoping:** the home list, tag chips, search, new note, "Delete N empty" and the trash each work on the current section only.
 - **Moving:** a move changes only the section; read-only and trashed notes cannot be moved.
 - **Inbox:** bot notes land in Default; Keep puts the note in the current section.
 - **Upgrade:** a version 6 database gains a Default section holding every note, with tags intact.
 - **Backups:** sections survive a personal backup and restore; an older backup restores into Default.
-- **End to end:** create "Work" and "Recipes"; a note made in Work is not on the Recipes home page, in its search or in its trash; switching changes the colours; a reload stays in the same section; move a note and follow it.
+- **End to end:** create "Work" and "Recipes"; a note made in Work is not on the Recipes home page, in its search or in its trash; switching changes the colours; a reload stays in the same section; move a note and follow it; delete a section with one note and one trashed note, and find them in Default and Default's trash.
 
 ## 11. What this changes in the other specifications
 
@@ -140,7 +143,7 @@ All nine existing test types still apply. The new tests:
 
 ## 12. Out of scope
 
-- Deleting a section.
+- Deleting Default; choosing where a deleted section's notes go (always Default).
 - A note in more than one section; sections inside sections.
 - Moving several notes at once.
 - Tags, fonts or styles that belong to one section.
@@ -150,7 +153,7 @@ All nine existing test types still apply. The new tests:
 
 ## 13. Decisions
 
-By the owner, 2026-11-20: a Default section; every note in one section, movable; each section has its own trash, opened from its card on the Sections page (no Trash in the left bar); the left bar's section square is a plain link to the Sections page, and switching is done with Open on a card (no menu); a read-only note must be unlocked before moving; one ID per section; six uniform colours; sections can be renamed but not deleted; simplicity first.
+By the owner, 2026-11-20: a Default section; every note in one section, movable; each section has its own trash, opened from its card on the Sections page (no Trash in the left bar); the left bar's section square is a plain link to the Sections page, and switching is done with Open on a card (no menu); a read-only note must be unlocked before moving; one ID per section; six uniform colours; sections can be renamed; simplicity first. Later the same day (draft 10) the owner reversed "sections cannot be deleted": any section but Default can be deleted, its notes and trash moving to Default; and the current card's mark became a corner tag.
 
 Chosen here where the owner was silent, each the simplest option:
 

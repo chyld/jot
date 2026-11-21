@@ -1,6 +1,6 @@
 // Sections (sections-spec.md): the `sections` table and every section rule. Every user
-// has a Default section; sections can be created, renamed and recoloured, never deleted.
-// Every query filters by the owner, and a section is known by (user, ID).
+// has a Default section; sections can be created, renamed, recoloured and deleted (all but
+// Default: a deleted section's notes, trashed ones too, move to Default). Every query filters by the owner, and a section is known by (user, ID).
 import {
   DEFAULT_SECTION_ID,
   isSectionColour,
@@ -72,4 +72,19 @@ export function updateSection(db: DB, userId: string, id: string, patch: { name?
   const colour = patch.colour as SectionColour | undefined;
   db.prepare('UPDATE sections SET name = COALESCE(?, name), colour = COALESCE(?, colour) WHERE user_id = ? AND id = ?').run(name ?? null, colour ?? null, userId, id);
   return getSection(db, userId, id)!;
+}
+
+/**
+ * Deletes a section (not Default). Every note in it moves to Default, as it is: live notes
+ * to Default's notes, trashed ones to Default's trash, Inbox and read-only notes too. Only
+ * each note's section changes. One transaction.
+ */
+export function deleteSection(db: DB, userId: string, id: string): { moved: number } {
+  if (!sectionExists(db, userId, id)) throw new SectionError('No such section.', 404);
+  if (id === DEFAULT_SECTION_ID) throw new SectionError('The Default section cannot be deleted.');
+  return db.transaction(() => {
+    const moved = db.prepare('UPDATE notes SET section_id = ? WHERE user_id = ? AND section_id = ?').run(DEFAULT_SECTION_ID, userId, id).changes;
+    db.prepare('DELETE FROM sections WHERE user_id = ? AND id = ?').run(userId, id);
+    return { moved };
+  })();
 }

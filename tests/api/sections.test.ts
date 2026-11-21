@@ -1,5 +1,5 @@
 // Type 2 (API integration): sections (sections-spec.md). Create, rename, recolour; the ID
-// rules; no delete. The home list, tag chips, search, New, "Delete N empty" and the trash
+// rules; deleting a section (its notes and trash move to Default). The home list, tag chips, search, New, "Delete N empty" and the trash
 // each work on the current section only. Moving a note; Keep and bot notes; backups.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
@@ -80,17 +80,74 @@ describe('sections', () => {
     expect(ids).not.toContain('job');
   });
 
-  it('has no way to delete a section', async () => {
-    expect((await c.del('/api/sections/work')).status).toBe(404);
-    expect((await c.del('/api/sections/default')).status).toBe(404);
-    expect((await c.get('/api/sections')).json.sections.map((s: any) => s.id)).toContain('work');
-  });
-
   it('a section that does not exist is refused wherever one is named', async () => {
     for (const url of ['/api/notes?section=nosuch', '/api/search?q=x&section=nosuch', '/api/trash?section=nosuch', '/api/empty-notes?section=nosuch', '/api/tags?section=nosuch']) {
       expect((await c.get(url)).status, url).toBe(404);
     }
     expect((await c.post('/api/notes?section=nosuch', {})).status).toBe(404);
+  });
+});
+
+describe('deleting a section', () => {
+  let c: Client;
+  beforeAll(async () => {
+    c = await newUser(env, 'sec_delete');
+    await c.post('/api/sections', { id: 'work', name: "Bob's Work", colour: 'blue' });
+    await c.post('/api/sections', { id: 'other', name: 'Other', colour: 'teal' });
+  });
+
+  it('moves every note to Default, trashed ones to Default’s trash, changing only their section', async () => {
+    const live = await note(c, 'work', 'Live one', 'zebraword');
+    await c.post(`/api/notes/${live.id}/tags`, { tag: 'office' });
+    const binned = await note(c, 'work', 'Binned one');
+    await c.del(`/api/notes/${binned.id}`);
+    const locked = await note(c, 'work', 'Locked one');
+    await c.post(`/api/notes/${locked.id}/read-only`, {});
+    const inbox = await note(c, 'work', 'Inbox one');
+    db().prepare('UPDATE notes SET inbox = 1, bot_name = ? WHERE id = ?').run('Grok', inbox.id);
+    const elsewhere = await note(c, 'other', 'Other one');
+    await note(c, 'default', 'Already default');
+    const ids = [live.id, binned.id, locked.id, inbox.id];
+    const before = ids.map(noteRow);
+
+    const r = await c.del('/api/sections/work');
+    expect(r.status, r.body).toBe(200);
+    expect(r.json).toEqual({ moved: 4 });
+
+    ids.map(noteRow).forEach((row, i) => expect(row).toEqual({ ...before[i], section_id: 'default' }));
+    expect(noteRow(elsewhere.id).section_id).toBe('other');
+    expect((await c.get('/api/sections')).json.sections.map((s: any) => [s.id, s.noteCount, s.trashCount])).toEqual([
+      ['default', 3, 1],
+      ['other', 1, 0],
+    ]);
+    expect(titles(await c.get('/api/notes?section=default'))).toEqual(['Already default', 'Live one', 'Locked one']);
+    expect((await c.get('/api/trash?section=default')).json.notes.map((n: any) => n.title)).toEqual(['Binned one']);
+    expect((await c.get('/api/inbox')).json.notes.map((n: any) => n.id)).toEqual([inbox.id]);
+    expect((await c.get('/api/notes?section=default&tag=office')).json.notes.map((n: any) => n.id)).toEqual([live.id]);
+    expect(titles(await c.get('/api/search?q=zebraword&section=default'))).toEqual(['Live one']);
+    // The section is gone everywhere.
+    expect((await c.get('/api/notes?section=work')).status).toBe(404);
+    expect(db().prepare("SELECT COUNT(*) AS n FROM sections WHERE user_id = (SELECT user_id FROM notes WHERE id = ?) AND id = 'work'").get(live.id).n).toBe(0);
+    // Its ID can be used again for a new, empty section.
+    expect((await c.post('/api/sections', { id: 'work', name: 'Work again', colour: 'olive' })).json.section).toMatchObject({ noteCount: 0, trashCount: 0 });
+  });
+
+  it('deletes an empty section', async () => {
+    await c.post('/api/sections', { id: 'empty', name: 'Empty', colour: 'slate' });
+    expect((await c.del('/api/sections/empty')).json).toEqual({ moved: 0 });
+    expect((await c.get('/api/sections')).json.sections.map((s: any) => s.id)).not.toContain('empty');
+  });
+
+  it('refuses to delete Default, with a clear error', async () => {
+    const r = await c.del('/api/sections/default');
+    expect(r.status).toBe(400);
+    expect(r.json.error).toMatch(/Default section cannot be deleted/);
+    expect((await c.get('/api/sections')).json.sections[0].id).toBe('default');
+  });
+
+  it('an unknown section is 404', async () => {
+    expect((await c.del('/api/sections/nosuch')).status).toBe(404);
+    expect((await c.del('/api/sections/Not-An-Id')).status).toBe(404);
   });
 });
 

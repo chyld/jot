@@ -371,11 +371,19 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       throw sectionError(e);
     }
   });
-  // Rename and recolour. The ID is fixed: an `id` in the body is ignored. There is no delete.
+  // Rename and recolour. The ID is fixed: an `id` in the body is ignored.
   app.patch('/api/sections/:section', async (req) => {
     const b = body(req);
     try {
       return { section: sections.updateSection(db, uid(req), (req.params as Record<string, string>).section, { name: b.name, colour: b.colour }) };
+    } catch (e) {
+      throw sectionError(e);
+    }
+  });
+  // Delete a section (not Default): its notes, trashed ones too, move to Default.
+  app.delete('/api/sections/:section', async (req) => {
+    try {
+      return sections.deleteSection(db, uid(req), (req.params as Record<string, string>).section);
     } catch (e) {
       throw sectionError(e);
     }

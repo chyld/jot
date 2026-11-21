@@ -463,8 +463,12 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .note-section.tb-btn:disabled { color: var(--muted); }
 .note-section.tb-btn[aria-expanded='true']:not(:disabled) { background: var(--accent-soft); color: var(--text); }
 .section-cards { list-style: none; padding: 0; margin: 0; }
-.section-card { background: var(--app-bg); border: 1px solid var(--border); border-top: 4px solid var(--accent); color: var(--text); display: flex; flex-direction: column; gap: 6px; }
+.section-card { position: relative; background: var(--app-bg); border: 1px solid var(--border); border-top: 4px solid var(--accent); color: var(--text); display: flex; flex-direction: column; gap: 6px; }
 .section-card-head { display: flex; align-items: center; gap: 10px; }
 .section-card-name { font-weight: 600; font-size: 16px; color: var(--accent-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.section-current { font-size: 13px; font-weight: 600; color: var(--accent-dark); background: var(--accent-soft); border-radius: 6px; padding: 4px 10px; }
+/* The current section's card: a small tag in its top-right corner. */
+.section-current { position: absolute; top: 10px; right: 10px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent-dark); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
+.section-card.is-current .section-card-head { padding-right: 72px; }
+.section-delete { margin-right: auto; }
+.section-delete-confirm { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .section-new { display: grid; place-items: center; border: 1px dashed var(--border); background: transparent; min-height: 140px; }

@@ -6,7 +6,7 @@ import { normalizeTag } from './tags';
 export const SECTION_COLOURS = ['olive', 'blue', 'violet', 'amber', 'teal', 'slate'] as const;
 export type SectionColour = (typeof SECTION_COLOURS)[number];
 
-/** Every user has this section, created with the account. It cannot be deleted (no section can). */
+/** Every user has this section, created with the account. It cannot be deleted (every other section can). */
 export const DEFAULT_SECTION_ID = 'default';
 export const MAX_SECTION_NAME = 60;
 
@@ -40,4 +40,17 @@ export function normalizeSectionName(input: unknown): SectionNameResult {
 
 export function isSectionColour(v: unknown): v is SectionColour {
   return typeof v === 'string' && (SECTION_COLOURS as readonly string[]).includes(v);
+}
+
+/**
+ * What the delete confirmation says: "Delete Bob's Work? Its 3 notes and 2 trashed notes
+ * move to Default." (`defaultName` is the Default section's name, which can be changed.)
+ */
+export function deleteSectionMessage(s: Pick<Section, 'name' | 'noteCount' | 'trashCount'>, defaultName: string): string {
+  const parts: string[] = [];
+  if (s.noteCount) parts.push(s.noteCount === 1 ? '1 note' : `${s.noteCount} notes`);
+  if (s.trashCount) parts.push(s.trashCount === 1 ? '1 trashed note' : `${s.trashCount} trashed notes`);
+  if (!parts.length) return `Delete ${s.name}? It has no notes.`;
+  const one = s.noteCount + s.trashCount === 1;
+  return `Delete ${s.name}? Its ${parts.join(' and ')} ${one ? 'moves' : 'move'} to ${defaultName}.`;
 }

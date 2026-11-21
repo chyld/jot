@@ -1,5 +1,5 @@
 // Type 1 (per-user isolation): sections (sections-spec.md §10). One user can never see,
-// use or change another user's sections, also when both have a section with the same ID.
+// use, change or delete another user's sections, also when both have a section with the same ID.
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { doc, makeTestEnv, newUser, type Client, type TestEnv } from '../helpers/setup';
 
@@ -83,4 +83,17 @@ it('another user’s note cannot be moved, and a note cannot be moved into anoth
   expect((await bob.post(`/api/notes/${bobs.id}/section`, { section: 'work' })).status).toBe(200);
   expect((await alice.get('/api/notes?section=work')).json.notes.map((n: any) => n.title)).not.toContain('Bob note');
   expect(aliceSecret.section).toBe('secret');
+});
+
+it('another user’s section cannot be deleted, also when both have one with the same ID', async () => {
+  expect((await bob.del('/api/sections/secret')).status).toBe(404);
+  expect((await alice.get('/api/sections')).json.sections.map((s: any) => s.id)).toContain('secret');
+  expect(db().prepare('SELECT section_id FROM notes WHERE id = ?').get(aliceSecret.id).section_id).toBe('secret');
+  // Bob deleting his own "work" leaves Alice's "work" and its notes alone.
+  expect((await bob.del('/api/sections/work')).status).toBe(200);
+  expect((await bob.get('/api/sections')).json.sections.map((s: any) => s.id)).toEqual(['default']);
+  expect((await alice.get('/api/sections')).json.sections.find((s: any) => s.id === 'work')).toMatchObject({ name: 'Alice Work', noteCount: 2, trashCount: 1 });
+  expect(db().prepare('SELECT section_id FROM notes WHERE id = ?').get(aliceWork.id).section_id).toBe('work');
+  expect((await alice.get('/api/notes?section=default')).json.notes).toEqual([]);
+  expect((await alice.get('/api/trash?section=default')).json.notes).toEqual([]);
 });

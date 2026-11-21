@@ -1,14 +1,24 @@
 // The Sections page (sections-spec.md §4, mockup A2), /sections: one card per section in
-// that section's own colours, with its name, ID, number of notes, Edit, Open (or a "Current"
-// mark) and Trash with the number of its trashed notes (each section has its own
-// trash: the button makes the section current and opens the Trash screen); a "+ New section"
-// card. The same dialog creates a section (name, ID, colour) and edits one (name and colour;
-// the ID is fixed). There is no delete.
+// that section's own colours, with its name, ID, number of notes, Edit, Open and Trash with
+// the number of its trashed notes (each section has its own trash: the button makes the
+// section current and opens the Trash screen). The current section's card has no Open; it
+// shows a "Current" tag in its top-right corner instead. A "+ New section" card. The same
+// dialog creates a section (name, ID, colour) and edits one (name and colour; the ID is
+// fixed); editing any section but Default also offers Delete, confirmed in the dialog, which
+// moves the section's notes (trashed ones too) to Default.
 import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { normalizeSectionId, normalizeSectionName, SECTION_COLOURS, type Section, type SectionColour } from '../../shared/sections';
+import {
+  DEFAULT_SECTION_ID,
+  deleteSectionMessage,
+  normalizeSectionId,
+  normalizeSectionName,
+  SECTION_COLOURS,
+  type Section,
+  type SectionColour,
+} from '../../shared/sections';
 import { api } from '../api';
-import { setCurrentSection, useSections } from '../currentSection';
+import { currentSectionId, setCurrentSection, useSections } from '../currentSection';
 import { SectionSquare } from '../components/SectionMarks';
 import { useData } from '../data';
 import { navigate } from '../router';
@@ -16,8 +26,9 @@ import { COLOUR_NAMES, THEMES, themeVars } from '../theme';
 
 const noteCount = (n: number) => (n === 1 ? '1 note' : `${n} notes`);
 
-function SectionDialog(props: { section: Section | null; onClose: () => void; onSaved: () => Promise<void> }) {
+function SectionDialog(props: { section: Section | null; defaultName: string; onClose: () => void; onSaved: () => Promise<void> }) {
   const editing = props.section;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [name, setName] = useState(editing?.name ?? '');
   const [id, setId] = useState(editing?.id ?? '');
   const [colour, setColour] = useState<SectionColour>(editing?.colour ?? 'olive');
@@ -91,14 +102,49 @@ function SectionDialog(props: { section: Section | null; onClose: () => void; on
             {error}
           </div>
         )}
-        <div className="modal-actions">
-          <button type="button" className="btn" onClick={props.onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            {editing ? 'Save' : 'Create section'}
-          </button>
-        </div>
+        {confirmingDelete && editing ? (
+          <div className="section-delete-confirm" role="group" aria-label={`Delete ${editing.name}`}>
+            <span>{deleteSectionMessage(editing, props.defaultName)}</span>
+            <div className="modal-actions">
+              <button type="button" className="btn" onClick={() => setConfirmingDelete(false)}>
+                Keep it
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await api.deleteSection(editing.id);
+                    if (currentSectionId() === editing.id) setCurrentSection(DEFAULT_SECTION_ID);
+                    await props.onSaved();
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Could not delete the section.');
+                    setBusy(false);
+                  }
+                }}
+              >
+                Delete section
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="modal-actions">
+            {editing && editing.id !== DEFAULT_SECTION_ID && (
+              <button type="button" className="btn btn-danger section-delete" onClick={() => (setConfirmingDelete(true), setError(null))}>
+                Delete
+              </button>
+            )}
+            <button type="button" className="btn" onClick={props.onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              {editing ? 'Save' : 'Create section'}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );
@@ -120,7 +166,8 @@ export function SectionsScreen() {
       </div>
       <ul className="card-grid section-cards" data-testid="section-cards">
         {sections.map((s) => (
-          <li key={s.id} className="card section-card" style={themeVars(s.colour)} aria-label={s.name} data-section={s.id}>
+          <li key={s.id} className={`card section-card ${s.id === current.id ? 'is-current' : ''}`} style={themeVars(s.colour)} aria-label={s.name} data-section={s.id}>
+            {s.id === current.id && <span className="section-current">Current</span>}
             <div className="section-card-head">
               <SectionSquare name={s.name} />
               <span className="section-card-name">{s.name}</span>
@@ -135,9 +182,7 @@ export function SectionsScreen() {
               <button type="button" className="btn btn-sm" aria-label={`Edit ${s.name}`} onClick={() => setDialog(s)}>
                 Edit
               </button>
-              {s.id === current.id ? (
-                <span className="section-current">Current</span>
-              ) : (
+              {s.id !== current.id && (
                 <button
                   type="button"
                   className="btn btn-sm btn-primary"
@@ -174,6 +219,7 @@ export function SectionsScreen() {
       {dialog && (
         <SectionDialog
           section={dialog === 'new' ? null : dialog}
+          defaultName={sections.find((s) => s.id === DEFAULT_SECTION_ID)?.name ?? 'Default'}
           onClose={() => setDialog(null)}
           onSaved={async () => {
             await reloadSections();
