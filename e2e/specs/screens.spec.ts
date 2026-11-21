@@ -1,6 +1,6 @@
 // Every screen renders for a logged-in user (screenshots saved for review).
 import { expect, test } from '@playwright/test';
-import { body, login, newNote, openMenu, typeInBody, waitSaved } from './helpers';
+import { body, login, newNote, openMenu, openTrash, typeInBody, waitSaved } from './helpers';
 
 test('every screen renders', async ({ page }) => {
   await login(page, 'alice');
@@ -22,7 +22,6 @@ test('every screen renders', async ({ page }) => {
     ['Fonts', 'Fonts'],
     ['Styles', 'Styles'],
     ['Account', 'Account'],
-    ['Trash', 'Trash'],
     ['Tags', 'Tags'],
   ]) {
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: label }).click();
@@ -30,6 +29,10 @@ test('every screen renders', async ({ page }) => {
     if (label === 'Fonts') await expect(page.getByTestId('catalog-card').first()).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: `test-results/screens/${label.toLowerCase()}.png` });
   }
+  // The trash is opened from the current section's card on the Sections page.
+  await openTrash(page);
+  await expect(page.getByRole('heading', { name: 'Trash — Default', level: 1 })).toBeVisible();
+  await page.screenshot({ path: 'test-results/screens/trash.png' });
   // Backup became the Account page.
   for (const gone of ['/backup']) {
     await page.goto(gone);

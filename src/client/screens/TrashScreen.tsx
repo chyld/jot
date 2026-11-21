@@ -93,7 +93,8 @@ function EmptyTrash(props: { count: number; onEmptied: () => void }) {
 export function TrashScreen() {
   const { bumpNotes } = useData();
   // Each section has its own trash: this is the current section's.
-  const section = useSections().current.id;
+  const current = useSections().current;
+  const section = current.id;
   const [notes, setNotes] = useState<NoteSummary[] | null>(null);
   const now = useNow();
   const load = () => api.trash().then((r) => setNotes(r.notes), () => setNotes([]));
@@ -103,7 +104,7 @@ export function TrashScreen() {
   return (
     <div className="screen">
       <div className="screen-head">
-        <h1>Trash</h1>
+        <h1>Trash — {current.name}</h1>
         {notes && <span className="muted">{notes.length} {notes.length === 1 ? 'note' : 'notes'}</span>}
         {notes && notes.length > 0 && (
           <div className="screen-head-actions">

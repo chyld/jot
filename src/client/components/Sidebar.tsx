@@ -1,4 +1,4 @@
-import { Inbox, NotebookPen, Paintbrush, Plus, Tags, Trash2, Type, UserRound } from 'lucide-react';
+import { Inbox, NotebookPen, Paintbrush, Plus, Tags, Type, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useData } from '../data';
@@ -70,9 +70,6 @@ export function Sidebar(props: { path: string }) {
       </RailLink>
       <RailLink to="/styles" label="Styles" active={p === '/styles'}>
         <Paintbrush size={20} />
-      </RailLink>
-      <RailLink to="/trash" label="Trash" active={p === '/trash'}>
-        <Trash2 size={20} />
       </RailLink>
       <RailLink to="/account" label="Account" active={p === '/account'}>
         <UserRound size={20} />

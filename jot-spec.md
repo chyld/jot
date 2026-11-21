@@ -226,13 +226,13 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it. A read-only note shows a "Read-only" indicator and cannot be edited |
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
-| Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
+| Trash | The current section's trashed notes, headed with whose trash it is ("Trash — Bob's Work"), with Restore and Delete permanently, and Empty trash (with an in-page confirmation). Opened from a section's card on the Sections page, not from the left bar (`sections-spec.md` §4) |
 | Tags (`/tags`) | Every tag with its number of notes; each name opens the home page filtered by it; Delete (with an in-page confirmation) removes the tag from every note and keeps the notes |
-| Sections (`/sections`) | One card per section, in its own colours: name, ID, number of notes, Edit, and Open or "Current section"; + New section. See `sections-spec.md` §4 |
+| Sections (`/sections`) | One card per section, in its own colours: name, ID, number of notes, Edit, Open or "Current section", and Trash with the number of its trashed notes ("Trash 2"); + New section. See `sections-spec.md` §4 |
 | Inbox (`/inbox`) | Notes bots wrote and the user has not kept yet, newest first, each with its bot's name and a Keep button. See `agent-spec.md` |
 | Account (`/account`) | The logged-in user's username at the top and a Log out button in the heading row, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. Then Bots: the address for bots (from `JOT_PUBLIC_URL`) and a setup snippet for a generic MCP client; create a bot by name; each bot's token always visible with Copy, Copy setup, its last-used time and Revoke (with a second-click confirm). No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
 
-A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page), the section button (`sections-spec.md` §3), the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles, Trash and, last, Account (a person icon). Log out is a button on the Account page, not in the bar. It has no notes icon. The bar is 48 px wide with 36 px buttons.
+A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page), the section button (`sections-spec.md` §3), the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles and, last, Account (a person icon). Log out is a button on the Account page, not in the bar. It has no notes icon and no Trash: each section's trash is opened from its card on the Sections page (`sections-spec.md` §4). The bar is 48 px wide with 36 px buttons.
 
 ---
 

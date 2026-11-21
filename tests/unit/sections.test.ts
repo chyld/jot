@@ -1,8 +1,12 @@
 // Type 3 (unit): the shared section rules (sections-spec.md §1): the ID follows the tag
-// rules, the name is 1 to 60 characters, and the colour is one of six.
+// rules, the name is 1 to 60 characters, and the colour is one of six; and the section
+// list's note and trash counts.
 import { describe, expect, it } from 'vitest';
 import { isSectionColour, normalizeSectionId, normalizeSectionName, SECTION_COLOURS } from '../../src/shared/sections';
 import { THEMES } from '../../src/client/theme';
+import { now, openDatabase } from '../../src/server/db';
+import { createNote, trashNote } from '../../src/server/notes';
+import { addDefaultSection, createSection, listSections } from '../../src/server/sections';
 
 describe('section IDs', () => {
   it('are letters a–z, 1 to 30, with uppercase lowercased', () => {
@@ -37,5 +41,27 @@ describe('colours', () => {
       for (const v of Object.values(THEMES[c])) expect(v).toMatch(/^#[0-9a-f]{6}$/);
     }
     expect(THEMES.olive).toEqual({ accent: '#4d7c0f', accentDark: '#3f6212', soft: '#e4f2c4', appBg: '#f7f9f1', border: '#e0e8cd', hover: '#eef5dc', text: '#1d2610', muted: '#6b7557' });
+  });
+});
+
+describe('the section list', () => {
+  it('gives each section its number of notes and of trashed notes', () => {
+    const db = openDatabase(':memory:');
+    db.prepare("INSERT INTO users (id, username, password_hash, created_at) VALUES ('u1', 'alice', 'x', ?)").run(now());
+    addDefaultSection(db, 'u1', now());
+    createSection(db, 'u1', { id: 'work', name: 'Work', colour: 'blue' });
+    const live = createNote(db, 'u1', 'work', 'Live', undefined);
+    for (const title of ['Binned', 'Binned too']) trashNote(db, 'u1', createNote(db, 'u1', 'work', title, undefined).id);
+    trashNote(db, 'u1', createNote(db, 'u1', 'default', 'Old', undefined).id);
+    expect(listSections(db, 'u1').map((s) => [s.id, s.noteCount, s.trashCount])).toEqual([
+      ['default', 0, 1],
+      ['work', 1, 2],
+    ]);
+    trashNote(db, 'u1', live.id);
+    expect(listSections(db, 'u1').map((s) => [s.id, s.noteCount, s.trashCount])).toEqual([
+      ['default', 0, 1],
+      ['work', 0, 3],
+    ]);
+    db.close();
   });
 });

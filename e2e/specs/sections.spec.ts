@@ -1,6 +1,7 @@
 // Sections (sections-spec.md §10): create "Work" and "Recipes"; a note made in Work is not
-// on the Recipes home page, in its search or in its trash; switching changes the colours;
-// a reload stays in the same section; move a note and follow it.
+// on the Recipes home page, in its search or in its trash; each section's trash opens from
+// its card on the Sections page; switching changes the colours; a reload stays in the same
+// section; move a note and follow it.
 import { expect, test, type Page } from '@playwright/test';
 import { goHome, login, newNote, typeInBody, uniq, waitSaved } from './helpers';
 
@@ -27,6 +28,12 @@ async function switchTo(page: Page, name: string) {
   await page.getByRole('menu').getByRole('menuitem', { name }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+}
+
+async function openSections(page: Page) {
+  await nav(page).getByRole('button', { name: /^Section: / }).click();
+  await page.getByRole('menuitem', { name: 'Manage sections' }).click();
+  await expect(page.getByRole('heading', { name: 'Sections', level: 1 })).toBeVisible();
 }
 
 async function searchFor(page: Page, word: string) {
@@ -69,16 +76,32 @@ test('sections keep their notes, search and trash apart; colours, reload and mov
   await expect(page.getByTestId('notes-list')).not.toContainText(`Plan ${w}`);
   await searchFor(page, w);
   await expect(page.getByTestId('notes-list')).toContainText('No notes match.');
-  await nav(page).getByRole('link', { name: 'Trash' }).click();
-  await expect(page.getByRole('heading', { name: 'Trash', level: 1 })).toBeVisible();
+
+  // Each card on the Sections page has a Trash button with its count; the left bar has no Trash.
+  await expect(nav(page).getByRole('link', { name: 'Trash' })).toHaveCount(0);
+  await openSections(page);
+  const recipesTrash = page.getByRole('listitem', { name: recipes }).getByRole('button', { name: /^Trash of / });
+  await expect(recipesTrash).toHaveText('Trash 0');
+  await recipesTrash.click();
+  await expect(page).toHaveURL(/\/trash$/);
+  await expect(page.getByRole('heading', { name: `Trash — ${recipes}`, level: 1 })).toBeVisible();
   await expect(page.getByText('The trash is empty.')).toBeVisible();
 
-  // Back in Work: its search and its trash have them.
-  await switchTo(page, work);
+  // Work's card opens Work's trash, which has the binned note, and makes Work current.
+  await openSections(page);
+  const workTrash = page.getByRole('listitem', { name: work }).getByRole('button', { name: /^Trash of / });
+  await expect(workTrash).toHaveText('Trash 1');
+  await page.screenshot({ path: 'test-results/screens/sections-trash.png' });
+  await workTrash.click();
+  await expect(page.getByRole('heading', { name: `Trash — ${work}`, level: 1 })).toBeVisible();
+  await expect(page.getByRole('listitem', { name: `Binned ${w}` })).toBeVisible();
+  await expect(newButton(page)).toHaveCSS('background-color', BLUE);
+
+  // Back in Work: its search has the note.
+  await goHome(page);
+  await expect(page.getByRole('heading', { name: work, level: 1 })).toBeVisible();
   await searchFor(page, w);
   await expect(page.getByTestId('notes-list')).toContainText(`Plan ${w}`);
-  await nav(page).getByRole('link', { name: 'Trash' }).click();
-  await expect(page.getByRole('listitem', { name: `Binned ${w}` })).toBeVisible();
 
   // A reload stays in the same section, with its colours.
   await goHome(page);

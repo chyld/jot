@@ -14,7 +14,7 @@ interface State {
 }
 
 /** Until the list has loaded (or if it cannot be): only Default. */
-const DEFAULT_ONLY: Section[] = [{ id: DEFAULT_SECTION_ID, name: 'Default', colour: 'olive', noteCount: 0 }];
+const DEFAULT_ONLY: Section[] = [{ id: DEFAULT_SECTION_ID, name: 'Default', colour: 'olive', noteCount: 0, trashCount: 0 }];
 
 let state: State = { userId: null, current: DEFAULT_SECTION_ID, sections: DEFAULT_ONLY };
 const listeners = new Set<() => void>();

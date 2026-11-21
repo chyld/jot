@@ -27,14 +27,14 @@ beforeAll(async () => {
 afterAll(() => env.close());
 
 it('lists only the user’s own sections, with their own names, colours and counts', async () => {
-  expect((await alice.get('/api/sections')).json.sections.map((s: any) => [s.id, s.name, s.colour, s.noteCount])).toEqual([
-    ['default', 'Default', 'olive', 0],
-    ['work', 'Alice Work', 'blue', 2],
-    ['secret', 'Alice Secret', 'violet', 1],
+  expect((await alice.get('/api/sections')).json.sections.map((s: any) => [s.id, s.name, s.colour, s.noteCount, s.trashCount])).toEqual([
+    ['default', 'Default', 'olive', 0, 0],
+    ['work', 'Alice Work', 'blue', 2, 1],
+    ['secret', 'Alice Secret', 'violet', 1, 0],
   ]);
-  expect((await bob.get('/api/sections')).json.sections.map((s: any) => [s.id, s.name, s.colour, s.noteCount])).toEqual([
-    ['default', 'Default', 'olive', 0],
-    ['work', 'Bob Work', 'teal', 0],
+  expect((await bob.get('/api/sections')).json.sections.map((s: any) => [s.id, s.name, s.colour, s.noteCount, s.trashCount])).toEqual([
+    ['default', 'Default', 'olive', 0, 0],
+    ['work', 'Bob Work', 'teal', 0, 0],
   ]);
 });
 

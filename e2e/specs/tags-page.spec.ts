@@ -1,7 +1,7 @@
 // The trash button on a note card (with Undo), and the Tags page: counts, and deleting
 // a tag after a confirmation, which keeps the notes.
 import { expect, test } from '@playwright/test';
-import { goHome, login, newNote, uniq } from './helpers';
+import { goHome, login, newNote, openTrash, uniq } from './helpers';
 
 async function addTag(page: import('@playwright/test').Page, tag: string) {
   const input = page.getByRole('textbox', { name: 'Add tag' });
@@ -25,7 +25,7 @@ test('a note card’s trash button moves the note to the trash, and Undo brings 
   const undo = page.getByTestId('trash-undo');
   await expect(undo).toContainText(title);
 
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Trash' }).click();
+  await openTrash(page);
   await page.getByRole('listitem', { name: title }).getByRole('button', { name: 'Restore' }).click();
   await goHome(page);
   await expect(page.getByTestId('trash-undo')).toHaveCount(0);

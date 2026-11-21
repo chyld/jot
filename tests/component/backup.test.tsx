@@ -145,7 +145,7 @@ describe('unsaved edits', () => {
 });
 
 describe('left bar', () => {
-  it('has an Account item above Trash', () => {
+  it('has Account as its last item, and no Trash (each section’s trash is on the Sections page)', () => {
     handler = (url) => (url.includes('fonts') ? json({ fonts: [] }) : json({ styles: [] }));
     render(
       <DataProvider user={{ id: 'u', username: 'alice' }} onLogout={() => {}}>
@@ -153,7 +153,7 @@ describe('left bar', () => {
       </DataProvider>,
     );
     const labels = screen.getAllByRole('link').map((a) => a.getAttribute('aria-label'));
-    expect(labels).toEqual(['Jot home: all notes', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Trash', 'Account']);
+    expect(labels).toEqual(['Jot home: all notes', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account']);
     const account = screen.getByRole('link', { name: 'Account' });
     expect(account.getAttribute('href')).toBe('/account');
     expect(account.getAttribute('title')).toBe('Account');

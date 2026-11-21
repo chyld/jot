@@ -1,7 +1,7 @@
 // Default fonts cannot be archived (no Archive action, server refuses); Empty trash
 // deletes every trashed note after an in-page confirmation, and nothing else.
 import { expect, test } from '@playwright/test';
-import { goHome, login, newNote, uniq } from './helpers';
+import { goHome, login, newNote, openTrash, uniq } from './helpers';
 
 test('default fonts have no Archive action, and the server refuses to archive them', async ({ page }) => {
   await login(page, 'carol');
@@ -60,7 +60,7 @@ test('Empty trash deletes every trashed note after a second click, and nothing e
     await page.getByRole('button', { name: 'Move to trash' }).click();
     await expect(page).toHaveURL(/\/$/);
   }
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Trash' }).click();
+  await openTrash(page);
   const list = page.locator('.trash-list');
   for (const t of gone) await expect(list).toContainText(t);
   const count = await list.locator('li').count();

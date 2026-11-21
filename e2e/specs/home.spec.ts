@@ -1,7 +1,7 @@
 // The home page is the notes list (search, New, tag filter) with no editor beside it;
 // the logo goes home; an open note fills the screen; the UI uses the Olive theme.
 import { expect, test, type Page } from '@playwright/test';
-import { body, goHome, login, newNote, openMenu, typeInBody, uniq, waitSaved } from './helpers';
+import { body, goHome, login, newNote, openMenu, openTrash, typeInBody, uniq, waitSaved } from './helpers';
 
 test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   await login(page, 'alice');
@@ -28,10 +28,11 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   expect(Math.round(pane.x)).toBe(Math.round(rail.width));
   expect(Math.round(pane.width)).toBe(viewport.width - Math.round(rail.width));
 
-  // The left bar: logo, new note, then fonts, styles, backup, trash and log out. No notes or tags icon.
+  // The left bar: logo, section button, new note, Inbox and Tags, then Fonts, Styles and Account.
+  // No notes icon, and no Trash: each section's trash is opened from its card on the Sections page.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'Section: Default', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Trash', 'Account']);
+  expect(controls).toEqual(['Jot home: all notes', 'Section: Default', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account']);
   await goHome(page);
 
   // Home: search, New, tag filter and the list, no editor.
@@ -59,7 +60,7 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
   await expect(filter.getByRole('button', { name: `#${red}` })).toBeVisible();
   await expect(filter.getByRole('button', { name: `#${blue}` })).toHaveCount(0);
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Trash' }).click();
+  await openTrash(page);
   await page.getByRole('listitem', { name: `Blue note ${blue}` }).getByRole('button', { name: 'Restore' }).click();
   await goHome(page);
   await expect(filter.getByRole('button', { name: `#${blue}` })).toBeVisible();

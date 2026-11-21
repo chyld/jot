@@ -1,6 +1,6 @@
 # Jot — sections specification
 
-- **Status:** draft 7, cut down for simplicity on the owner's instruction (2026-11-20). Not built. Not yet approved.
+- **Status:** draft 8 (2026-11-20): draft 7, cut down for simplicity on the owner's instruction, plus the trash moved onto the Sections page. Built.
 - **Adds to:** `jot-spec.md`, `agent-spec.md`, `backup-spec.md`. Where this document and those disagree, this one wins; section 11 lists what it changes.
 - **In one line:** every note belongs to one section (such as Work or Recipes); the user is always "in" one section, sees only its notes, and the whole interface takes that section's colour.
 - **Mockups:** https://claude.ai/artifact/BKEFkADCqCtakTeydTRNNb. The owner chose **A2** (Sections page as cards), **B1** (switch from a menu in the left bar) and **C2** (whole interface tinted).
@@ -37,7 +37,7 @@ Sections are listed with Default first, then in the order they were created.
 | Search | The current section's notes |
 | New note (both New buttons and `/new`) | Created in the current section |
 | "Delete N empty" | The current section's empty notes |
-| Trash | **Each section has its own trash.** The Trash screen, Restore, Delete permanently and Empty trash work on the current section's trashed notes |
+| Trash | **Each section has its own trash.** The Trash screen, Restore, Delete permanently and Empty trash work on the current section's trashed notes. The screen's heading says whose trash it is ("Trash — Bob's Work"). It is opened from the section's card on the Sections page (section 4); the left bar has no Trash |
 | Tags page, Inbox, Fonts, Styles, Account | **Unchanged from today.** Not divided by section; they just take the current section's colours. Clicking a tag opens the current section's home page filtered by it |
 
 ## 3. Switching section (mockup B1)
@@ -50,7 +50,8 @@ Sections are listed with Default first, then in the order they were created.
 
 ## 4. The Sections page (mockup A2), `/sections`
 
-- One card per section, drawn in that section's own colours: its name, its ID, its number of notes, an **Edit** button, and **Open** (or a "Current section" mark).
+- One card per section, drawn in that section's own colours: its name, its ID, its number of notes, an **Edit** button, **Open** (or a "Current section" mark) and a **Trash** button.
+- **Trash** shows a trash-can icon and the number of the section's trashed notes ("Trash 2", and "Trash 0" when it is empty). Clicking it makes the section current and opens the Trash screen (`/trash`), which shows that section's trash.
 - A **+ New section** card opens a dialog: Name, ID and Colour. The dialog says the ID cannot be changed later. Errors (empty name, invalid ID, ID already used) are shown in the dialog.
 - **Edit** opens the same dialog with the ID fixed: the name and colour can be changed.
 - There is no Delete.
@@ -134,7 +135,7 @@ All nine existing test types still apply. The new tests:
 
 - `jot-spec.md` §3 "tags are the only organisation": sections are now a level above tags.
 - `jot-spec.md` §3 New note, Trash, Empty trash, Delete empty notes, and §5 Search: each works on the current section.
-- `jot-spec.md` §11 and §12: Olive becomes one of six colours; new Sections screen; the left bar gains the section button.
+- `jot-spec.md` §11 and §12: Olive becomes one of six colours; new Sections screen; the left bar gains the section button and loses Trash (each section's trash opens from its card).
 - `agent-spec.md` §3: bot notes land in Default; Keep puts a note in the current section.
 - `backup-spec.md` §3: personal backup format 4.
 
@@ -150,7 +151,7 @@ All nine existing test types still apply. The new tests:
 
 ## 13. Decisions
 
-By the owner, 2026-11-20: a Default section; every note in one section, movable; each section has its own trash; a read-only note must be unlocked before moving; one ID per section; six uniform colours; sections can be renamed but not deleted; simplicity first.
+By the owner, 2026-11-20: a Default section; every note in one section, movable; each section has its own trash, opened from its card on the Sections page (no Trash in the left bar); a read-only note must be unlocked before moving; one ID per section; six uniform colours; sections can be renamed but not deleted; simplicity first.
 
 Chosen here where the owner was silent, each the simplest option:
 

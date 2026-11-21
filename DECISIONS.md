@@ -917,3 +917,12 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   tag), `tests/component/sections.test.tsx`, `e2e/specs/sections.spec.ts`. Existing tests changed
   only where the spec changed what they check (the URLs with `?section=`, format 4, schema 7,
   the four theme shades, the left bar's controls).
+- **Trash per section, on the Sections page (owner request, draft 8).** The left bar's Trash
+  link is gone. Each section card has a Trash button (trash-can icon and "Trash <n>", also
+  "Trash 0") after Edit and Open; it makes the section current and goes to the unchanged
+  `/trash` route. `GET /api/sections` gives each section a `trashCount` beside `noteCount`:
+  every trashed note of that section, Inbox ones included, which is what its Trash screen
+  lists. The Trash screen's heading is "Trash — <section name>" (the app's spaced em dash).
+  The button's accessible name is "Trash of <name> (<n> notes)". The e2e specs that used the
+  left bar link now open the trash through the `openTrash` helper (section menu → Manage
+  sections → the current section's card).

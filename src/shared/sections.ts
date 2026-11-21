@@ -16,6 +16,8 @@ export interface Section {
   colour: SectionColour;
   /** Live notes on the section's home page (not trashed, not in the Inbox). */
   noteCount: number;
+  /** Notes in the section's trash (its Trash screen). */
+  trashCount: number;
 }
 
 export type SectionIdResult = { ok: true; id: string } | { ok: false; error: string };

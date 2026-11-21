@@ -26,9 +26,9 @@ beforeEach(() => {
   localStorage.clear();
   history.replaceState(null, '', '/');
   sections = [
-    { id: 'default', name: 'Default', colour: 'olive', noteCount: 1 },
-    { id: 'work', name: "Bob's Work", colour: 'blue', noteCount: 2 },
-    { id: 'recipe', name: 'Recipes', colour: 'amber', noteCount: 0 },
+    { id: 'default', name: 'Default', colour: 'olive', noteCount: 1, trashCount: 0 },
+    { id: 'work', name: "Bob's Work", colour: 'blue', noteCount: 2, trashCount: 0 },
+    { id: 'recipe', name: 'Recipes', colour: 'amber', noteCount: 0, trashCount: 2 },
   ];
   note = {
     id: 'n1', title: 'Plan', preview: '', tags: [], createdAt: '2026-11-19T10:00:00Z', updatedAt: '2026-11-19T10:00:00Z',
@@ -97,10 +97,11 @@ describe('the current section', () => {
     expect(accent()).toBe('');
   });
 
-  it('the trash is the current section’s', async () => {
+  it('the trash is the current section’s, and its heading says whose', async () => {
     localStorage.setItem(KEY, 'recipe');
     inApp(<TrashScreen />);
     await waitFor(() => expect(urls('/api/trash?')).toContain('/api/trash?section=recipe'));
+    expect(await screen.findByRole('heading', { name: 'Trash — Recipes', level: 1 })).toBeTruthy();
   });
 });
 
@@ -147,13 +148,28 @@ describe('the Sections page', () => {
     expect(location.pathname).toBe('/');
   });
 
+  it('each card has a Trash button with the number of its trashed notes, which opens that section’s trash', async () => {
+    localStorage.setItem(KEY, 'work');
+    inApp(<SectionsScreen />);
+    const work = await screen.findByRole('listitem', { name: "Bob's Work" });
+    // Beside Edit and Open, also on the current section's card, and shown when the trash is empty.
+    expect(within(work).getAllByRole('button').map((b) => b.textContent?.trim())).toEqual(['Edit', 'Trash 0']);
+    expect(within(work).getByRole('button', { name: "Trash of Bob's Work (0 notes)" })).toBeTruthy();
+    const recipes = screen.getByRole('listitem', { name: 'Recipes' });
+    expect(within(recipes).getAllByRole('button').map((b) => b.textContent?.trim())).toEqual(['Edit', 'Open', 'Trash 2']);
+    expect(within(recipes).getByRole('button', { name: 'Trash of Recipes (2 notes)' }).querySelector('svg')).toBeTruthy(); // the trash-can icon
+    await userEvent.click(within(recipes).getByRole('button', { name: /^Trash of Recipes/ }));
+    expect(localStorage.getItem(KEY)).toBe('recipe');
+    expect(location.pathname).toBe('/trash');
+  });
+
   it('creates a section with name, ID and colour; errors are shown in the dialog', async () => {
     handler = (url, init) => {
       if (url !== '/api/sections' || init.method !== 'POST') return null;
       const b = JSON.parse(init.body as string);
       if (b.id === 'work') return json({ error: 'You already have a section with the ID "work".' }, 409);
-      sections = [...sections, { ...b, noteCount: 0 }];
-      return json({ section: { ...b, noteCount: 0 } }, 201);
+      sections = [...sections, { ...b, noteCount: 0, trashCount: 0 }];
+      return json({ section: { ...b, noteCount: 0, trashCount: 0 } }, 201);
     };
     inApp(<SectionsScreen />);
     await userEvent.click(await screen.findByRole('button', { name: 'New section' }));

@@ -1,7 +1,7 @@
 // Editor extras: Clear formatting, opening links, a full-width writing area with a right
 // margin marker, no vertical scrollbars anywhere, and showing invisible characters.
 import { expect, test, type Page } from '@playwright/test';
-import { body, goHome, login, newNote, openMenu, typeInBody, uniq, waitSaved } from './helpers';
+import { body, goHome, login, newNote, openMenu, openTrash, typeInBody, uniq, waitSaved } from './helpers';
 
 const noteId = (page: Page) => new URL(page.url()).pathname.split('/').pop()!;
 async function setContent(page: Page, content: unknown) {
@@ -194,11 +194,13 @@ test('no element shows a vertical scrollbar, yet long notes, lists and menus sti
   // The home page and the other screens.
   await goHome(page);
   expect(await scrollbars()).toEqual([]);
-  for (const name of ['Fonts', 'Styles', 'Account', 'Trash']) {
+  for (const name of ['Fonts', 'Styles', 'Account']) {
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name }).click();
     await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
     expect(await scrollbars(), name).toEqual([]);
   }
+  await openTrash(page);
+  expect(await scrollbars(), 'Trash').toEqual([]);
   // The Fonts screen is long: it scrolls with the wheel.
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Fonts' }).click();
   await expect(page.getByTestId('catalog-card').first()).toBeVisible({ timeout: 30_000 });

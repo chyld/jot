@@ -32,7 +32,8 @@ export function listSections(db: DB, userId: string): Section[] {
   return db
     .prepare(
       `SELECT s.id, s.name, s.colour,
-         (SELECT COUNT(*) FROM notes n WHERE n.user_id = s.user_id AND n.section_id = s.id AND n.deleted_at IS NULL AND n.inbox = 0) AS noteCount
+         (SELECT COUNT(*) FROM notes n WHERE n.user_id = s.user_id AND n.section_id = s.id AND n.deleted_at IS NULL AND n.inbox = 0) AS noteCount,
+         (SELECT COUNT(*) FROM notes n WHERE n.user_id = s.user_id AND n.section_id = s.id AND n.deleted_at IS NOT NULL) AS trashCount
        FROM sections s WHERE s.user_id = ?
        ORDER BY s.id <> ?, s.created_at, s.rowid`,
     )

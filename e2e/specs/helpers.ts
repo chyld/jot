@@ -43,6 +43,19 @@ export async function goHome(page: Page) {
   await expect(page.getByTestId('notes-list')).toBeVisible();
 }
 
+/**
+ * Each section has its own trash, opened from its card on the Sections page (reached
+ * through the left bar's section menu). This opens the current section's.
+ */
+export async function openTrash(page: Page) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^Section: / }).click();
+  await page.getByRole('menuitem', { name: 'Manage sections' }).click();
+  const card = page.getByTestId('section-cards').getByRole('listitem').filter({ hasText: 'Current section' });
+  await card.getByRole('button', { name: /^Trash of / }).click();
+  await expect(page).toHaveURL(/\/trash$/);
+  await expect(page.getByRole('heading', { name: /^Trash — /, level: 1 })).toBeVisible();
+}
+
 export async function waitSaved(page: Page) {
   await expect(page.getByTestId('save-status')).toHaveText('Saved', { timeout: 20_000 });
 }

@@ -1,9 +1,11 @@
 // The Sections page (sections-spec.md §4, mockup A2), /sections: one card per section in
-// that section's own colours, with its name, ID, number of notes, Edit, and Open (or a
-// "Current section" mark); a "+ New section" card. The same dialog creates a section
-// (name, ID, colour) and edits one (name and colour; the ID is fixed). There is no delete.
+// that section's own colours, with its name, ID, number of notes, Edit, Open (or a "Current
+// section" mark) and Trash with the number of its trashed notes (each section has its own
+// trash: the button makes the section current and opens the Trash screen); a "+ New section"
+// card. The same dialog creates a section (name, ID, colour) and edits one (name and colour;
+// the ID is fixed). There is no delete.
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { normalizeSectionId, normalizeSectionName, SECTION_COLOURS, type Section, type SectionColour } from '../../shared/sections';
 import { api } from '../api';
 import { setCurrentSection, useSections } from '../currentSection';
@@ -150,6 +152,18 @@ export function SectionsScreen() {
                   Open
                 </button>
               )}
+              <button
+                type="button"
+                className="btn btn-sm"
+                aria-label={`Trash of ${s.name} (${noteCount(s.trashCount)})`}
+                title={`Trash of ${s.name}`}
+                onClick={() => {
+                  setCurrentSection(s.id);
+                  navigate('/trash');
+                }}
+              >
+                <Trash2 size={14} /> Trash {s.trashCount}
+              </button>
             </div>
           </li>
         ))}

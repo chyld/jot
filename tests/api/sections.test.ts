@@ -33,7 +33,7 @@ describe('sections', () => {
 
   it('every account starts with a Default section (Olive) holding its notes', async () => {
     const r = await c.get('/api/sections');
-    expect(r.json.sections).toEqual([{ id: 'default', name: 'Default', colour: 'olive', noteCount: 0 }]);
+    expect(r.json.sections).toEqual([{ id: 'default', name: 'Default', colour: 'olive', noteCount: 0, trashCount: 0 }]);
     const n = await c.post('/api/notes', {});
     expect(n.json.note.section).toBe('default');
   });
@@ -41,7 +41,7 @@ describe('sections', () => {
   it('creates sections, listed Default first and then in the order they were made', async () => {
     const a = await c.post('/api/sections', { id: 'work', name: "Bob's Work", colour: 'blue' });
     expect(a.status, a.body).toBe(201);
-    expect(a.json.section).toEqual({ id: 'work', name: "Bob's Work", colour: 'blue', noteCount: 0 });
+    expect(a.json.section).toEqual({ id: 'work', name: "Bob's Work", colour: 'blue', noteCount: 0, trashCount: 0 });
     expect((await c.post('/api/sections', { id: 'Recipe', name: '  Recipes  ', colour: 'amber' })).json.section).toMatchObject({ id: 'recipe', name: 'Recipes' });
     expect((await c.post('/api/sections', { id: 'aaa', name: 'First by name', colour: 'teal' })).status).toBe(201);
     expect((await c.get('/api/sections')).json.sections.map((s: any) => s.id)).toEqual(['default', 'work', 'recipe', 'aaa']);
@@ -153,12 +153,17 @@ describe('scoping', () => {
     expect(workTrash).not.toContain('Old recipe');
     expect(titles(await c.get('/api/trash?section=recipe'))).toContain('Old recipe');
     expect(titles(await c.get('/api/trash'))).toEqual([]); // Default's trash is empty
+    // The section list gives each section's trash count beside its note count.
+    const trashCount = async () => Object.fromEntries(((await c.get('/api/sections')).json.sections as any[]).map((s) => [s.id, s.trashCount]));
+    const recipeTrash = titles(await c.get('/api/trash?section=recipe')).length;
+    expect(await trashCount()).toMatchObject({ default: 0, work: 3, recipe: recipeTrash });
     // Restore puts a note back in its own section.
     expect((await c.post(`/api/trash/${r.id}/restore`, {})).json.note.section).toBe('recipe');
     await c.del(`/api/notes/${r.id}`);
     expect((await c.del('/api/trash?section=work')).json.deleted).toBe(3); // Old work and the two empty notes
     expect(titles(await c.get('/api/trash?section=work'))).toEqual([]);
     expect(titles(await c.get('/api/trash?section=recipe'))).toContain('Old recipe');
+    expect(await trashCount()).toMatchObject({ default: 0, work: 0, recipe: recipeTrash });
     expect(noteRow(r.id)).toBeTruthy();
   });
 });
@@ -285,7 +290,7 @@ describe('backups', () => {
     await c.post('/api/sections', { id: 'work', name: 'Work', colour: 'blue' });
     const r = await restore(c, packBackup(b));
     expect(r.done.status, r.done.body).toBe(200);
-    expect((await c.get('/api/sections')).json.sections).toEqual([{ id: 'default', name: 'Default', colour: 'olive', noteCount: 1 }]);
+    expect((await c.get('/api/sections')).json.sections).toEqual([{ id: 'default', name: 'Default', colour: 'olive', noteCount: 1, trashCount: 0 }]);
     const list = (await c.get('/api/notes')).json.notes;
     expect(list.map((n: any) => [n.title, n.section, n.tags])).toEqual([['Old one', 'default', ['kept']]]);
   });
