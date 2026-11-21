@@ -70,18 +70,20 @@ export function useRail() {
   return useContext(RailContext);
 }
 
-export function RailExpandButton(props: { className?: string }) {
-  const { collapsed, setCollapsed } = useRail();
-  if (!collapsed) return null;
+export function RailToggleButton(props: { className?: string; onlyWhenCollapsed?: boolean }) {
+  const { collapsed, toggle } = useRail();
+  if (props.onlyWhenCollapsed && !collapsed) return null;
+  const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
   return (
     <button
       type="button"
-      className={`rail-expand-btn ${props.className ?? ''}`}
-      aria-label="Expand sidebar"
-      title="Expand sidebar (Ctrl+\)"
-      onClick={() => setCollapsed(false)}
+      className={`rail-toggle-btn ${props.className ?? ''}`}
+      aria-label={label}
+      aria-expanded={!collapsed}
+      title={`${label} (Ctrl+\\)`}
+      onClick={toggle}
     >
-      <PanelLeftOpen size={18} />
+      {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
     </button>
   );
 }
@@ -109,7 +111,7 @@ export { createAndOpenNote } from '../newNotes';
 export function Sidebar(props: { path: string }) {
   const { bumpNotes, inboxCount, reloadInbox } = useData();
   const { current } = useSections();
-  const { collapsed, setCollapsed } = useRail();
+  const { collapsed } = useRail();
   const [newError, setNewError] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const p = props.path;
@@ -163,15 +165,6 @@ export function Sidebar(props: { path: string }) {
       <RailLink to="/account" label="Account" active={p === '/account'}>
         <UserRound size={20} />
       </RailLink>
-      <button
-        type="button"
-        className="rail-btn rail-collapse-btn"
-        aria-label="Collapse sidebar"
-        title="Collapse sidebar (Ctrl+\)"
-        onClick={() => setCollapsed(true)}
-      >
-        <PanelLeftClose size={18} />
-      </button>
       {newError && (
         <div role="alert" className="rail-error" onClick={() => setNewError(null)}>
           {newError}

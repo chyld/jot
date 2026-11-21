@@ -94,9 +94,9 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 .main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--app-bg); }
 .rail { width: 48px; background: var(--rail); border-right: 1px solid var(--rail-border); display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 6px; flex-shrink: 0; overflow: hidden; transition: width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.16s ease, border-right-width 0.2s ease; }
 .rail.is-collapsed { width: 0; border-right-width: 0; opacity: 0; pointer-events: none; }
-.rail-expand-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.12s, border-color 0.12s; }
-.rail-expand-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
-.rail-expand-float { position: absolute; top: 14px; left: 12px; z-index: 10; }
+.rail-toggle-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--accent-dark); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.12s, border-color 0.12s; }
+.rail-toggle-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.rail-toggle-float { position: absolute; top: 14px; left: 12px; z-index: 10; }
 .app.is-rail-collapsed .screen { padding-left: 56px; }
 .rail-logo { color: var(--rail-logo); width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 4px; }
 .rail-logo:hover { background: var(--rail-hover); }
@@ -504,7 +504,7 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
   html, body, #root, .app, .main, .note-pane, .note-pane.full, .note, .note-page, .note-scroll { display: block; height: auto; min-height: 0; overflow: visible; }
   :root, body, #root, .app, .main, .note-pane, .note-header { background: #fff; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* highlights, text colours, photo borders, code blocks */
-  .rail, .rail-expand-btn, .toolbar-wrap, .note-status, .wrap-marker, .banner, .readonly-confirm, .modal-backdrop, .rail-error,
+  .rail, .rail-toggle-btn, .toolbar-wrap, .note-status, .wrap-marker, .banner, .readonly-confirm, .modal-backdrop, .rail-error,
   .note-header > :not(.note-title), .jot-photo-handle, .note-body .column-resize-handle { display: none !important; }
   .note-header { display: block; padding: 0 0 12px; }
   .note-title { display: block; width: 100%; max-width: none; padding: 0; }

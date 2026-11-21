@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RailExpandButton, RailProvider, Sidebar } from '../../src/client/components/Sidebar';
+import { RailProvider, RailToggleButton, Sidebar } from '../../src/client/components/Sidebar';
 import { DataProvider } from '../../src/client/data';
 import { FONTS } from './setup';
 
@@ -30,7 +30,8 @@ function renderRail() {
       <RailProvider>
         <Sidebar path="/n/note-1" />
         <header className="note-header">
-          <RailExpandButton />
+          <RailToggleButton />
+          <input className="note-title" aria-label="Title" defaultValue="Test" />
         </header>
       </RailProvider>
     </DataProvider>,
@@ -38,21 +39,26 @@ function renderRail() {
 }
 
 describe('collapsible left rail', () => {
-  it('collapses via the rail button, shows the header expand button, and persists to localStorage', async () => {
+  it('toggles from the button left of the title and persists to localStorage', async () => {
     renderRail();
     const nav = document.querySelector('nav.rail') as HTMLElement;
+    const header = document.querySelector('header.note-header') as HTMLElement;
     expect(nav.classList.contains('is-collapsed')).toBe(false);
-    expect(screen.queryByRole('button', { name: 'Expand sidebar' })).toBeNull();
+    expect(within(nav).queryByRole('button', { name: 'Collapse sidebar' })).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    const collapseBtn = within(header).getByRole('button', { name: 'Collapse sidebar' });
+    const title = within(header).getByLabelText('Title');
+    expect(collapseBtn.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await userEvent.click(collapseBtn);
     expect(nav.classList.contains('is-collapsed')).toBe(true);
     expect(localStorage.getItem('jot.railCollapsed')).toBe('1');
 
-    const expandBtn = screen.getByRole('button', { name: 'Expand sidebar' });
+    const expandBtn = within(header).getByRole('button', { name: 'Expand sidebar' });
     await userEvent.click(expandBtn);
     expect(nav.classList.contains('is-collapsed')).toBe(false);
     expect(localStorage.getItem('jot.railCollapsed')).toBe('0');
-    expect(screen.queryByRole('button', { name: 'Expand sidebar' })).toBeNull();
+    expect(within(header).getByRole('button', { name: 'Collapse sidebar' })).toBeTruthy();
   });
 
   it('restores collapsed state from localStorage and toggles with Ctrl+\\', () => {

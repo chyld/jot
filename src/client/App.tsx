@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { User } from '../shared/types';
 import { api, setUnauthorizedHandler } from './api';
-import { RailExpandButton, RailProvider, Sidebar, useRail } from './components/Sidebar';
+import { RailProvider, RailToggleButton, Sidebar, useRail } from './components/Sidebar';
 import { DataProvider, useData } from './data';
 import { createAndOpenNote } from './newNotes';
 import { match, navigate, useLocation } from './router';
@@ -78,7 +78,7 @@ function AppShell(props: { path: string; search: URLSearchParams }) {
     <div className={`app ${collapsed ? 'is-rail-collapsed' : ''}`}>
       <Sidebar path={props.path} />
       <main className="main">
-        {!isNote && <RailExpandButton className="rail-expand-float" />}
+        {!isNote && <RailToggleButton className="rail-toggle-float" onlyWhenCollapsed />}
         <Screen path={props.path} search={props.search} />
       </main>
     </div>
