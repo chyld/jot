@@ -488,7 +488,7 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 @page { margin: 18mm; }
 @media print {
   html, body, #root, .app, .main, .note-pane, .note-pane.full, .note, .note-page, .note-scroll { display: block; height: auto; min-height: 0; overflow: visible; }
-  html, body, .main, .note-pane, .note-header { background: #fff; }
+  :root, body, #root, .app, .main, .note-pane, .note-header { background: #fff; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* highlights, text colours, photo borders, code blocks */
   .rail, .toolbar-wrap, .note-status, .wrap-marker, .banner, .readonly-confirm, .modal-backdrop, .rail-error,
   .note-header > :not(.note-title), .jot-photo-handle, .note-body .column-resize-handle { display: none !important; }
