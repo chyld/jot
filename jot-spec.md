@@ -44,6 +44,7 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 - A note has a title, a body and tags.
 - No folders and no inbox. Every note belongs to one section (`sections-spec.md`), a level above tags; within a section, tags are the organisation.
 - Notes list shows title, preview text, tags and relative time ("3 min ago").
+- The home page notes list is ordered by last update, most recently updated first (ties by note ID). Editing a note moves it to the top.
 - Created and updated dates are shown on each note, in the status line (section 6). Dates are in the viewer's own time zone.
 - Each note has its own URL.
 - New note button. New notes and Delete empty notes work on the current section (`sections-spec.md` §2).
@@ -98,7 +99,9 @@ Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write note
 
 ## 6. Editor
 
-Built on Tiptap. Opening a note shows the editor full screen (everything except the left bar): a header with the title, tags, the Keep button (Inbox notes) and the trash button, then the toolbar, the note page and a status line. No notes list is shown beside it.
+Built on Tiptap. Opening a note shows the editor full screen (everything except the left bar): a header with the title, tags, the Keep button (Inbox notes), Previous note and Next note, and the trash button, then the toolbar, the note page and a status line. No notes list is shown beside it.
+
+**Previous note and Next note** are two arrow icon buttons just left of the trash button. They walk the note's section in exactly the home page order (its live notes: not trashed, not in the Inbox; the whole section, ignoring any tag filter or search): Next opens the note after this one in that list, Previous the one before. They wrap around: Next on the last note opens the first, Previous on the first opens the last. What was typed is saved first, as when leaving a note any other way; the neighbour is worked out from the list as it is at the click, so a note just edited (now at the top) counts from the top. They are not shown on a trashed note, an Inbox note, or the only note of its section; they work on read-only notes.
 
 The **status line** is a thin bar (28 px, muted 12.5 px text, a line above it) pinned at the bottom of the note screen, under the writing area; it stays put while the note scrolls. Left to right: the word count and character count of the note body ("21 words", "1 character"; counted from the text, spaces included, updated as you type), the save status (nothing while there is nothing to save), the Read-only label and the "From <bot>" label when they apply; at the right, "Created <date> · Updated <relative time>". It is always one row: when the window is narrow, "Created …" shortens and then goes, keeping the updated time. It is shown on trashed and read-only notes too, is not printed, and its text cannot be selected.
 

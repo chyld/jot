@@ -74,6 +74,8 @@ h2 { font-size: 18px; margin: 0 0 12px; }
 .btn-danger:hover:not(:disabled) { background: #912018; }
 .icon-btn { border: 0; background: transparent; padding: 6px; border-radius: 6px; cursor: pointer; color: var(--muted); display: inline-flex; }
 .icon-btn:hover { background: var(--subtle); color: var(--danger); }
+.note-nav-buttons { display: inline-flex; }
+.icon-btn.note-nav:hover { color: var(--text); }
 .form-error { color: var(--danger); font-size: 13px; }
 
 /* ---------------------------------------------------------------- login */

@@ -69,6 +69,22 @@ describe('notes', () => {
     expect(item.content).toBeUndefined();
   });
 
+  it('orders the home list by last update, newest first (not by creation): an edited older note goes to the top', async () => {
+    const a = await newNote('Order A');
+    await new Promise((r) => setTimeout(r, 15));
+    const b = await newNote('Order B');
+    await new Promise((r) => setTimeout(r, 15));
+    const c = await newNote('Order C');
+    const ids = async () => (await alice.get('/api/notes')).json.notes.map((n: any) => n.id).filter((id: string) => [a.id, b.id, c.id].includes(id));
+    expect(await ids()).toEqual([c.id, b.id, a.id]);
+    await new Promise((r) => setTimeout(r, 15));
+    await alice.patch(`/api/notes/${a.id}`, { title: 'Order A edited' });
+    expect(await ids()).toEqual([a.id, c.id, b.id]);
+    // The list is sorted by updatedAt, newest first, throughout.
+    const all = (await alice.get('/api/notes')).json.notes.map((n: any) => n.updatedAt);
+    expect(all).toEqual([...all].sort().reverse());
+  });
+
   it('builds a short preview from the body text', async () => {
     const long = 'word '.repeat(100).trim();
     const note = await newNote('P', doc('Line one', long));

@@ -952,3 +952,12 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   needs no change: it saves the sections that exist and a restore replaces them. The current
   card's button-row mark became a small uppercase "Current" pill in the card's top-right
   corner; that card's buttons are Edit and Trash.
+- **Previous / Next note in the editor (owner request).** Two chevron buttons left of Move
+  to trash walk the note's section in home page order (`updated_at DESC, id`, live notes,
+  no tag filter or search) and wrap. No new route: the editor reads `GET
+  /api/notes?section=<the note's section>` once to know whether there is another note
+  (hidden for trashed and Inbox notes and a section's only note), and again at the click,
+  after `autosave.flush()` (the same save the trash and move buttons do), so a note just
+  edited counts from the top. A note no longer in the list at the click does nothing.
+  Tests: `tests/component/note-nav.test.tsx`, `e2e/specs/note-nav.spec.ts`, and the home
+  order is pinned in `tests/api/notes.test.ts`.

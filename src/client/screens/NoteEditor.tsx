@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Bot, Check, Lock, RotateCcw, Trash2 } from 'lucide-react';
+import { Bot, Check, ChevronLeft, ChevronRight, Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note } from '../../shared/types';
@@ -182,6 +182,36 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     }
   };
 
+  // Previous / Next walk the note's section in home page order (the whole section, no tag
+  // filter or search), wrapping at both ends. Shown only for a live note (not trashed, not
+  // in the Inbox) in a section with at least one other note. The list is fetched again at
+  // click time, after the save, so an edit that moved this note to the top counts.
+  const [sectionSize, setSectionSize] = useState(0);
+  const walkable = !trashed && !note.inbox;
+  useEffect(() => {
+    if (!walkable) return;
+    let cancelled = false;
+    api.sectionNotes(note.section).then(
+      (r) => !cancelled && setSectionSize(r.notes.length),
+      () => !cancelled && setSectionSize(0),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [walkable, note.section]);
+  const openNeighbour = async (step: 1 | -1) => {
+    setMessage(null);
+    try {
+      await autosave.flush(); // what was typed is saved first, as when leaving the note any other way
+      const list = (await api.sectionNotes(note.section)).notes;
+      const i = list.findIndex((n) => n.id === note.id);
+      if (i < 0 || list.length < 2) return;
+      navigate(`/n/${list[(i + step + list.length) % list.length].id}`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not open the note.');
+    }
+  };
+
   const tagChange = async (fn: () => Promise<{ note: Note }>) => {
     await autosave.flush();
     const { note: n } = await fn();
@@ -245,6 +275,16 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
             >
               <Check size={14} /> Keep in {current.name}
             </button>
+          )}
+          {walkable && sectionSize > 1 && (
+            <span className="note-nav-buttons">
+              <button type="button" className="icon-btn note-nav" aria-label="Previous note" title="Previous note" onClick={() => void openNeighbour(-1)}>
+                <ChevronLeft size={18} />
+              </button>
+              <button type="button" className="icon-btn note-nav" aria-label="Next note" title="Next note" onClick={() => void openNeighbour(1)}>
+                <ChevronRight size={18} />
+              </button>
+            </span>
           )}
           {!locked && (
             <button

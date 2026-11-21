@@ -58,6 +58,8 @@ export const api = {
   logout: () => request<void>('POST', '/api/logout', {}),
 
   notes: (tag?: string) => request<{ notes: NoteSummary[] }>('GET', inSection(tag ? `/api/notes?tag=${encodeURIComponent(tag)}` : '/api/notes')),
+  /** A given section's notes in home page order (the editor's Previous / Next). */
+  sectionNotes: (section: string) => request<{ notes: NoteSummary[] }>('GET', `/api/notes?section=${encodeURIComponent(section)}`),
   search: (q: string) => request<{ notes: NoteSummary[] }>('GET', inSection(`/api/search?q=${encodeURIComponent(q)}`)),
   note: (id: string) => request<{ note: Note }>('GET', `/api/notes/${encodeURIComponent(id)}`),
   createNote: () => request<{ note: Note }>('POST', inSection('/api/notes'), {}),
