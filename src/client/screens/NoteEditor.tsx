@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Bot, Check, ChevronLeft, ChevronRight, Lock, RotateCcw, Trash2 } from 'lucide-react';
+import { Bot, Check, ArrowLeft, ArrowRight, Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note } from '../../shared/types';
@@ -276,16 +276,6 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
               <Check size={14} /> Keep in {current.name}
             </button>
           )}
-          {walkable && sectionSize > 1 && (
-            <span className="note-nav-buttons">
-              <button type="button" className="icon-btn note-nav" aria-label="Previous note" title="Previous note" onClick={() => void openNeighbour(-1)}>
-                <ChevronLeft size={18} />
-              </button>
-              <button type="button" className="icon-btn note-nav" aria-label="Next note" title="Next note" onClick={() => void openNeighbour(1)}>
-                <ChevronRight size={18} />
-              </button>
-            </span>
-          )}
           {!locked && (
             <button
               type="button"
@@ -301,6 +291,16 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
             >
               <Trash2 size={18} />
             </button>
+          )}
+          {walkable && sectionSize > 1 && (
+            <span className="note-nav-buttons">
+              <button type="button" className="icon-btn note-nav" aria-label="Previous note" title="Previous note" onClick={() => void openNeighbour(-1)}>
+                <ArrowLeft size={16} strokeWidth={2.5} />
+              </button>
+              <button type="button" className="icon-btn note-nav" aria-label="Next note" title="Next note" onClick={() => void openNeighbour(1)}>
+                <ArrowRight size={16} strokeWidth={2.5} />
+              </button>
+            </span>
           )}
         </div>
       </header>

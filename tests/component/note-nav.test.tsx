@@ -72,18 +72,18 @@ const next = () => screen.findByRole('button', { name: 'Next note' });
 const previous = () => screen.findByRole('button', { name: 'Previous note' });
 
 describe('previous and next note', () => {
-  it('sit in the header just left of Move to trash: Previous, Next, Move to trash', async () => {
+  it('sit in the header just right of Move to trash: Move to trash, Previous, Next', async () => {
     const header = await openNote('b');
     await next();
     const labels = within(header)
       .getAllByRole('button')
       .map((b) => b.getAttribute('aria-label'))
       .filter((l) => l === 'Previous note' || l === 'Next note' || l === 'Move to trash');
-    expect(labels).toEqual(['Previous note', 'Next note', 'Move to trash']);
+    expect(labels).toEqual(['Move to trash', 'Previous note', 'Next note']);
     const trash = within(header).getByRole('button', { name: 'Move to trash' });
     const nextBtn = within(header).getByRole('button', { name: 'Next note' });
-    expect(nextBtn.compareDocumentPosition(trash) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect((nextBtn.closest('.note-nav-buttons') as HTMLElement).nextElementSibling).toBe(trash);
+    expect(nextBtn.compareDocumentPosition(trash) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect((nextBtn.closest('.note-nav-buttons') as HTMLElement).previousElementSibling).toBe(trash);
   });
 
   it('Next opens the note after this one and Previous the one before, in the section list order', async () => {
