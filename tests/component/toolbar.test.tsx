@@ -44,6 +44,7 @@ describe('Toolbar', () => {
       'Redo',
       'Clear formatting',
       'Show spaces, tabs and line ends',
+      'Show empty lines',
     ]);
   });
 

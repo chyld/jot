@@ -286,6 +286,11 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
     to the disabled toolbar.
   - Tiptap 3 keeps an empty paragraph after a final heading, so that paragraph shows a ¶
     too.
+- **Show empty lines** mirrors Show invisibles in its own module (`emptyLines.ts`): a node
+  decoration puts a class on each empty top-level paragraph or heading and CSS `::after`
+  draws the 4 px dot 18 px left of the text. Empty lines inside lists, quotes and tables get
+  no dot (it would collide with bullets and borders). Stored in `localStorage`
+  (`jot.showEmptyLines`), off by default, and always enabled like the pilcrow.
 
 - **No rules for New (owner decision, replacing "one intent creates one note").** Every
   activation of a New button creates a note. The in-flight flag, the held keystrokes, the

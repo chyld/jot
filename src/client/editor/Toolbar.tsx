@@ -1,6 +1,6 @@
 // The editor toolbar, left to right as in the reference screenshots:
 //  1 Styles  2 Font  3 Size  4 Text colour, highlight  5 B I U S code link
-//  6 Heading  7 List  8 Insert  9 Undo, redo
+//  6 Heading  7 List  8 Insert  9 Undo, redo, clear formatting, show invisibles, show empty lines
 // plus table controls (cursor in a table) and photo controls (photo selected).
 import { useContext, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
@@ -38,6 +38,7 @@ import type { Style } from '../../shared/styles';
 import type { Font } from '../../shared/types';
 import { Dropdown, MenuItem, ToolButton, ToolbarDisabled } from '../components/Dropdown';
 import { clearFormatting } from './clear';
+import { emptyLinesOn, setEmptyLines } from './emptyLines';
 import { invisiblesOn, setInvisibles } from './invisibles';
 import { currentFormat, matchingStyle, quoteFamily, applyStyle, type CurrentFormat } from './stamp';
 import { PhotoControls } from './PhotoControls';
@@ -616,6 +617,19 @@ function InvisiblesToggle(props: { editor: Editor }) {
   );
 }
 
+/** Shows a dot beside each empty line. Like the pilcrow, it changes nothing, so it stays enabled on read-only notes. */
+function EmptyLinesToggle(props: { editor: Editor }) {
+  const on = useEditorState({ editor: props.editor, selector: ({ editor }) => emptyLinesOn(editor) }) as boolean;
+  return (
+    <ToolButton label="Show empty lines" active={on} alwaysEnabled onClick={() => setEmptyLines(props.editor, !on)}>
+      <svg width={ICON} height={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+        <circle cx="4" cy="12" r="1.6" fill="currentColor" stroke="none" />
+        <path d="M9 6h12M9 12h12M9 18h12" />
+      </svg>
+    </ToolButton>
+  );
+}
+
 /** The lock at the end of the toolbar. Turning it on asks once more; the web app cannot turn it off. */
 function ReadOnlyToggle(props: { readOnly: boolean; onRequest: () => void }) {
   return (
@@ -702,6 +716,7 @@ export function Toolbar(props: ToolbarProps) {
             <RemoveFormatting size={ICON} />
           </ToolButton>
           <InvisiblesToggle editor={editor} />
+          <EmptyLinesToggle editor={editor} />
         </div>
         {props.onMakeReadOnly && (
           <>

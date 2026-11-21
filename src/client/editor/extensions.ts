@@ -13,6 +13,7 @@ import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-s
 import Highlight from '@tiptap/extension-highlight';
 import { OrderedList, TaskItem, TaskList } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
+import { EmptyLines } from './emptyLines';
 import { Invisibles } from './invisibles';
 import { LinkOpener } from './links';
 import { Photo } from './photo';
@@ -65,5 +66,6 @@ export function jotExtensions() {
     Photo,
     LinkOpener,
     Invisibles,
+    EmptyLines,
   ];
 }

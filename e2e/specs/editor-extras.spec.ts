@@ -1,5 +1,5 @@
 // Editor extras: Clear formatting, opening links, a full-width writing area with a right
-// margin marker, no vertical scrollbars anywhere, and showing invisible characters.
+// margin marker, no vertical scrollbars anywhere, showing invisible characters, and empty lines.
 import { expect, test, type Page } from '@playwright/test';
 import { body, goHome, login, newNote, openMenu, openTrash, typeInBody, uniq, waitSaved } from './helpers';
 
@@ -257,4 +257,39 @@ test('invisible characters show on demand, are remembered, and never reach the n
   await toggle.click();
   await expect(body(page).locator('.inv-para')).toHaveCount(2);
   await toggle.click(); // leave it off for the other flows
+});
+
+test('empty lines show a gutter dot on demand, right after the pilcrow, and never reach the note', async ({ page }) => {
+  await login(page, 'alice');
+  await newNote(page, `Empty lines ${uniq()}`);
+  const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+  const labels = await toolbar.getByRole('button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+  const i = labels.indexOf('Show spaces, tabs and line ends');
+  expect(labels.slice(i, i + 3)).toEqual(['Show spaces, tabs and line ends', 'Show empty lines', 'Make read-only']);
+  const toggle = toolbar.getByRole('button', { name: 'Show empty lines' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await typeInBody(page, 'one');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('two');
+  await waitSaved(page);
+  const dotted = body(page).locator('p.empty-line');
+  await expect(dotted).toHaveCount(1);
+  const dot = await dotted.evaluate((el) => {
+    const s = getComputedStyle(el, '::after');
+    return { width: s.width, radius: s.borderRadius, left: s.left, color: s.backgroundColor };
+  });
+  expect(dot).toEqual({ width: '4px', radius: '50%', left: '-18px', color: 'rgb(154, 165, 136)' });
+  await page.screenshot({ path: 'test-results/screens/empty-lines.png' });
+  // The saved note is exactly what was typed.
+  expect(await saved(page)).toEqual({ type: 'doc', content: [p('one'), { type: 'paragraph' }, p('two')] });
+  // Remembered in this browser; turned off, the dots go.
+  await page.reload();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(body(page).locator('p.empty-line')).toHaveCount(1);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(body(page).locator('.empty-line')).toHaveCount(0);
 });

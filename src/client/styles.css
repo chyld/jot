@@ -433,6 +433,10 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .inv-para::after { content: '¶'; }
 .inv-break::after { content: '↵'; }
 
+/* Empty lines (display only: a CSS dot in the left gutter on an empty paragraph or heading). */
+.note-body .empty-line { position: relative; }
+.note-body .empty-line::after { content: ''; position: absolute; left: -18px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: #9aa588; pointer-events: none; user-select: none; }
+
 /* ---------------------------------------------------------------- Inbox and bots */
 .rail-inbox { position: relative; display: grid; place-items: center; }
 .rail-count { position: absolute; top: -7px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--accent-text); font-size: 10.5px; font-weight: 700; line-height: 16px; text-align: center; }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Type 7 (component): Clear formatting, opening links, and showing invisible characters.
+// Type 7 (component): Clear formatting, opening links, and showing invisible characters and empty lines.
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import type { Editor } from '@tiptap/core';
 import { Toolbar } from '../../src/client/editor/Toolbar';
 import { clearFormatting } from '../../src/client/editor/clear';
+import { EMPTY_LINES_KEY, emptyLinesOn, setEmptyLines } from '../../src/client/editor/emptyLines';
 import { INVISIBLES_KEY, invisiblesOn, setInvisibles } from '../../src/client/editor/invisibles';
 import { currentFormat } from '../../src/client/editor/stamp';
 import { FONTS, makeEditor, STYLES } from './setup';
@@ -226,6 +227,73 @@ describe('show invisible characters', () => {
     await userEvent.click(toggle);
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(editor.view.dom.querySelectorAll('.inv-para').length).toBe(textblocks(editor));
+  });
+});
+
+describe('show empty lines', () => {
+  beforeEach(() => localStorage.clear());
+  const t = (text: string) => [{ type: 'text', text }];
+  const CONTENT = {
+    type: 'doc',
+    content: [
+      { type: 'paragraph', content: t('one') },
+      { type: 'paragraph' },
+      { type: 'heading', attrs: { level: 2 } },
+      { type: 'paragraph', content: t('two') },
+      { type: 'paragraph' },
+    ],
+  };
+
+  it('dots only the empty lines, without changing the note', () => {
+    const editor = makeEditor(CONTENT);
+    const before = JSON.stringify(editor.getJSON());
+    const dom = editor.view.dom;
+    expect(dom.querySelectorAll('.empty-line').length).toBe(0);
+    setEmptyLines(editor, true);
+    expect(emptyLinesOn(editor)).toBe(true);
+    const marked = [...dom.querySelectorAll('.empty-line')];
+    expect(marked.map((el) => el.tagName)).toEqual(['P', 'H2', 'P']);
+    expect(marked.every((el) => el.textContent === '')).toBe(true);
+    expect(JSON.stringify(editor.getJSON())).toBe(before);
+    // Typing into an empty line takes its dot away; the note holds just what was typed.
+    editor.commands.setTextSelection(6);
+    editor.view.dispatch(editor.state.tr.insertText('x'));
+    expect((editor.getJSON() as any).content[1]).toEqual({ type: 'paragraph', content: t('x') });
+    expect(dom.querySelectorAll('.empty-line').length).toBe(2);
+    setEmptyLines(editor, false);
+    expect(dom.querySelectorAll('.empty-line').length).toBe(0);
+  });
+
+  it('is remembered in this browser', () => {
+    const a = makeEditor(CONTENT);
+    expect(emptyLinesOn(a)).toBe(false);
+    setEmptyLines(a, true);
+    expect(localStorage.getItem(EMPTY_LINES_KEY)).toBe('1');
+    const b = makeEditor(CONTENT);
+    expect(emptyLinesOn(b)).toBe(true);
+    expect(b.view.dom.querySelectorAll('.empty-line').length).toBe(3);
+    setEmptyLines(b, false);
+    expect(emptyLinesOn(makeEditor(CONTENT))).toBe(false);
+  });
+
+  it('is a toolbar toggle right after the pilcrow that stays enabled on a read-only note', async () => {
+    const editor = makeEditor(CONTENT);
+    render(
+      <Toolbar editor={editor} styles={STYLES} fonts={FONTS} onSaveSelectionAsStyle={vi.fn()} onManageStyles={vi.fn()} onBrowseFonts={vi.fn()} onPickImage={vi.fn()} readOnly onMakeReadOnly={vi.fn()} />,
+    );
+    const labels = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+    const i = labels.indexOf('Show spaces, tabs and line ends');
+    expect(labels.slice(i, i + 3)).toEqual(['Show spaces, tabs and line ends', 'Show empty lines', 'Read-only']);
+    const toggle = screen.getByRole('button', { name: 'Show empty lines' });
+    expect(toggle.getAttribute('title')).toBe('Show empty lines');
+    expect((toggle as HTMLButtonElement).disabled).toBe(false);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    await userEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(editor.view.dom.querySelectorAll('.empty-line').length).toBe(3);
+    await userEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(editor.view.dom.querySelectorAll('.empty-line').length).toBe(0);
   });
 });
 
