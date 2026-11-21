@@ -1,16 +1,17 @@
 import { Inbox, NotebookPen, Paintbrush, Plus, Tags, Type, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useSections } from '../currentSection';
 import { useData } from '../data';
 import { navigate } from '../router';
 import { NewNoteLink } from './NewNoteLink';
-import { SectionMenu } from './SectionMenu';
+import { SectionSquare } from './SectionMarks';
 
-function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode; title?: string }) {
+function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode; title?: string; className?: string }) {
   return (
     <a
       href={props.to}
-      className={`rail-btn ${props.active ? 'is-active' : ''}`}
+      className={`rail-btn ${props.className ?? ''} ${props.active ? 'is-active' : ''}`}
       aria-label={props.label}
       title={props.title ?? props.label}
       aria-current={props.active ? 'page' : undefined}
@@ -28,6 +29,7 @@ export { createAndOpenNote } from '../newNotes';
 
 export function Sidebar(props: { path: string }) {
   const { bumpNotes, inboxCount, reloadInbox } = useData();
+  const { current } = useSections();
   const [newError, setNewError] = useState<string | null>(null);
   const p = props.path;
   // The count is fetched again on every move between screens (bots write at any time).
@@ -49,7 +51,10 @@ export function Sidebar(props: { path: string }) {
       >
         <NotebookPen size={20} />
       </a>
-      <SectionMenu />
+      {/* The section square (sections-spec.md §3): the current section's colour and first letter; it opens the Sections page. */}
+      <RailLink to="/sections" label={`Sections (current: ${current.name})`} active={p === '/sections'} className="rail-section">
+        <SectionSquare name={current.name} />
+      </RailLink>
       <NewNoteLink className="rail-new" label="New note" bump={bumpNotes} onError={setNewError}>
         <Plus size={20} />
       </NewNoteLink>

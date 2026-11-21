@@ -4,7 +4,7 @@
 import { Check } from 'lucide-react';
 import { useSections } from '../currentSection';
 import { Dropdown, MenuItem, ToolbarDisabled } from './Dropdown';
-import { SectionDot } from './SectionMenu';
+import { SectionDot } from './SectionMarks';
 
 export function NoteSection(props: { section: string; disabled: boolean; onMove: (section: string) => void }) {
   const { sections } = useSections();

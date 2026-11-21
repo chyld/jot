@@ -139,7 +139,7 @@ describe('Inbox', () => {
     expect(link.getAttribute('href')).toBe('/inbox');
     await waitFor(() => expect(within(link).getByTestId('inbox-count').textContent).toBe('2'));
     const labels = screen.getAllByRole('link').map((a) => a.getAttribute('aria-label'));
-    expect(labels.indexOf('Inbox')).toBe(1); // right after the home logo
+    expect(labels.indexOf('Inbox')).toBe(2); // after the home logo and the section link
   });
 
   it('lists Inbox notes with their bot’s name; Keep moves one out', async () => {

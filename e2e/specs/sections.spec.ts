@@ -23,17 +23,18 @@ async function createSection(page: Page, name: string, id: string, colour: strin
   await expect(page.getByRole('listitem', { name })).toContainText(`ID: ${id}`);
 }
 
-async function switchTo(page: Page, name: string) {
-  await nav(page).getByRole('button', { name: /^Section: / }).click();
-  await page.getByRole('menu').getByRole('menuitem', { name }).click();
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+async function openSections(page: Page) {
+  await nav(page).getByRole('link', { name: /^Sections \(current: / }).click();
+  await expect(page).toHaveURL(/\/sections$/);
+  await expect(page.getByRole('heading', { name: 'Sections', level: 1 })).toBeVisible();
 }
 
-async function openSections(page: Page) {
-  await nav(page).getByRole('button', { name: /^Section: / }).click();
-  await page.getByRole('menuitem', { name: 'Manage sections' }).click();
-  await expect(page.getByRole('heading', { name: 'Sections', level: 1 })).toBeVisible();
+/** Switching section is done with Open on the section's card on the Sections page. */
+async function switchTo(page: Page, name: string) {
+  await openSections(page);
+  await page.getByRole('listitem', { name }).getByRole('button', { name: `Open ${name}` }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 }
 
 async function searchFor(page: Page, word: string) {
@@ -49,14 +50,20 @@ test('sections keep their notes, search and trash apart; colours, reload and mov
   await expect(page.getByRole('heading', { name: 'Default', level: 1 })).toBeVisible();
 
   // Create the two sections on the Sections page.
-  await nav(page).getByRole('button', { name: 'Section: Default' }).click();
-  await page.getByRole('menuitem', { name: 'Manage sections' }).click();
+  // The left bar's square is a link to the Sections page, marked active there.
+  const sectionLink = nav(page).getByRole('link', { name: 'Sections (current: Default)' });
+  await expect(sectionLink).toHaveText('D');
+  await sectionLink.click();
+  await expect(page).toHaveURL(/\/sections$/);
   await expect(page.getByRole('heading', { name: 'Sections', level: 1 })).toBeVisible();
+  await expect(sectionLink).toHaveAttribute('aria-current', 'page');
   await createSection(page, work, `work${w}`, 'Blue');
   await createSection(page, recipes, `recipe${w}`, 'Amber');
-  await nav(page).getByRole('button', { name: 'Section: Default' }).click();
-  await page.screenshot({ path: 'test-results/screens/section-menu.png' });
-  await page.keyboard.press('Escape');
+  // Every card's buttons fit on one line, the current section's too.
+  for (const name of ['Default', work, recipes]) {
+    const tops = await page.getByRole('listitem', { name, exact: true }).getByRole('button').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+    expect(new Set(tops).size).toBe(1);
+  }
   await page.screenshot({ path: 'test-results/screens/sections.png' });
 
   // A note in Work, and one in Work's trash.

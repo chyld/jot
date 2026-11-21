@@ -1,6 +1,6 @@
 // The Sections page (sections-spec.md §4, mockup A2), /sections: one card per section in
-// that section's own colours, with its name, ID, number of notes, Edit, Open (or a "Current
-// section" mark) and Trash with the number of its trashed notes (each section has its own
+// that section's own colours, with its name, ID, number of notes, Edit, Open (or a "Current"
+// mark) and Trash with the number of its trashed notes (each section has its own
 // trash: the button makes the section current and opens the Trash screen); a "+ New section"
 // card. The same dialog creates a section (name, ID, colour) and edits one (name and colour;
 // the ID is fixed). There is no delete.
@@ -9,7 +9,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { normalizeSectionId, normalizeSectionName, SECTION_COLOURS, type Section, type SectionColour } from '../../shared/sections';
 import { api } from '../api';
 import { setCurrentSection, useSections } from '../currentSection';
-import { firstLetter } from '../components/SectionMenu';
+import { SectionSquare } from '../components/SectionMarks';
 import { useData } from '../data';
 import { navigate } from '../router';
 import { COLOUR_NAMES, THEMES, themeVars } from '../theme';
@@ -122,9 +122,7 @@ export function SectionsScreen() {
         {sections.map((s) => (
           <li key={s.id} className="card section-card" style={themeVars(s.colour)} aria-label={s.name} data-section={s.id}>
             <div className="section-card-head">
-              <span className="section-square" aria-hidden="true">
-                {firstLetter(s.name)}
-              </span>
+              <SectionSquare name={s.name} />
               <span className="section-card-name">{s.name}</span>
             </div>
             <div className="muted small">
@@ -138,7 +136,7 @@ export function SectionsScreen() {
                 Edit
               </button>
               {s.id === current.id ? (
-                <span className="section-current">Current section</span>
+                <span className="section-current">Current</span>
               ) : (
                 <button
                   type="button"

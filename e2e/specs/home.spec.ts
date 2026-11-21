@@ -28,11 +28,11 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   expect(Math.round(pane.x)).toBe(Math.round(rail.width));
   expect(Math.round(pane.width)).toBe(viewport.width - Math.round(rail.width));
 
-  // The left bar: logo, section button, new note, Inbox and Tags, then Fonts, Styles and Account.
+  // The left bar: logo, section link, new note, Inbox and Tags, then Fonts, Styles and Account.
   // No notes icon, and no Trash: each section's trash is opened from its card on the Sections page.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'Section: Default', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account']);
+  expect(controls).toEqual(['Jot home: all notes', 'Sections (current: Default)', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account']);
   await goHome(page);
 
   // Home: search, New, tag filter and the list, no editor.

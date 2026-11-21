@@ -869,7 +869,7 @@ read/unread tracking, no rate limiting, no extra tools).
 Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `src/server/sections.ts`
 (table and rules), section-aware queries in `notes.ts`, `src/client/theme.ts`,
 `src/client/currentSection.ts` (store) and three components (`SectionMenu`, `SectionsScreen`,
-`NoteSection`). Nothing the spec does not ask for. Where it is silent:
+`NoteSection`; `SectionMenu` was later replaced by the section link, see the last item). Nothing the spec does not ask for. Where it is silent:
 
 - **Storage.** Schema version 7: a `sections` table keyed by (user, ID), and `notes.section_id`
   added with `DEFAULT 'default'`, which fills every existing note without rewriting a row. The
@@ -895,15 +895,14 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   sections has loaded the interface uses the remembered ID and Olive for a moment; a remembered
   section that is not in the list becomes Default. If the list cannot be loaded, only Default is
   shown.
-- **Switching** from the menu or a card's Open goes to the home page without a tag filter.
+- **Switching** from a card's Open goes to the home page without a tag filter.
 - **Theme.** The eight values are CSS variables on `<html>`; every other chrome variable in
   `styles.css` is built from them. Logging out removes them, so the login page is Olive. The
   one-off Olive shades listed in "Theme (Olive)" above are replaced as the spec says: toolbar
   text uses Accent dark, disabled text and the toolbar size box edge use Muted, and the margin
   marker's line uses Border (the nearest of the eight to `#b4c88c`). Shadows and the modal
   backdrop keep their faint olive tint in every section.
-- **Section button** shows the first character of the name, uppercased. The menu marks the
-  current section with a tick. The Sections page's dialog checks the rules in the browser first
+- **Section square** shows the first character of the name, uppercased. The Sections page's dialog checks the rules in the browser first
   (the shared rules) and shows the server's message otherwise.
 - **The note's section control** sits after the tags. On a read-only or trashed note it shows
   the section but is disabled.
@@ -926,3 +925,11 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   The button's accessible name is "Trash of <name> (<n> notes)". The e2e specs that used the
   left bar link now open the trash through the `openTrash` helper (section menu → Manage
   sections → the current section's card).
+- **The section button is a link (owner request, draft 9).** The left bar's square under the
+  logo no longer opens a menu: it is a plain left bar link to `/sections` (accessible name
+  "Sections (current: <name>)"), marked active there like the other links. The menu, its
+  "Manage sections" item and its CSS are gone; `SectionMenu.tsx` became `SectionMarks.tsx`
+  (the square and the colour dot, shared by the left bar, the cards and the note's section
+  control). Switching is done with Open on a Sections page card. The current card's mark is
+  shortened to "Current" so Edit, the mark and Trash fit on one line. The e2e helpers switch
+  and open the trash through the Sections page.

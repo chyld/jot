@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Type 7 (component): sections (sections-spec.md §2–§6). The left bar's section menu, the
+// Type 7 (component): sections (sections-spec.md §2–§6). The left bar's section link, the
 // current section remembered in the browser and added to requests, the theme colours, the
 // home page heading, the Sections page and its dialog, and the note's section control.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -105,40 +105,39 @@ describe('the current section', () => {
   });
 });
 
-describe('the section menu in the left bar', () => {
-  it('shows the first letter of the current section; choosing another makes it current and goes home', async () => {
+describe('the section link in the left bar', () => {
+  it('shows the current section’s first letter in its colour and goes to the Sections page', async () => {
     localStorage.setItem(KEY, 'work');
     history.replaceState(null, '', '/tags');
     inApp(<Sidebar path="/tags" />);
-    const button = await screen.findByRole('button', { name: "Section: Bob's Work" });
-    expect(button.textContent).toBe('B');
-    await userEvent.click(button);
-    const menu = screen.getByRole('menu');
-    const items = within(menu).getAllByRole('menuitem').map((i) => i.getAttribute('aria-label') ?? i.textContent);
-    expect(items).toEqual(['Default', "Bob's Work (current section)", 'Recipes', 'Manage sections']);
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Recipes' }));
-    expect(location.pathname).toBe('/');
-    expect(localStorage.getItem(KEY)).toBe('recipe');
-    await waitFor(() => expect(accent()).toBe('#b45309'));
-    expect(screen.getByRole('button', { name: 'Section: Recipes' }).textContent).toBe('R');
+    const link = await screen.findByRole('link', { name: "Sections (current: Bob's Work)" });
+    expect(link.textContent).toBe('B');
+    expect(link.getAttribute('href')).toBe('/sections');
+    expect(link.getAttribute('aria-current')).toBeNull();
+    await waitFor(() => expect(accent()).toBe('#1d4ed8'));
+    expect(screen.queryByRole('button', { name: /^Section/ })).toBeNull(); // no popup menu
+    await userEvent.click(link);
+    expect(location.pathname).toBe('/sections');
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('Manage sections opens the Sections page', async () => {
-    inApp(<Sidebar path="/" />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Section: Default' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Manage sections' }));
-    expect(location.pathname).toBe('/sections');
+  it('is marked active on the Sections page', async () => {
+    inApp(<Sidebar path="/sections" />);
+    const link = await screen.findByRole('link', { name: 'Sections (current: Default)' });
+    expect(link.textContent).toBe('D');
+    expect(link.getAttribute('aria-current')).toBe('page');
+    expect(link.className).toContain('is-active');
   });
 });
 
 describe('the Sections page', () => {
-  it('shows one card per section with its name, ID, number of notes, Edit and Open or “Current section”', async () => {
+  it('shows one card per section with its name, ID, number of notes, Edit and Open or “Current”', async () => {
     localStorage.setItem(KEY, 'work');
     inApp(<SectionsScreen />);
     const card = await screen.findByRole('listitem', { name: "Bob's Work" });
     expect(card.textContent).toContain('ID: work');
     expect(card.textContent).toContain('2 notes');
-    expect(within(card).getByText('Current section')).toBeTruthy();
+    expect(within(card).getByText('Current', { exact: true })).toBeTruthy();
     expect((card as HTMLElement).style.getPropertyValue('--accent')).toBe('#1d4ed8'); // its own colours
     const other = screen.getByRole('listitem', { name: 'Recipes' });
     expect(other.textContent).toContain('0 notes');

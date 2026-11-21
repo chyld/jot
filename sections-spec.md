@@ -1,9 +1,9 @@
 # Jot — sections specification
 
-- **Status:** draft 8 (2026-11-20): draft 7, cut down for simplicity on the owner's instruction, plus the trash moved onto the Sections page. Built.
+- **Status:** draft 9 (2026-11-20): draft 7, cut down for simplicity on the owner's instruction, plus the trash moved onto the Sections page (draft 8) and the left bar's section menu replaced by a plain link to the Sections page (draft 9). Built.
 - **Adds to:** `jot-spec.md`, `agent-spec.md`, `backup-spec.md`. Where this document and those disagree, this one wins; section 11 lists what it changes.
 - **In one line:** every note belongs to one section (such as Work or Recipes); the user is always "in" one section, sees only its notes, and the whole interface takes that section's colour.
-- **Mockups:** https://claude.ai/artifact/BKEFkADCqCtakTeydTRNNb. The owner chose **A2** (Sections page as cards), **B1** (switch from a menu in the left bar) and **C2** (whole interface tinted).
+- **Mockups:** https://claude.ai/artifact/BKEFkADCqCtakTeydTRNNb. The owner chose **A2** (Sections page as cards), **B1** (a section button in the left bar; its menu was later replaced by a link to the Sections page, section 3) and **C2** (whole interface tinted).
 
 **The rule for this document and the build (owner):** simplicity beats completeness. Jot has about three users. Anything not written here is left as it is today, and rare timing cases (two tabs, a restore in another tab) are deliberately not specified. When the builder meets a case this document does not cover, they pick the simplest behaviour.
 
@@ -42,15 +42,14 @@ Sections are listed with Default first, then in the order they were created.
 
 ## 3. Switching section (mockup B1)
 
-- The left bar gets a **section button** under the Jot logo: a square in the section's accent colour showing the first letter of its name.
-- Clicking it opens a menu of the user's sections: colour dot and name, with a tick on the current one.
-- Choosing a section makes it current, recolours the interface and goes to its home page.
-- Below the list, **Manage sections** opens the Sections page.
+- The left bar has a **section link** under the Jot logo: a square in the current section's accent colour showing the first letter of its name. Its accessible name says where it goes and which section is current ("Sections (current: Bob's Work)").
+- It is a plain link to the Sections page (`/sections`), marked active there like the other left bar links. It opens no menu.
+- A section is switched with **Open** on its card on the Sections page (section 4): that makes it current, recolours the interface and goes to its home page.
 - The home page heading is the current section's name ("Bob's Work").
 
 ## 4. The Sections page (mockup A2), `/sections`
 
-- One card per section, drawn in that section's own colours: its name, its ID, its number of notes, an **Edit** button, **Open** (or a "Current section" mark) and a **Trash** button.
+- One card per section, drawn in that section's own colours: its name, its ID, its number of notes, an **Edit** button, **Open** (or a "Current" mark on the current section's card) and a **Trash** button, all on one line.
 - **Trash** shows a trash-can icon and the number of the section's trashed notes ("Trash 2", and "Trash 0" when it is empty). Clicking it makes the section current and opens the Trash screen (`/trash`), which shows that section's trash.
 - A **+ New section** card opens a dialog: Name, ID and Colour. The dialog says the ID cannot be changed later. Errors (empty name, invalid ID, ID already used) are shown in the dialog.
 - **Edit** opens the same dialog with the ID fixed: the name and colour can be changed.
@@ -114,7 +113,7 @@ Each part has one job, so sections can be understood, tested and changed on thei
 | Shared rules | ID and name validation and the list of colours, used by server and client, as the tag rules are today |
 | Theme (client) | One file maps each colour name to its eight values and sets them as CSS variables. Components use only the variables |
 | Current section (client) | One small store holds the current section, remembers it in the browser, and adds it to requests |
-| Screens (client) | The section menu, the Sections page and the note's section control: three separate components that use the store |
+| Screens (client) | The left bar's section link, the Sections page and the note's section control, each using the store |
 
 The server checks that a section belongs to the logged-in user, as it does for everything else. No new dependency is needed.
 
@@ -135,7 +134,7 @@ All nine existing test types still apply. The new tests:
 
 - `jot-spec.md` §3 "tags are the only organisation": sections are now a level above tags.
 - `jot-spec.md` §3 New note, Trash, Empty trash, Delete empty notes, and §5 Search: each works on the current section.
-- `jot-spec.md` §11 and §12: Olive becomes one of six colours; new Sections screen; the left bar gains the section button and loses Trash (each section's trash opens from its card).
+- `jot-spec.md` §11 and §12: Olive becomes one of six colours; new Sections screen; the left bar gains the section link (to the Sections page) and loses Trash (each section's trash opens from its card).
 - `agent-spec.md` §3: bot notes land in Default; Keep puts a note in the current section.
 - `backup-spec.md` §3: personal backup format 4.
 
@@ -151,7 +150,7 @@ All nine existing test types still apply. The new tests:
 
 ## 13. Decisions
 
-By the owner, 2026-11-20: a Default section; every note in one section, movable; each section has its own trash, opened from its card on the Sections page (no Trash in the left bar); a read-only note must be unlocked before moving; one ID per section; six uniform colours; sections can be renamed but not deleted; simplicity first.
+By the owner, 2026-11-20: a Default section; every note in one section, movable; each section has its own trash, opened from its card on the Sections page (no Trash in the left bar); the left bar's section square is a plain link to the Sections page, and switching is done with Open on a card (no menu); a read-only note must be unlocked before moving; one ID per section; six uniform colours; sections can be renamed but not deleted; simplicity first.
 
 Chosen here where the owner was silent, each the simplest option:
 
