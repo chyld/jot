@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useData } from '../data';
 import { navigate } from '../router';
 import { NewNoteLink } from './NewNoteLink';
+import { SectionMenu } from './SectionMenu';
 
 function RailLink(props: { to: string; label: string; active: boolean; children: React.ReactNode; title?: string }) {
   return (
@@ -48,6 +49,7 @@ export function Sidebar(props: { path: string }) {
       >
         <NotebookPen size={20} />
       </a>
+      <SectionMenu />
       <NewNoteLink className="rail-new" label="New note" bump={bumpNotes} onError={setNewError}>
         <Plus size={20} />
       </NewNoteLink>

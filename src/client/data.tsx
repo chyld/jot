@@ -1,9 +1,12 @@
 // The logged-in user's fonts and styles, shared by every screen, plus a counter
-// screens bump when the notes list should reload.
+// screens bump when the notes list should reload. It also loads the user's sections into
+// the current-section store and colours the interface in the current section's colour.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Style } from '../shared/styles';
 import type { Font, User } from '../shared/types';
 import { api } from './api';
+import { setSections, startSections, useSections } from './currentSection';
+import { applyTheme, clearTheme } from './theme';
 import { clearAllUnsaved, resumeUnsaved } from './unsaved';
 
 interface Data {
@@ -17,6 +20,8 @@ interface Data {
   /** How many notes are in the Inbox (simply a count; nothing tracks read or unread). */
   inboxCount: number;
   reloadInbox: () => Promise<void>;
+  /** Fetches the sections again (after a create, rename or recolour). */
+  reloadSections: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -46,6 +51,20 @@ function useFontStylesheet(version: number) {
 
 export function DataProvider(props: { user: User; onLogout: () => void; children: ReactNode }) {
   resumeUnsaved(props.user.id);
+  useState(() => startSections(props.user.id));
+  const reloadSections = useCallback(async () => {
+    try {
+      setSections((await api.sections()).sections ?? []);
+    } catch {
+      setSections([]); // only Default, until the next try
+    }
+  }, []);
+  useEffect(() => {
+    void reloadSections();
+  }, [reloadSections]);
+  const colour = useSections().current.colour;
+  useEffect(() => applyTheme(colour), [colour]);
+  useEffect(() => clearTheme, []); // logging out: the login page is always Olive
   const [fonts, setFonts] = useState<Font[]>([]);
   const [styles, setStyles] = useState<Style[]>([]);
   const [fontsVersion, setFontsVersion] = useState(1);
@@ -95,6 +114,7 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
         bumpNotes: () => setNotesVersion((v) => v + 1),
         inboxCount,
         reloadInbox,
+        reloadSections,
         logout,
       }}
     >

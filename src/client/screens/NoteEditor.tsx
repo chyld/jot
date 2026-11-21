@@ -9,7 +9,9 @@ import { api, ApiError } from '../api';
 import { useAutosave, type SaveStatus } from '../autosave';
 import { useNow } from '../components/NoteCard';
 import { blankStyle, StyleDialog } from '../components/StyleDialog';
+import { NoteSection } from '../components/NoteSection';
 import { TagInput } from '../components/TagInput';
+import { setCurrentSection, useSections } from '../currentSection';
 import { useData } from '../data';
 import { jotExtensions } from '../editor/extensions';
 import { pasteProps, PHOTO_TYPE_MESSAGE, PHOTO_TYPES } from '../editor/paste';
@@ -66,7 +68,13 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
 
 function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: Note) => void }) {
   const { fonts, styles, reloadStyles, user, bumpNotes } = useData();
+  const { current } = useSections();
   const note = props.note;
+  // Opening a note makes its section current, and a moved note is followed to its new
+  // section. An Inbox note does not: the Inbox is not divided by section.
+  useEffect(() => {
+    if (!note.inbox) setCurrentSection(note.section);
+  }, [note.section, note.inbox]);
   const trashed = note.deletedAt !== null;
   const readOnly = note.readOnly;
   // Nothing can be edited in a trashed or a read-only note.
@@ -162,6 +170,18 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     else void pickImage(file);
   };
 
+  const moveTo = async (section: string) => {
+    setMessage(null);
+    try {
+      await autosave.flush();
+      const { note: n } = await api.moveNote(note.id, section);
+      props.onChange(n);
+      bumpNotes();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not move the note.');
+    }
+  };
+
   const tagChange = async (fn: () => Promise<{ note: Note }>) => {
     await autosave.flush();
     const { note: n } = await fn();
@@ -204,12 +224,13 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           }}
           onRemove={(tag) => void tagChange(() => api.removeTag(note.id, tag)).catch(() => {})}
         />
+        <NoteSection section={note.section} disabled={locked} onMove={(s) => void moveTo(s)} />
         <div className="note-meta">
           {note.inbox && !trashed && !readOnly && (
             <button
               type="button"
               className="btn btn-sm btn-primary"
-              title="Move this note out of the Inbox into your notes"
+              title={`Move this note out of the Inbox into ${current.name}`}
               onClick={async () => {
                 setMessage(null);
                 try {
@@ -222,7 +243,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
                 }
               }}
             >
-              <Check size={14} /> Keep
+              <Check size={14} /> Keep in {current.name}
             </button>
           )}
           {!locked && (

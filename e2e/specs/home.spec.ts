@@ -31,7 +31,7 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   // The left bar: logo, new note, then fonts, styles, backup, trash and log out. No notes or tags icon.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Trash', 'Account']);
+  expect(controls).toEqual(['Jot home: all notes', 'Section: Default', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Trash', 'Account']);
   await goHome(page);
 
   // Home: search, New, tag filter and the list, no editor.
@@ -163,12 +163,12 @@ test('the Olive theme', async ({ page }) => {
   await newNote(page, 'Theme check');
   const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
   await expect(toolbar).toHaveCSS('background-color', 'rgb(238, 245, 220)'); // #eef5dc
-  await expect(toolbar).toHaveCSS('color', 'rgb(50, 71, 15)'); // #32470f
+  await expect(toolbar).toHaveCSS('color', 'rgb(63, 98, 18)'); // accent dark #3f6212 (sections-spec.md §5)
   await expect(toolbar).toHaveCSS('border-bottom-width', '1px');
   await expect(toolbar).toHaveCSS('border-bottom-color', 'rgb(224, 232, 205)');
   await expect(toolbar.locator('.tb-sep').first()).toHaveCSS('background-color', 'rgb(224, 232, 205)');
   const bold = toolbar.getByRole('button', { name: 'Bold' });
-  await expect(bold).toHaveCSS('color', 'rgb(50, 71, 15)');
+  await expect(bold).toHaveCSS('color', 'rgb(63, 98, 18)');
   await bold.hover();
   await expect(bold).toHaveCSS('background-color', 'rgb(228, 242, 196)'); // hover (#eef5dc would vanish on the toolbar)
   await typeInBody(page, 'pressed');
@@ -181,16 +181,16 @@ test('the Olive theme', async ({ page }) => {
   await bold.hover();
   await expect(bold).toHaveCSS('background-color', 'rgb(77, 124, 15)'); // stays accent under the mouse
   await page.mouse.move(700, 600);
-  // Disabled redo stays readable (4.2:1).
+  // Disabled redo stays readable: the muted text colour.
   const redo = toolbar.getByRole('button', { name: 'Redo' });
   await expect(redo).toBeDisabled();
-  await expect(redo).toHaveCSS('color', 'rgb(109, 119, 90)'); // #6d775a
+  await expect(redo).toHaveCSS('color', 'rgb(107, 117, 87)'); // muted #6b7557
   await expect(redo).toHaveCSS('opacity', '1');
-  // The size box (3:1 edge) and menus stay white with dark text.
+  // The size box (a muted edge) and menus stay white with dark text.
   const size = toolbar.getByRole('textbox', { name: 'Font size' });
   await expect(size).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(size).toHaveCSS('color', 'rgb(29, 38, 16)');
-  await expect(size).toHaveCSS('border-top-color', 'rgb(133, 144, 110)'); // #85906e
+  await expect(size).toHaveCSS('border-top-color', 'rgb(107, 117, 87)'); // muted #6b7557
   const fontBtn = toolbar.getByRole('button', { name: 'Font', exact: true });
   await fontBtn.click();
   const menu = page.getByRole('menu', { name: 'Font' });

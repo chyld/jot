@@ -863,3 +863,57 @@ read/unread tracking, no rate limiting, no extra tools).
   `http://localhost:9003`).
 - The User manual needed no change (it describes the Account page's backup parts, which
   are unchanged), so it has no bots section.
+
+## Sections (`sections-spec.md`, draft 7)
+
+Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `src/server/sections.ts`
+(table and rules), section-aware queries in `notes.ts`, `src/client/theme.ts`,
+`src/client/currentSection.ts` (store) and three components (`SectionMenu`, `SectionsScreen`,
+`NoteSection`). Nothing the spec does not ask for. Where it is silent:
+
+- **Storage.** Schema version 7: a `sections` table keyed by (user, ID), and `notes.section_id`
+  added with `DEFAULT 'default'`, which fills every existing note without rewriting a row. The
+  column has no foreign key (SQLite refuses one on an added column with a default); the server
+  checks every section it is given belongs to the user. Default's `created_at` is the account's.
+- **How the browser names the current section.** The store adds `?section=<id>` to the home
+  list, tag chips, search, New, "Delete N empty", the trash, Empty trash and Keep. A request
+  without it means Default; another user's or an unknown ID is 404 ("No such section.").
+  `GET /api/tags` without it stays as it was (every section), for the Tags page.
+- **Routes.** `GET/POST /api/sections`, `PATCH /api/sections/:id` (name and/or colour; an `id` in
+  the body is ignored), `POST /api/notes/:id/section` to move. No DELETE route.
+- **Rules.** The ID uses the tag rules, including lowercasing ("Work" becomes "work"). The name
+  is trimmed, 1–60 characters. A duplicate ID is 409. Default can be renamed and recoloured.
+- **Note count** on a section card counts live notes outside the Inbox (what its home page shows).
+- **Moving** does not change the note's dates. Refused with 403 (read-only) or 409 (trashed).
+  An Inbox note can be moved; it stays in the Inbox.
+- **Opening a note** makes its section current, except an Inbox note: the Inbox is not divided
+  by section, so opening a bot's note from it leaves the current section alone and Keep still
+  goes where the button says.
+- **Restore puts a note back in its own section**, whichever section is current. Restore and
+  Delete permanently name the note, so they take no section.
+- **The current section** is in local storage under `jot.section.<user id>`. Until the list of
+  sections has loaded the interface uses the remembered ID and Olive for a moment; a remembered
+  section that is not in the list becomes Default. If the list cannot be loaded, only Default is
+  shown.
+- **Switching** from the menu or a card's Open goes to the home page without a tag filter.
+- **Theme.** The eight values are CSS variables on `<html>`; every other chrome variable in
+  `styles.css` is built from them. Logging out removes them, so the login page is Olive. The
+  one-off Olive shades listed in "Theme (Olive)" above are replaced as the spec says: toolbar
+  text uses Accent dark, disabled text and the toolbar size box edge use Muted, and the margin
+  marker's line uses Border (the nearest of the eight to `#b4c88c`). Shadows and the modal
+  backdrop keep their faint olive tint in every section.
+- **Section button** shows the first character of the name, uppercased. The menu marks the
+  current section with a tick. The Sections page's dialog checks the rules in the browser first
+  (the shared rules) and shows the server's message otherwise.
+- **The note's section control** sits after the tags. On a read-only or trashed note it shows
+  the section but is disabled.
+- **Personal backup format 4** adds `sections` (ID, name, colour, created) and `section` on each
+  note. The manifest's counts are unchanged. An older backup restores with one Default section
+  (Olive) holding every note: a restore replaces, so sections made since are gone, as notes made
+  since are.
+- **Tests.** `tests/isolation/sections-isolation.test.ts`, `tests/api/sections.test.ts`,
+  `tests/unit/sections.test.ts`, `tests/db/migration-v7.test.ts` (against
+  `tests/fixtures/jot-v6.db`, made with the version 6 code from `jot-v5.db` plus a bot note and a
+  tag), `tests/component/sections.test.tsx`, `e2e/specs/sections.spec.ts`. Existing tests changed
+  only where the spec changed what they check (the URLs with `?section=`, format 4, schema 7,
+  the four theme shades, the left bar's controls).

@@ -43,10 +43,10 @@ test('pressing + in an empty note makes another note', async ({ page }) => {
 
 test('+ works again after a create fails', async ({ page }) => {
   const before = await count(page);
-  await page.route('**/api/notes', (route) => (route.request().method() === 'POST' ? route.fulfill({ status: 500, body: '{}' }) : route.fallback()));
+  await page.route(/\/api\/notes(\?|$)/, (route) => (route.request().method() === 'POST' ? route.fulfill({ status: 500, body: '{}' }) : route.fallback()));
   await plus(page).click();
   await expect(page.getByRole('alert')).toBeVisible();
-  await page.unroute('**/api/notes');
+  await page.unroute(/\/api\/notes(\?|$)/);
   await plus(page).click();
   await opened(page);
   expect(await count(page)).toBe(before + 1);

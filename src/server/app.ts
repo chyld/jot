@@ -11,6 +11,7 @@ import fastifyStatic from '@fastify/static';
 import { MAX_TITLE_LENGTH } from '../shared/constants';
 import { validateStyleInput } from '../shared/styles';
 import { isDefaultFont } from '../shared/starter';
+import { DEFAULT_SECTION_ID } from '../shared/sections';
 import { normalizeTag } from '../shared/tags';
 import type { Font, TiptapDoc } from '../shared/types';
 import { BackupError, RESTORING_MESSAGE } from './backup/errors';
@@ -43,6 +44,7 @@ import {
 } from './fonts';
 import { isId, newId } from './ids';
 import * as notes from './notes';
+import * as sections from './sections';
 import { burnPasswordCheck, verifyPassword } from './passwords';
 import { createSession, deleteSession, SESSION_COOKIE, userForSession } from './sessions';
 import { detectImageType, SNIFF_BYTES } from './uploads';
@@ -259,17 +261,30 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return { note: r };
   };
 
+  /**
+   * The current section, sent by the browser as `?section=<id>` on the home page, search,
+   * New, "Delete N empty", the trash and Keep. Without one it is Default. Another user's
+   * section, or one that does not exist, is 404.
+   */
+  const sectionOf = (req: FastifyRequest): string => {
+    const v = (req.query as Record<string, unknown>).section;
+    if (v === undefined) return DEFAULT_SECTION_ID;
+    if (!sections.sectionExists(db, uid(req), v)) throw notFound('No such section.');
+    return v as string;
+  };
+
   app.get('/api/notes', async (req) => {
     const tag = (req.query as Record<string, unknown>).tag;
     if (tag !== undefined && typeof tag !== 'string') throw bad('Bad tag.');
-    return { notes: notes.listNotes(db, uid(req), tag || undefined) };
+    return { notes: notes.listNotes(db, uid(req), sectionOf(req), tag || undefined) };
   });
 
   app.post('/api/notes', async (req, reply) => {
     const b = body(req);
+    const section = sectionOf(req);
     const title = b.title === undefined ? '' : readTitle(b.title);
     const content = b.content === undefined ? undefined : readContent(b.content);
-    return reply.code(201).send({ note: notes.createNote(db, uid(req), title, content) });
+    return reply.code(201).send({ note: notes.createNote(db, uid(req), section, title, content) });
   });
 
   app.get('/api/notes/:id', async (req) => {
@@ -295,8 +310,20 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   });
 
   // Empty notes (no title, no body, no tags): how many, and move them all to the trash.
-  app.get('/api/empty-notes', async (req) => ({ count: notes.countEmptyNotes(db, uid(req)) }));
-  app.delete('/api/empty-notes', async (req) => ({ trashed: notes.trashEmptyNotes(db, uid(req)) }));
+  app.get('/api/empty-notes', async (req) => ({ count: notes.countEmptyNotes(db, uid(req), sectionOf(req)) }));
+  app.delete('/api/empty-notes', async (req) => ({ trashed: notes.trashEmptyNotes(db, uid(req), sectionOf(req)) }));
+
+  // Moving a note to another section (body: { section }). Only its section changes.
+  app.post('/api/notes/:id/section', async (req) => {
+    const id = param(req, 'id');
+    const target = body(req).section;
+    if (!notes.getNote(db, uid(req), id)) throw notFound('Note not found.');
+    if (!sections.sectionExists(db, uid(req), target)) throw notFound('No such section.');
+    const r = notes.moveNote(db, uid(req), id, target as string);
+    if (r === 'trashed') throw new HttpError(409, 'This note is in the trash. Restore it before moving it.');
+    if (r === 'read-only') throw new HttpError(403, 'This note is read-only, so it cannot be moved. It can only be made writable again from the command line on the server.');
+    return updated(r);
+  });
 
   // Read-only is one way: the web app can turn it on, never off (only `jot unlock-note`).
   app.post('/api/notes/:id/read-only', async (req) => {
@@ -327,7 +354,32 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return updated(notes.removeTag(db, uid(req), id, r.tag));
   });
 
-  app.get('/api/tags', async (req) => ({ tags: notes.listTags(db, uid(req)) }));
+  // With ?section=, the tags of that section (the home page's chips); without, of every section (the Tags page).
+  app.get('/api/tags', async (req) => {
+    const section = (req.query as Record<string, unknown>).section === undefined ? undefined : sectionOf(req);
+    return { tags: notes.listTags(db, uid(req), section) };
+  });
+
+  // ---------------------------------------------------------------- sections
+  const sectionError = (e: unknown) => (e instanceof sections.SectionError ? new HttpError(e.status, e.message) : e);
+  app.get('/api/sections', async (req) => ({ sections: sections.listSections(db, uid(req)) }));
+  app.post('/api/sections', async (req, reply) => {
+    const b = body(req);
+    try {
+      return reply.code(201).send({ section: sections.createSection(db, uid(req), { id: b.id, name: b.name, colour: b.colour }) });
+    } catch (e) {
+      throw sectionError(e);
+    }
+  });
+  // Rename and recolour. The ID is fixed: an `id` in the body is ignored. There is no delete.
+  app.patch('/api/sections/:section', async (req) => {
+    const b = body(req);
+    try {
+      return { section: sections.updateSection(db, uid(req), (req.params as Record<string, string>).section, { name: b.name, colour: b.colour }) };
+    } catch (e) {
+      throw sectionError(e);
+    }
+  });
 
   // Deleting a tag takes it off every note of the user; the notes are kept.
   app.delete('/api/tags/:tag', async (req) => {
@@ -345,7 +397,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   // ---------------------------------------------------------------- inbox and bots
   app.get('/api/inbox', async (req) => ({ notes: notes.listInbox(db, uid(req)) }));
 
-  app.post('/api/notes/:id/keep', async (req) => updated(notes.keepNote(db, uid(req), param(req, 'id'))));
+  // Keep puts the note in the current section.
+  app.post('/api/notes/:id/keep', async (req) => updated(notes.keepNote(db, uid(req), param(req, 'id'), sectionOf(req))));
 
   const publicUrl = (opts.publicUrl ?? process.env.JOT_PUBLIC_URL ?? 'http://localhost:9003').replace(/\/+$/, '');
   const botError = (e: unknown) => (e instanceof BotError ? new HttpError(e.status, e.message) : e);
@@ -365,10 +418,11 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   // The MCP server for bots (bearer tokens only).
   registerMcp(app, ctx, restoring);
 
-  app.get('/api/search', async (req) => ({ notes: notes.searchNotes(db, uid(req), (req.query as Record<string, unknown>).q) }));
+  app.get('/api/search', async (req) => ({ notes: notes.searchNotes(db, uid(req), sectionOf(req), (req.query as Record<string, unknown>).q) }));
 
   // ---------------------------------------------------------------- trash
-  app.get('/api/trash', async (req) => ({ notes: notes.listTrash(db, uid(req)) }));
+  // Each section has its own trash. Restore and permanent delete name the note itself.
+  app.get('/api/trash', async (req) => ({ notes: notes.listTrash(db, uid(req), sectionOf(req)) }));
 
   app.post('/api/trash/:id/restore', async (req) => {
     const note = notes.restoreNote(db, uid(req), param(req, 'id'));
@@ -377,7 +431,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   });
 
   // Empty trash: every note in the user's trash, permanently, in one transaction.
-  app.delete('/api/trash', async (req) => ({ deleted: notes.emptyTrash(db, uid(req)) }));
+  app.delete('/api/trash', async (req) => ({ deleted: notes.emptyTrash(db, uid(req), sectionOf(req)) }));
 
   app.delete('/api/trash/:id', async (req, reply) => {
     if (!notes.purgeNote(db, uid(req), param(req, 'id'))) throw notFound('No such note in the trash.');

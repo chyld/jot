@@ -22,6 +22,7 @@ const note = {
   readOnly: false,
   inbox: false,
   botName: null,
+  section: 'default',
   content: { type: 'doc', content: [{ type: 'paragraph' }] },
 };
 let loggedIn: boolean;
@@ -45,7 +46,7 @@ beforeEach(() => {
       if (url === '/api/fonts') return json({ fonts: FONTS });
       if (url === '/api/styles') return json({ styles: [] });
       if (url === '/api/inbox') return json({ notes: [] });
-      if (url === '/api/notes' && method === 'POST') {
+      if (url === '/api/notes?section=default' && method === 'POST') {
         creates++;
         if (failCreates > 0) {
           failCreates--;

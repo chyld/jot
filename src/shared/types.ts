@@ -18,6 +18,8 @@ export interface NoteSummary {
   inbox: boolean;
   /** The bot that wrote the note (kept after Keep and after the token is revoked). */
   botName: string | null;
+  /** The ID of the section the note belongs to (sections-spec.md). */
+  section: string;
 }
 
 export interface Bot {

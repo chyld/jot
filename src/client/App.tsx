@@ -11,6 +11,7 @@ import { InboxScreen } from './screens/InboxScreen';
 import { Login } from './screens/Login';
 import { NotesScreen } from './screens/NotesScreen';
 import { NoteScreen } from './screens/NoteScreen';
+import { SectionsScreen } from './screens/SectionsScreen';
 import { StylesScreen } from './screens/StylesScreen';
 import { TagsScreen } from './screens/TagsScreen';
 import { TrashScreen } from './screens/TrashScreen';
@@ -61,6 +62,7 @@ function Screen(props: { path: string; search: URLSearchParams }) {
   if (p === '/inbox') return <InboxScreen />;
   if (p === '/trash') return <TrashScreen />;
   if (p === '/tags') return <TagsScreen />;
+  if (p === '/sections') return <SectionsScreen />;
   return (
     <div className="screen">
       <h1>Not found</h1>

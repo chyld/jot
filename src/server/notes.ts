@@ -1,6 +1,9 @@
 // Notes, tags, trash and search. Every function takes the owner's user id and every
 // query filters by it. The FTS5 index holds exactly one row per live (non-trashed)
 // note and is rewritten in the same transaction as any change that affects it.
+// The functions behind the home page, search, New, "Delete N empty" and the trash take the
+// current section and add it to their queries (sections-spec.md §2). The app checks that
+// the section is the user's before calling them.
 import type { Note, NoteSummary, Tag, TiptapDoc } from '../shared/types';
 import { docText, emptyDoc, previewOf } from './content';
 import { now, type DB } from './db';
@@ -19,10 +22,11 @@ interface NoteRow {
   read_only: number;
   inbox: number;
   bot_name: string | null;
+  section_id: string;
   tag_list: string | null;
 }
 
-const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only, n.inbox, n.bot_name,
+const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only, n.inbox, n.bot_name, n.section_id,
   (SELECT group_concat(t.name, ' ' ORDER BY t.name) FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
      WHERE nt.note_id = n.id) AS tag_list`;
 
@@ -38,6 +42,7 @@ function toSummary(r: NoteRow): NoteSummary {
     readOnly: r.read_only === 1,
     inbox: r.inbox === 1,
     botName: r.bot_name ?? null,
+    section: r.section_id,
   };
 }
 
@@ -70,37 +75,37 @@ export function getNote(db: DB, userId: string, id: string): Note | null {
   return { ...toSummary(r), content: JSON.parse(r.content!) as TiptapDoc };
 }
 
-export function listNotes(db: DB, userId: string, tag?: string): NoteSummary[] {
+export function listNotes(db: DB, userId: string, section: string, tag?: string): NoteSummary[] {
   const rows = tag
     ? db
         .prepare(
-          `SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
+          `SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.section_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
            AND EXISTS (SELECT 1 FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
                        WHERE nt.note_id = n.id AND t.user_id = ? AND t.name = ?)
            ORDER BY n.updated_at DESC, n.id`,
         )
-        .all(userId, userId, tag)
+        .all(userId, section, userId, tag)
     : db
-        .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 ORDER BY n.updated_at DESC, n.id`)
-        .all(userId);
+        .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.section_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 ORDER BY n.updated_at DESC, n.id`)
+        .all(userId, section);
   return (rows as NoteRow[]).map(toSummary);
 }
 
-export function listTrash(db: DB, userId: string): NoteSummary[] {
+export function listTrash(db: DB, userId: string, section: string): NoteSummary[] {
   const rows = db
-    .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.deleted_at IS NOT NULL ORDER BY n.deleted_at DESC, n.id`)
-    .all(userId) as NoteRow[];
+    .prepare(`SELECT ${SUMMARY_COLS} FROM notes n WHERE n.user_id = ? AND n.section_id = ? AND n.deleted_at IS NOT NULL ORDER BY n.deleted_at DESC, n.id`)
+    .all(userId, section) as NoteRow[];
   return rows.map(toSummary);
 }
 
-export function createNote(db: DB, userId: string, title: string, content: TiptapDoc | undefined): Note {
+export function createNote(db: DB, userId: string, section: string, title: string, content: TiptapDoc | undefined): Note {
   const id = newId();
   const doc = content ?? emptyDoc();
   const t = now();
   db.transaction(() => {
     db.prepare(
-      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)',
-    ).run(id, userId, title, JSON.stringify(doc), docText(doc), t, t);
+      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)',
+    ).run(id, userId, title, JSON.stringify(doc), docText(doc), t, t, section);
     reindexNote(db, id);
   })();
   return getNote(db, userId, id)!;
@@ -217,25 +222,25 @@ function isEmptyContent(json: string): boolean {
  * The user's empty notes: live, on the home page (not in the inbox), not read-only, with
  * no title, no tags and nothing in the body (a photo, a table or a rule is something).
  */
-function emptyNoteIds(db: DB, userId: string): string[] {
+function emptyNoteIds(db: DB, userId: string, section: string): string[] {
   const rows = db
     .prepare(
       `SELECT n.id, n.title, n.content FROM notes n
-        WHERE n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 AND n.read_only = 0
+        WHERE n.user_id = ? AND n.section_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 AND n.read_only = 0
           AND NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id)`,
     )
-    .all(userId) as Array<{ id: string; title: string; content: string }>;
+    .all(userId, section) as Array<{ id: string; title: string; content: string }>;
   return rows.filter((r) => r.title.trim() === '' && isEmptyContent(r.content)).map((r) => r.id);
 }
 
-export function countEmptyNotes(db: DB, userId: string): number {
-  return emptyNoteIds(db, userId).length;
+export function countEmptyNotes(db: DB, userId: string, section: string): number {
+  return emptyNoteIds(db, userId, section).length;
 }
 
-/** Moves every empty note of the user to the trash, in one transaction. Returns how many. */
-export function trashEmptyNotes(db: DB, userId: string): number {
+/** Moves every empty note of the section to the trash, in one transaction. Returns how many. */
+export function trashEmptyNotes(db: DB, userId: string, section: string): number {
   return db.transaction(() => {
-    const ids = emptyNoteIds(db, userId);
+    const ids = emptyNoteIds(db, userId, section);
     const t = now();
     const trash = db.prepare('UPDATE notes SET deleted_at = ? WHERE id = ? AND user_id = ?');
     for (const id of ids) {
@@ -267,13 +272,15 @@ export function purgeNote(db: DB, userId: string, id: string): boolean {
   })();
 }
 
-/** Permanently deletes every note in the user's trash. Photos stay on disk, as with purgeNote. */
-export function emptyTrash(db: DB, userId: string): number {
+/** Permanently deletes every note in the section's trash. Photos stay on disk, as with purgeNote. */
+export function emptyTrash(db: DB, userId: string, section: string): number {
   return db.transaction(() => {
-    const ids = (db.prepare('SELECT id FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL').all(userId) as Array<{ id: string }>).map((r) => r.id);
+    const ids = (
+      db.prepare('SELECT id FROM notes WHERE user_id = ? AND section_id = ? AND deleted_at IS NOT NULL').all(userId, section) as Array<{ id: string }>
+    ).map((r) => r.id);
     const delFts = db.prepare('DELETE FROM notes_fts WHERE note_id = ?');
     for (const id of ids) delFts.run(id); // trashed notes have no index row; kept exact anyway
-    db.prepare('DELETE FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL').run(userId);
+    db.prepare('DELETE FROM notes WHERE user_id = ? AND section_id = ? AND deleted_at IS NOT NULL').run(userId, section);
     deleteOrphanTags(db, userId);
     return ids.length;
   })();
@@ -287,17 +294,27 @@ export function listInbox(db: DB, userId: string): NoteSummary[] {
   return rows.map(toSummary);
 }
 
-/** Keep: moves a note out of the Inbox into the user's notes. The bot's name stays. */
-export function keepNote(db: DB, userId: string, id: string): UpdateResult {
+/** Keep: moves a note out of the Inbox into the given (current) section. The bot's name stays. */
+export function keepNote(db: DB, userId: string, id: string, section: string): UpdateResult {
   return db.transaction((): UpdateResult => {
     const state = liveCheck(db, userId, id);
     if (state !== 'ok') return state;
-    db.prepare('UPDATE notes SET inbox = 0 WHERE id = ? AND user_id = ?').run(id, userId);
+    db.prepare('UPDATE notes SET inbox = 0, section_id = ? WHERE id = ? AND user_id = ?').run(section, id, userId);
     return getNote(db, userId, id)!;
   })();
 }
 
-/** A note a bot wrote: in the Inbox, with the bot's name copied onto it. The caller runs this in a transaction. */
+/** Moves a note to another section. Only its section changes (not even its dates). Read-only and trashed notes cannot be moved. */
+export function moveNote(db: DB, userId: string, id: string, section: string): UpdateResult {
+  return db.transaction((): UpdateResult => {
+    const state = liveCheck(db, userId, id);
+    if (state !== 'ok') return state;
+    db.prepare('UPDATE notes SET section_id = ? WHERE id = ? AND user_id = ?').run(section, id, userId);
+    return getNote(db, userId, id)!;
+  })();
+}
+
+/** A note a bot wrote: in the Inbox and the Default section, with the bot's name copied onto it. The caller runs this in a transaction. */
 export function createBotNote(
   db: DB,
   userId: string,
@@ -306,8 +323,8 @@ export function createBotNote(
   const id = newId();
   const t = now();
   db.prepare(
-    `INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, inbox, bot_name, bot_request_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1, ?, ?)`,
+    `INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, inbox, bot_name, bot_request_id, section_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, 1, ?, ?, 'default')`,
   ).run(id, userId, n.title, JSON.stringify(n.content), docText(n.content), t, t, n.botName, n.requestId);
   for (const tag of n.tags) {
     db.prepare('INSERT OR IGNORE INTO tags (id, user_id, name) VALUES (?, ?, ?)').run(newId(), userId, tag);
@@ -327,16 +344,17 @@ export function findBotRequest(db: DB, userId: string, botName: string, requestI
   );
 }
 
-export function listTags(db: DB, userId: string): Tag[] {
+/** Tags on live notes outside the Inbox: of one section (the home page's chips), or of all of them (the Tags page). */
+export function listTags(db: DB, userId: string, section?: string): Tag[] {
   return db
     .prepare(
       `SELECT t.name AS name, COUNT(*) AS count FROM tags t
        JOIN note_tags nt ON nt.tag_id = t.id
        JOIN notes n ON n.id = nt.note_id
-       WHERE t.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
+       WHERE t.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 AND (? IS NULL OR n.section_id = ?)
        GROUP BY t.id ORDER BY t.name`,
     )
-    .all(userId, userId) as Tag[];
+    .all(userId, userId, section ?? null, section ?? null) as Tag[];
 }
 
 export type DeleteTagResult = { removedFrom: number } | { readOnly: number } | 'not-found';
@@ -362,17 +380,17 @@ export function deleteTag(db: DB, userId: string, tag: string): DeleteTagResult 
   })();
 }
 
-export function searchNotes(db: DB, userId: string, q: unknown): NoteSummary[] {
+export function searchNotes(db: DB, userId: string, section: string, q: unknown): NoteSummary[] {
   const match = buildFtsQuery(q);
   if (!match) return [];
   try {
     const rows = db
       .prepare(
         `SELECT ${SUMMARY_COLS} FROM notes_fts f JOIN notes n ON n.id = f.note_id
-         WHERE notes_fts MATCH ? AND f.user_id = ? AND n.user_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
+         WHERE notes_fts MATCH ? AND f.user_id = ? AND n.user_id = ? AND n.section_id = ? AND n.deleted_at IS NULL AND n.inbox = 0
          ORDER BY f.rank, n.updated_at DESC LIMIT 200`,
       )
-      .all(match, userId, userId) as NoteRow[];
+      .all(match, userId, userId, section) as NoteRow[];
     return rows.map(toSummary);
   } catch (err) {
     // buildFtsQuery only produces valid expressions; a syntax error here is a last line

@@ -3,39 +3,42 @@
    page is white and note content uses the Vivid palette, separate from these colours. */
 :root {
   color-scheme: light;
-  /* left bar */
-  --rail: #ffffff;
-  --rail-border: #e0e8cd;
-  --rail-icon: #6b7557;
-  --rail-hover: #eef5dc;
-  --rail-active: #e4f2c4;
-  --rail-active-icon: #3f6212;
-  --rail-logo: #4d7c0f;
-  /* editor toolbar */
-  --toolbar: #eef5dc;
-  --toolbar-border: #e0e8cd;
-  --toolbar-text: #32470f;
-  --toolbar-hover: #e4f2c4; /* the general hover tint equals the toolbar colour, so hover uses the chip green */
-  --toolbar-active: #4d7c0f;
-  --toolbar-active-text: #ffffff;
-  --toolbar-sep: #e0e8cd;
-  --disabled-text: #6d775a; /* 4.2:1 on the toolbar, 4.7:1 on white */
-  --field-edge: #85906e; /* 3:1 edge for white fields on the toolbar */
-  /* accent and surfaces */
+  /* The eight theme values (sections-spec.md §5). These are Olive; theme.ts sets the
+     current section's eight on <html>, and every chrome colour below is built from them. */
   --accent: #4d7c0f;
-  --accent-text: #ffffff;
   --accent-dark: #3f6212;
   --accent-soft: #e4f2c4;
-  --accent-ring: #4d7c0f;
-  --tag-bg: #e4f2c4;
-  --tag-text: #3f6212;
   --app-bg: #f7f9f1;
-  --surface: #ffffff;
-  --page: #ffffff;
+  --border: #e0e8cd;
+  --hover: #eef5dc;
   --text: #1d2610;
   --muted: #6b7557;
-  --border: #e0e8cd;
-  --subtle: #eef5dc; /* hover tint; table/photo control bars; banners */
+  /* left bar */
+  --rail: #ffffff;
+  --rail-border: var(--border);
+  --rail-icon: var(--muted);
+  --rail-hover: var(--hover);
+  --rail-active: var(--accent-soft);
+  --rail-active-icon: var(--accent-dark);
+  --rail-logo: var(--accent);
+  /* editor toolbar */
+  --toolbar: var(--hover);
+  --toolbar-border: var(--border);
+  --toolbar-text: var(--accent-dark);
+  --toolbar-hover: var(--accent-soft); /* the general hover tint equals the toolbar colour, so hover uses the soft accent */
+  --toolbar-active: var(--accent);
+  --toolbar-active-text: #ffffff;
+  --toolbar-sep: var(--border);
+  --disabled-text: var(--muted);
+  --field-edge: var(--muted); /* edge for white fields on the toolbar */
+  /* accent and surfaces */
+  --accent-text: #ffffff;
+  --accent-ring: var(--accent);
+  --tag-bg: var(--accent-soft);
+  --tag-text: var(--accent-dark);
+  --surface: #ffffff;
+  --page: #ffffff;
+  --subtle: var(--hover); /* hover tint; table/photo control bars; banners */
   --danger: #b42318;
   --radius: 10px;
   --shadow: 0 10px 30px rgba(29, 38, 16, 0.14), 0 2px 6px rgba(29, 38, 16, 0.08);
@@ -151,8 +154,8 @@ a.rail-new, a.btn { text-decoration: none; }
 /* The full width beside the left bar; text wraps at the right margin marker, with a gutter beyond it. */
 .note-content { padding: 28px var(--wrap-gutter) 80px 32px; }
 .wrap-marker { position: absolute; top: 0; bottom: 0; right: var(--wrap-gutter); width: 0; pointer-events: none; user-select: none; z-index: 2; }
-.wrap-marker-line { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: #b4c88c; }
-.wrap-marker-triangle { position: absolute; top: 0; left: 0.5px; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #4d7c0f; }
+.wrap-marker-line { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--border); }
+.wrap-marker-triangle { position: absolute; top: 0; left: 0.5px; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid var(--accent); }
 /* The status line: always one 28 px row under the writing area. When it runs out of room
    "Created …" truncates and then goes (the updated time stays); nothing wraps. Not
    selectable: a triple click on the note's last paragraph would otherwise run into it. */
@@ -451,3 +454,21 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .bot-head { display: flex; align-items: center; gap: 8px; }
 .bot-token { user-select: all; background: var(--subtle); border-radius: 6px; padding: 4px 8px; }
 .rail-error { position: fixed; left: 56px; top: 72px; z-index: 50; max-width: 320px; background: var(--surface); border: 1px solid var(--danger); color: var(--danger); border-radius: 8px; padding: 8px 12px; font-size: 13px; box-shadow: var(--shadow); cursor: pointer; }
+
+/* ---------------------------------------------------------------- sections */
+.section-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
+.section-square { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; font-size: 13px; font-weight: 700; line-height: 1; }
+.rail-section.tb-btn { width: 36px; height: 36px; padding: 0; border-radius: 10px; margin-bottom: 4px; }
+.rail-section.tb-btn:hover:not(:disabled), .rail-section.tb-btn[aria-expanded='true']:not(:disabled) { background: var(--rail-hover); color: inherit; }
+.menu-sections { min-width: 220px; }
+.menu-sections .menu-item { font-size: 14.5px; }
+.menu-item.is-active .section-dot { box-shadow: 0 0 0 2px #fff; }
+.note-section.tb-btn { height: 28px; gap: 6px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 500; background: var(--surface); }
+.note-section.tb-btn:disabled { color: var(--muted); }
+.note-section.tb-btn[aria-expanded='true']:not(:disabled) { background: var(--accent-soft); color: var(--text); }
+.section-cards { list-style: none; padding: 0; margin: 0; }
+.section-card { background: var(--app-bg); border: 1px solid var(--border); border-top: 4px solid var(--accent); color: var(--text); display: flex; flex-direction: column; gap: 6px; }
+.section-card-head { display: flex; align-items: center; gap: 10px; }
+.section-card-name { font-weight: 600; font-size: 16px; color: var(--accent-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.section-current { font-size: 13px; font-weight: 600; color: var(--accent-dark); background: var(--accent-soft); border-radius: 6px; padding: 4px 10px; }
+.section-new { display: grid; place-items: center; border: 1px dashed var(--border); background: transparent; min-height: 140px; }

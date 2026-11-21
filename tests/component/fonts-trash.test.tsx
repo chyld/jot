@@ -74,8 +74,8 @@ describe('Trash screen', () => {
   beforeEach(() => {
     trash = [note('a', 'One'), note('b', 'Two'), note('c', 'Three')];
     handler = (url, init) => {
-      if (url === '/api/trash' && (init.method ?? 'GET') === 'GET') return json({ notes: trash });
-      if (url === '/api/trash' && init.method === 'DELETE') {
+      if (url === '/api/trash?section=default' && (init.method ?? 'GET') === 'GET') return json({ notes: trash });
+      if (url === '/api/trash?section=default' && init.method === 'DELETE') {
         const n = trash.length;
         trash = [];
         return json({ deleted: n });
@@ -94,7 +94,7 @@ describe('Trash screen', () => {
     expect(screen.getByText(/3 notes will be deleted forever.*cannot be undone/i)).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Confirm: empty trash' }));
     await waitFor(() => expect(screen.getByText('The trash is empty.')).toBeTruthy());
-    expect(calls.filter((c) => c.method === 'DELETE').map((c) => c.url)).toEqual(['/api/trash']);
+    expect(calls.filter((c) => c.method === 'DELETE').map((c) => c.url)).toEqual(['/api/trash?section=default']);
     expect(screen.queryByRole('button', { name: 'Empty trash' })).toBeNull();
   });
 

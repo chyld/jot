@@ -139,7 +139,7 @@ test('the writing area fills the window, with a fixed right margin marker where 
     return line;
   };
   const wide = await check();
-  await expect(page.getByTestId('wrap-marker').locator('.wrap-marker-line')).toHaveCSS('background-color', 'rgb(180, 200, 140)');
+  await expect(page.getByTestId('wrap-marker').locator('.wrap-marker-line')).toHaveCSS('background-color', 'rgb(224, 232, 205)'); // the border colour #e0e8cd (sections-spec.md §5)
   await expect(page.getByTestId('wrap-marker').locator('.wrap-marker-triangle')).toHaveCSS('border-top-color', 'rgb(77, 124, 15)');
   await expect(page.getByTestId('wrap-marker')).toHaveCSS('pointer-events', 'none');
   await expect(page.getByTestId('wrap-marker')).toHaveCSS('user-select', 'none');

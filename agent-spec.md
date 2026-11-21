@@ -27,10 +27,10 @@
 ## 3. The Inbox
 
 - A new Inbox item in the left bar shows the number of notes in the Inbox. The number is simply how many notes are there; nothing tracks "read" or "unread".
-- A note a bot creates is an ordinary note with two extra facts recorded on it: it is in the Inbox, and the name of the bot that wrote it. The name is copied onto the note, so it survives the token being revoked.
+- A note a bot creates is an ordinary note with two extra facts recorded on it: it is in the Inbox, and the name of the bot that wrote it. The name is copied onto the note, so it survives the token being revoked. It is created in the user's Default section (`sections-spec.md` §7).
 - Inbox notes do not appear on the home page, in its search or in its tag filter. They appear only on the Inbox screen, newest first, each showing its bot's name.
 - Opening an Inbox note opens the normal editor. It can be edited, tagged, made read-only or trashed like any note.
-- **Keep** moves a note out of the Inbox into the user's notes. The bot's name stays on it.
+- **Keep** moves a note out of the Inbox into the current section (the button says which, "Keep in Work"). The bot's name stays on it.
 - Only the user can keep or trash a note. A bot cannot.
 
 ## 4. The MCP server

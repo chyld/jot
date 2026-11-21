@@ -38,7 +38,7 @@ const inApp = (ui: React.ReactNode) =>
     </DataProvider>,
   );
 const note = (id: string, title: string, extra: object = {}) => ({
-  id, title, preview: 'preview', tags: [], createdAt: '2026-11-19T10:00:00Z', updatedAt: '2026-11-19T10:00:00Z', deletedAt: null, readOnly: false, inbox: true, botName: 'Grok', ...extra,
+  id, title, preview: 'preview', tags: [], createdAt: '2026-11-19T10:00:00Z', updatedAt: '2026-11-19T10:00:00Z', deletedAt: null, readOnly: false, inbox: true, botName: 'Grok', section: 'default', ...extra,
 });
 const common = (url: string) => {
   if (url === '/api/fonts') return json({ fonts: [] });
@@ -124,7 +124,7 @@ describe('Inbox', () => {
       const c = common(url);
       if (c) return c;
       if (url === '/api/inbox') return json({ notes: inbox });
-      if (url === '/api/notes/n1/keep' && init.method === 'POST') {
+      if (url === '/api/notes/n1/keep?section=default' && init.method === 'POST') {
         const kept = { ...inbox[0], inbox: false };
         inbox = inbox.slice(1);
         return json({ note: kept });
@@ -150,7 +150,7 @@ describe('Inbox', () => {
     expect(within(screen.getByRole('article', { name: 'Another' })).getByTestId('note-bot').textContent).toMatch(/Claude/);
     await userEvent.click(screen.getByRole('button', { name: 'Keep From the bot' }));
     await waitFor(() => expect(screen.queryByRole('article', { name: 'From the bot' })).toBeNull());
-    expect(calls.some((c) => c.url === '/api/notes/n1/keep' && c.method === 'POST')).toBe(true);
+    expect(calls.some((c) => c.url === '/api/notes/n1/keep?section=default' && c.method === 'POST')).toBe(true);
   });
 
   it('says so when it is empty', async () => {

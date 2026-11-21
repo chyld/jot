@@ -3,11 +3,12 @@
 import Database from 'better-sqlite3';
 import { ensureDefaultStyles } from './defaultStyles';
 import { addManual, refreshManuals } from './manual';
+import { addDefaultSection } from './sections';
 import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -195,6 +196,28 @@ function migrate(db: DB) {
         );
       `);
       db.pragma(`user_version = 6`);
+    })();
+  }
+  // Version 7: sections (sections-spec.md §8). Every user gets a Default section and every
+  // note a section. The new column's default puts every existing note in Default without
+  // rewriting a row; the table is not rebuilt.
+  if (version < 7) {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE sections (
+          user_id    TEXT NOT NULL REFERENCES users(id),
+          id         TEXT NOT NULL,
+          name       TEXT NOT NULL,
+          colour     TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          PRIMARY KEY (user_id, id)
+        );
+        ALTER TABLE notes ADD COLUMN section_id TEXT NOT NULL DEFAULT 'default';
+      `);
+      for (const u of db.prepare('SELECT id, created_at FROM users ORDER BY created_at, id').all() as Array<{ id: string; created_at: string }>) {
+        addDefaultSection(db, u.id, u.created_at);
+      }
+      db.pragma(`user_version = 7`);
     })();
   }
 }

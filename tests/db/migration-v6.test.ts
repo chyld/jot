@@ -31,9 +31,11 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 it('adds the Inbox flag, bot name and request id to notes, and the bot_tokens table; nothing existing changes', () => {
   const db = openDatabase(file);
-  expect(SCHEMA_VERSION).toBe(6);
-  expect(db.pragma('user_version', { simple: true })).toBe(6);
-  const after = db.prepare('SELECT * FROM notes ORDER BY id').all() as any[];
+  expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(6);
+  expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
+  // The columns version 6 had (later versions add more, tested on their own).
+  const v6cols = [...Object.keys(before[0]), 'inbox', 'bot_name', 'bot_request_id'].join(', ');
+  const after = db.prepare(`SELECT ${v6cols} FROM notes ORDER BY id`).all() as any[];
   expect(after.length).toBe(before.length);
   for (const [i, n] of after.entries()) {
     const { inbox, bot_name, bot_request_id, ...rest } = n;

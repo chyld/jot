@@ -1,6 +1,8 @@
 // Thin JSON client for Jot's API.
 import type { BackupInfo, Bot, CatalogFont, Font, Note, NoteSummary, Photo, RestoreSummary, SafetyBackup, Tag, User } from '../shared/types';
+import type { Section, SectionColour } from '../shared/sections';
 import type { Style, StyleInput } from '../shared/styles';
+import { currentSectionId } from './currentSection';
 
 export class ApiError extends Error {
   constructor(
@@ -45,19 +47,25 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   return data as T;
 }
 
+/** Adds the current section to a request that works on it (sections-spec.md §2). */
+function inSection(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}section=${encodeURIComponent(currentSectionId())}`;
+}
+
 export const api = {
   me: () => request<{ user: User }>('GET', '/api/me'),
   login: (username: string, password: string) => request<{ user: User }>('POST', '/api/login', { username, password }),
   logout: () => request<void>('POST', '/api/logout', {}),
 
-  notes: (tag?: string) => request<{ notes: NoteSummary[] }>('GET', tag ? `/api/notes?tag=${encodeURIComponent(tag)}` : '/api/notes'),
-  search: (q: string) => request<{ notes: NoteSummary[] }>('GET', `/api/search?q=${encodeURIComponent(q)}`),
+  notes: (tag?: string) => request<{ notes: NoteSummary[] }>('GET', inSection(tag ? `/api/notes?tag=${encodeURIComponent(tag)}` : '/api/notes')),
+  search: (q: string) => request<{ notes: NoteSummary[] }>('GET', inSection(`/api/search?q=${encodeURIComponent(q)}`)),
   note: (id: string) => request<{ note: Note }>('GET', `/api/notes/${encodeURIComponent(id)}`),
-  createNote: () => request<{ note: Note }>('POST', '/api/notes', {}),
+  createNote: () => request<{ note: Note }>('POST', inSection('/api/notes'), {}),
+  moveNote: (id: string, section: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/section`, { section }),
   updateNote: (id: string, patch: { title?: string; content?: unknown }) =>
     request<{ note: Note }>('PATCH', `/api/notes/${encodeURIComponent(id)}`, patch),
   inbox: () => request<{ notes: NoteSummary[] }>('GET', '/api/inbox'),
-  keep: (id: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/keep`, {}),
+  keep: (id: string) => request<{ note: Note }>('POST', inSection(`/api/notes/${encodeURIComponent(id)}/keep`), {}),
   bots: () => request<{ publicUrl: string; mcpUrl: string; bots: Bot[] }>('GET', '/api/bots'),
   createBot: (name: string) => request<{ bot: Bot }>('POST', '/api/bots', { name }),
   revokeBot: (id: string) => request<void>('DELETE', `/api/bots/${encodeURIComponent(id)}`),
@@ -66,15 +74,23 @@ export const api = {
   addTag: (id: string, tag: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/tags`, { tag }),
   removeTag: (id: string, tag: string) =>
     request<{ note: Note }>('DELETE', `/api/notes/${encodeURIComponent(id)}/tags/${encodeURIComponent(tag)}`),
+  /** Every tag, across all sections (the Tags page). */
   tags: () => request<{ tags: Tag[] }>('GET', '/api/tags'),
+  /** The current section's tags (the home page's chips). */
+  sectionTags: () => request<{ tags: Tag[] }>('GET', inSection('/api/tags')),
   deleteTag: (tag: string) => request<{ tag: string; removedFrom: number }>('DELETE', `/api/tags/${encodeURIComponent(tag)}`),
 
-  trash: () => request<{ notes: NoteSummary[] }>('GET', '/api/trash'),
+  sections: () => request<{ sections: Section[] }>('GET', '/api/sections'),
+  createSection: (s: { id: string; name: string; colour: SectionColour }) => request<{ section: Section }>('POST', '/api/sections', s),
+  updateSection: (id: string, s: { name: string; colour: SectionColour }) =>
+    request<{ section: Section }>('PATCH', `/api/sections/${encodeURIComponent(id)}`, s),
+
+  trash: () => request<{ notes: NoteSummary[] }>('GET', inSection('/api/trash')),
   restore: (id: string) => request<{ note: Note }>('POST', `/api/trash/${encodeURIComponent(id)}/restore`, {}),
   purge: (id: string) => request<void>('DELETE', `/api/trash/${encodeURIComponent(id)}`),
-  emptyTrash: () => request<{ deleted: number }>('DELETE', '/api/trash'),
-  emptyNotes: () => request<{ count: number }>('GET', '/api/empty-notes'),
-  trashEmptyNotes: () => request<{ trashed: number }>('DELETE', '/api/empty-notes'),
+  emptyTrash: () => request<{ deleted: number }>('DELETE', inSection('/api/trash')),
+  emptyNotes: () => request<{ count: number }>('GET', inSection('/api/empty-notes')),
+  trashEmptyNotes: () => request<{ trashed: number }>('DELETE', inSection('/api/empty-notes')),
 
   uploadPhoto: (file: File) => {
     const fd = new FormData();

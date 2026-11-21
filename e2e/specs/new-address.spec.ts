@@ -67,7 +67,7 @@ test('a failed create shows the error and Try again makes the note', async ({ pa
   await login(page, USER);
   const before = await count(page.request);
   let fail = true;
-  await page.route('**/api/notes', (route) => {
+  await page.route(/\/api\/notes(\?|$)/, (route) => {
     if (route.request().method() === 'POST' && fail) {
       fail = false;
       return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'The server is out of space.' }) });

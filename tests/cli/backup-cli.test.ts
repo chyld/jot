@@ -43,12 +43,14 @@ function makeVersion1(db: Database.Database) {
   db.exec('DROP INDEX IF EXISTS notes_bot_request');
   for (const c of ['inbox', 'bot_name', 'bot_request_id']) db.exec(`ALTER TABLE notes DROP COLUMN ${c}`);
   db.exec('DROP TABLE IF EXISTS bot_tokens');
+  db.exec('ALTER TABLE notes DROP COLUMN section_id');
+  db.exec('DROP TABLE IF EXISTS sections');
   db.exec('DROP TABLE IF EXISTS restore_files');
   db.pragma('user_version = 1');
 }
 
-// bot_tokens: full system backups carry the bots' tokens (agent-spec.md §2).
-const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'bot_tokens'];
+// bot_tokens: full system backups carry the bots' tokens (agent-spec.md §2); sections ride along unchanged (sections-spec.md §8).
+const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'bot_tokens', 'sections'];
 function dump(dbFile: string) {
   const db = new Database(dbFile, { readonly: true });
   const out: Record<string, unknown[]> = {};

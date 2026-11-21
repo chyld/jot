@@ -139,7 +139,7 @@ describe('round trip', () => {
     expect(names[0]).toBe('data.json');
     expect(names.filter((n) => n.startsWith('photos/')).length).toBe(2);
     expect(names.filter((n) => n.startsWith('fonts/')).length).toBeGreaterThan(6);
-    expect(b.manifest).toMatchObject({ format: 'jot-personal-backup', version: 3 });
+    expect(b.manifest).toMatchObject({ format: 'jot-personal-backup', version: 4 });
     expect(b.manifest.entries.map((e: any) => e.name).sort()).toEqual([...names].sort());
     expect(JSON.stringify(b.data)).not.toMatch(/password|argon2|layout/); // no username, no password
   });
@@ -157,7 +157,7 @@ describe('read-only notes', () => {
     const { file } = await takeBackup(c);
     const data = openBackup(file).data;
     expect(Object.fromEntries(data.notes.map((n: any) => [n.title, n.readOnly]))).toEqual({ 'User manual': true, 'locked one': true, 'loose one': false });
-    expect(openBackup(file).manifest.version).toBe(3);
+    expect(openBackup(file).manifest.version).toBe(4);
 
     // The restore replaces every note, read-only ones included (the safety backup has them).
     await c.post('/api/notes', { title: 'after the backup', content: doc('x') });

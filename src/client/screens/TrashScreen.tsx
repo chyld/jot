@@ -4,6 +4,7 @@ import { relativeTime } from '../../shared/time';
 import type { NoteSummary } from '../../shared/types';
 import { api } from '../api';
 import { useNow } from '../components/NoteCard';
+import { useSections } from '../currentSection';
 import { useData } from '../data';
 
 function TrashItem(props: { note: NoteSummary; now: Date; onRestore: () => void; onPurge: () => void }) {
@@ -91,12 +92,14 @@ function EmptyTrash(props: { count: number; onEmptied: () => void }) {
 
 export function TrashScreen() {
   const { bumpNotes } = useData();
+  // Each section has its own trash: this is the current section's.
+  const section = useSections().current.id;
   const [notes, setNotes] = useState<NoteSummary[] | null>(null);
   const now = useNow();
   const load = () => api.trash().then((r) => setNotes(r.notes), () => setNotes([]));
   useEffect(() => {
     void load();
-  }, []);
+  }, [section]);
   return (
     <div className="screen">
       <div className="screen-head">

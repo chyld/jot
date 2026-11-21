@@ -8,6 +8,7 @@ import { newId } from './ids';
 import { checkPasswordRules, hashPassword } from './passwords';
 import { deleteUserSessions } from './sessions';
 import { addManual } from './manual';
+import { addDefaultSection } from './sections';
 import { loadStarterManifest, STARTER_STYLES } from './starter';
 
 export class UserError extends Error {}
@@ -55,6 +56,7 @@ export async function createUser(ctx: JotContext, usernameInput: string, passwor
     for (const d of [fontsDir(ctx, id), photosDir(ctx, id), userDir(ctx, id), dirname(userDir(ctx, id))]) await syncDir(d);
     ctx.db.transaction(() => {
       ctx.db.prepare('INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)').run(id, username, hash, created);
+      addDefaultSection(ctx.db, id, created);
       const insFont = ctx.db.prepare(
         'INSERT INTO fonts (id, user_id, family, category, faces, archived_at, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)',
       );

@@ -1,19 +1,24 @@
 // The home page: the user's notes as a list, with search, a New button and a tag
 // filter. The tag filter is how notes are browsed by tag; it lives in the URL
 // (/?tag=name) so a tag name clicked anywhere can open the home page filtered.
-// Opening a note goes to its own full-screen editor page.
+// Opening a note goes to its own full-screen editor page. Everything here is the
+// current section's: the heading is its name, and the list, chips, search, New and
+// "Delete N empty" work on it alone.
 import { useEffect, useState } from 'react';
 import { Plus, Search, Trash2 } from 'lucide-react';
 import type { NoteSummary, Tag } from '../../shared/types';
 import { api } from '../api';
 import { NoteCard, useNow } from '../components/NoteCard';
 import { NewNoteLink } from '../components/NewNoteLink';
+import { useSections } from '../currentSection';
 import { useData } from '../data';
 import { homeHref, navigate } from '../router';
 
 export function NotesScreen(props: { tag: string | null }) {
   const [newError, setNewError] = useState<string | null>(null);
   const { notesVersion, bumpNotes } = useData();
+  const { current } = useSections();
+  const section = current.id;
   const [query, setQuery] = useState('');
   const tag = props.tag || null;
   const setTag = (t: string | null) => navigate(homeHref(t));
@@ -46,8 +51,8 @@ export function NotesScreen(props: { tag: string | null }) {
   };
 
   useEffect(() => {
-    api.tags().then((r) => setTags(r.tags), () => setTags([]));
-  }, [notesVersion]);
+    api.sectionTags().then((r) => setTags(r.tags), () => setTags([]));
+  }, [notesVersion, section]);
   // Empty notes (no title, no body, no tags): the header offers to trash them all, after a
   // second click that confirms.
   const [emptyCount, setEmptyCount] = useState(0);
@@ -56,7 +61,7 @@ export function NotesScreen(props: { tag: string | null }) {
   const [emptyDone, setEmptyDone] = useState<number | null>(null);
   useEffect(() => {
     api.emptyNotes().then((r) => setEmptyCount(r.count), () => setEmptyCount(0));
-  }, [notesVersion]);
+  }, [notesVersion, section]);
   useEffect(() => {
     if (emptyCount === 0) setConfirmingEmpty(false);
   }, [emptyCount]);
@@ -100,13 +105,13 @@ export function NotesScreen(props: { tag: string | null }) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [query, tag, notesVersion]);
+  }, [query, tag, notesVersion, section]);
 
   const filtering = query.trim() !== '' || tag !== null;
   return (
     <div className="screen home">
       <div className="screen-head">
-        <h1>Notes</h1>
+        <h1>{current.name}</h1>
         <label className="search-box grow">
           <Search size={16} />
           <input type="search" placeholder="Search notes" aria-label="Search notes" value={query} onChange={(e) => setQuery(e.target.value)} />

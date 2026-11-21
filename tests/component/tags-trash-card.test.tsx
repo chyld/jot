@@ -45,6 +45,7 @@ const note = (id: string, title: string, readOnly = false) => ({
   deletedAt: null,
   inbox: false,
   botName: null,
+  section: 'default',
   readOnly,
 });
 
@@ -80,8 +81,8 @@ describe('notes list', () => {
     let trashed: any[] = [];
     handler = (url, init) => {
       const method = init.method ?? 'GET';
-      if (url === '/api/notes' && method === 'GET') return json({ notes: live });
-      if (url === '/api/tags') return json({ tags: [] });
+      if (url === '/api/notes?section=default' && method === 'GET') return json({ notes: live });
+      if (url === '/api/tags?section=default') return json({ tags: [] });
       if (url === '/api/inbox') return json({ notes: [] });
       if (url === '/api/fonts') return json({ fonts: [] });
       if (url === '/api/styles') return json({ styles: [] });

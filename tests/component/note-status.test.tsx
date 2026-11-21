@@ -24,6 +24,7 @@ const makeNote = (extra: object = {}) => ({
   readOnly: false,
   inbox: false,
   botName: null,
+  section: 'default',
   content: { type: 'doc', content: [para('Hello there world'), para('Two lines')] },
   ...extra,
 });

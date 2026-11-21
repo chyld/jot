@@ -42,11 +42,11 @@ Run inside the container with `docker compose exec`; `jot restore` runs with the
 ## 3. Notes
 
 - A note has a title, a body and tags.
-- No folders and no inbox; tags are the only organisation.
+- No folders and no inbox. Every note belongs to one section (`sections-spec.md`), a level above tags; within a section, tags are the organisation.
 - Notes list shows title, preview text, tags and relative time ("3 min ago").
 - Created and updated dates are shown on each note, in the status line (section 6). Dates are in the viewer's own time zone.
 - Each note has its own URL.
-- New note button.
+- New note button. New notes and Delete empty notes work on the current section (`sections-spec.md` §2).
 - A note made with a New button (the + in the left bar or + New on the home page) opens with the text cursor in the note body, ready to type without a click. Opening an existing note does not move the cursor into the body.
 - Every press of a New button creates a note. Nothing is guarded or reused: a double-click makes two notes, and pressing New in an empty note makes another.
 - **Delete empty notes.** When the user has empty notes, the home page header shows a button, left of + New, with how many ("Delete 3 empty"). An empty note has no title, no tags and nothing in the body (a photo, a table or a rule counts as something); read-only notes, Inbox notes and trashed notes are never counted. Clicking it asks once more in the page ("3 empty notes will move to the trash.", Confirm: delete empty, Cancel). Confirming moves them all to the trash in one action, where they can be restored, and the page says how many were moved. The button is not shown when there are none.
@@ -75,7 +75,7 @@ Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write note
 
 ### Trash
 
-- Deleting a note moves it to the trash.
+- Deleting a note moves it to the trash. Each section has its own trash: the Trash screen, Restore, Delete permanently and Empty trash work on the current section's (`sections-spec.md` §2).
 - From the trash a note can be restored or permanently deleted.
 - **Empty trash** permanently deletes every note in the user's trash in one action. It asks once more in the page, saying how many notes will be deleted and that this cannot be undone, and is not shown when the trash is empty. It touches only the user's own trashed notes. Photos stay on disk, as with permanent delete, and tags and search stay consistent.
 - Trashed notes do not appear in the notes list or in search.
@@ -94,7 +94,7 @@ Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write note
 ## 5. Search
 
 - Searches note text and tags.
-- Returns only the logged-in user's notes, and never trashed ones.
+- Returns only the logged-in user's notes in the current section (`sections-spec.md` §2), and never trashed ones.
 
 ## 6. Editor
 
@@ -202,7 +202,7 @@ A fixed palette ("Vivid"): 10 text colours, 10 highlight colours and 10 photo bo
 
 ### Interface theme ("Olive")
 
-The app's own interface (not note content) uses the "Olive" theme, light mode only; there is no dark mode. Nothing in the interface chrome is dark: the left bar is white and the editor toolbar pale. No rose or pink appears anywhere in the chrome. The note page itself stays white, and the Vivid palette above is unchanged for note content.
+The app's own interface (not note content) uses the "Olive" theme, light mode only. Olive is now one of six section colours: the interface takes the current section's colour (`sections-spec.md` §5), and this table describes Olive; there is no dark mode. Nothing in the interface chrome is dark: the left bar is white and the editor toolbar pale. No rose or pink appears anywhere in the chrome. The note page itself stays white, and the Vivid palette above is unchanged for note content.
 
 | Element | Colour |
 |---|---|
@@ -228,10 +228,11 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
 | Trash | Trashed notes with Restore and Delete permanently, and Empty trash (with an in-page confirmation) |
 | Tags (`/tags`) | Every tag with its number of notes; each name opens the home page filtered by it; Delete (with an in-page confirmation) removes the tag from every note and keeps the notes |
+| Sections (`/sections`) | One card per section, in its own colours: name, ID, number of notes, Edit, and Open or "Current section"; + New section. See `sections-spec.md` §4 |
 | Inbox (`/inbox`) | Notes bots wrote and the user has not kept yet, newest first, each with its bot's name and a Keep button. See `agent-spec.md` |
 | Account (`/account`) | The logged-in user's username at the top and a Log out button in the heading row, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. Then Bots: the address for bots (from `JOT_PUBLIC_URL`) and a setup snippet for a generic MCP client; create a bot by name; each bot's token always visible with Copy, Copy setup, its last-used time and Revoke (with a second-click confirm). No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
 
-A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page) the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles, Trash and, last, Account (a person icon). Log out is a button on the Account page, not in the bar. It has no notes icon. The bar is 48 px wide with 36 px buttons.
+A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page), the section button (`sections-spec.md` §3), the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles, Trash and, last, Account (a person icon). Log out is a button on the Account page, not in the bar. It has no notes icon. The bar is 48 px wide with 36 px buttons.
 
 ---
 

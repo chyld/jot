@@ -17,6 +17,7 @@ import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { MAX_TITLE_LENGTH } from '../../shared/constants';
 import { validateStyleInput } from '../../shared/styles';
+import { DEFAULT_SECTION_ID, isSectionColour, normalizeSectionId, normalizeSectionName, type SectionColour } from '../../shared/sections';
 import { normalizeTag } from '../../shared/tags';
 import type { TiptapDoc, TiptapNode } from '../../shared/types';
 import { ContentError, docText, sanitizeDoc } from '../content';
@@ -40,7 +41,9 @@ import { TarWriter } from './tar';
 export const PERSONAL_FORMAT = 'jot-personal-backup';
 // Format 2 added `readOnly` on notes (format 1 restores with every note writable).
 // Format 3 added `inbox` and `botName` (older formats restore with every note outside the Inbox).
-export const PERSONAL_VERSION = 3;
+// Format 4 added `sections` and each note's `section` (older formats restore with one
+// Default section holding every note).
+export const PERSONAL_VERSION = 4;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------------------ what a backup holds
@@ -56,6 +59,13 @@ interface BNote {
   readOnly: boolean;
   inbox: boolean;
   botName: string | null;
+  section: string;
+}
+interface BSection {
+  id: string;
+  name: string;
+  colour: SectionColour;
+  createdAt: string;
 }
 interface BPhoto {
   id: string;
@@ -87,6 +97,7 @@ interface BStyle {
   updatedAt: string;
 }
 export interface PersonalData {
+  sections: BSection[];
   notes: BNote[];
   photos: BPhoto[];
   fonts: BFont[];
@@ -127,6 +138,13 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
       readOnly: n.read_only === 1,
       inbox: n.inbox === 1,
       botName: n.bot_name ?? null,
+      section: n.section_id,
+    }));
+    const sections = (db.prepare("SELECT * FROM sections WHERE user_id = ? ORDER BY id <> 'default', created_at, rowid").all(userId) as any[]).map((s) => ({
+      id: s.id,
+      name: s.name,
+      colour: s.colour,
+      createdAt: s.created_at,
     }));
     const photos = (db.prepare('SELECT * FROM photos WHERE user_id = ? ORDER BY created_at, id').all(userId) as any[]).map((p) => ({
       id: p.id,
@@ -158,7 +176,7 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
       createdAt: s.created_at,
       updatedAt: s.updated_at,
     }));
-    return { notes, photos, fonts, styles };
+    return { sections, notes, photos, fonts, styles };
   })();
 }
 
@@ -435,6 +453,28 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
   // The default styles are rebuilt on the restored fonts, so the backup must have them.
   for (const family of STARTER_FONT_FAMILIES) if (!families.has(family)) fail(`it does not have the default font "${family}", which the default styles need.`);
 
+  // Sections (format 4). Older backups have none: they restore with one Default section
+  // holding every note.
+  const sections: BSection[] = [];
+  const sectionIds = new Set<string>();
+  if (manifest.version >= 4) {
+    if (!Array.isArray(raw.sections) || raw.sections.length > 1000) fail('its data.json has no valid list of sections.');
+    for (const sec of raw.sections) {
+      const id = isObj(sec) ? normalizeSectionId(sec.id) : null;
+      if (!id?.ok || id.id !== sec.id || sectionIds.has(sec.id)) fail('a section has an invalid or repeated ID.');
+      const name = normalizeSectionName(sec.name);
+      if (!name.ok || name.name !== sec.name) fail(`section "${sec.id}" has an invalid name.`);
+      if (!isSectionColour(sec.colour)) fail(`section "${sec.id}" has an invalid colour.`);
+      if (!isDate(sec.createdAt)) fail(`section "${sec.id}" has an invalid date.`);
+      sectionIds.add(sec.id);
+      sections.push({ id: sec.id, name: sec.name, colour: sec.colour, createdAt: sec.createdAt });
+    }
+    if (!sectionIds.has(DEFAULT_SECTION_ID)) fail('it has no Default section.');
+  } else {
+    sections.push({ id: DEFAULT_SECTION_ID, name: 'Default', colour: 'olive', createdAt: manifest.createdAt });
+    sectionIds.add(DEFAULT_SECTION_ID);
+  }
+
   const missingNames = new Set(manifest.missing.map((m) => m.name));
   const notes: BNote[] = [];
   const noteIds = new Set<string>();
@@ -474,13 +514,15 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
     }
     const inbox = n.inbox === true;
     const botName = typeof n.botName === 'string' ? n.botName : null;
+    const section = manifest.version >= 4 ? n.section : DEFAULT_SECTION_ID;
+    if (!sectionIds.has(section)) fail(`note "${label}" names a section that is not in the backup.`);
     for (const id of photoRefs(content)) {
       if (photoIds.has(id)) continue;
       if (missingNames.has(`photos/${id}`)) danglingUsed.add(`photos/${id}`);
       else fail(`note "${label}" uses a photo that is not in the backup.`);
     }
     noteIds.add(n.id);
-    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly, inbox, botName });
+    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly, inbox, botName, section });
   }
 
   // The entries must be exactly the files the records point at, apart from listed missing ones.
@@ -515,7 +557,7 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
 
   return {
     summary: { createdAt: manifest.createdAt, counts, adjustedNotes: adjusted, missing: manifest.missing.map((m) => ({ name: m.name, what: m.what })) },
-    data: { notes, photos, fonts, styles },
+    data: { sections, notes, photos, fonts, styles },
     present: [...seen.keys()],
   };
 }
@@ -723,9 +765,11 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
       .all(userId) as Array<{ id: string; family: string }>;
     db.pragma('defer_foreign_keys = ON'); // until the defaults point at the new fonts, below
     db.prepare('DELETE FROM styles WHERE user_id = ? AND is_default = 0').run(userId);
-    for (const t of ['notes_fts', 'note_tags', 'notes', 'tags', 'photos', 'fonts']) {
+    for (const t of ['notes_fts', 'note_tags', 'notes', 'tags', 'photos', 'fonts', 'sections']) {
       db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
     }
+    const insSection = db.prepare('INSERT INTO sections (user_id, id, name, colour, created_at) VALUES (?, ?, ?, ?, ?)');
+    for (const sec of data.sections) insSection.run(userId, sec.id, sec.name, sec.colour, sec.createdAt);
     const insFont = db.prepare('INSERT INTO fonts (id, user_id, family, category, faces, archived_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
     for (const f of data.fonts) insFont.run(fontMap.get(f.id), userId, f.family, f.category, JSON.stringify(f.faces), f.archivedAt, f.createdAt);
     const insPhoto = db.prepare('INSERT INTO photos (id, user_id, mime, size, original_name, created_at) VALUES (?, ?, ?, ?, ?, ?)');
@@ -743,13 +787,13 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
     const tagIds = new Map<string, string>();
     const insTag = db.prepare('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)');
     const insNote = db.prepare(
-      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only, inbox, bot_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only, inbox, bot_name, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     const insLink = db.prepare('INSERT INTO note_tags (note_id, tag_id, user_id) VALUES (?, ?, ?)');
     for (const n of data.notes) {
       const id = newId();
       const content = remapPhotoRefs(n.content, photoMap);
-      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0, n.inbox ? 1 : 0, n.botName);
+      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0, n.inbox ? 1 : 0, n.botName, n.section);
       for (const t of n.tags) {
         if (!tagIds.has(t)) {
           tagIds.set(t, newId());

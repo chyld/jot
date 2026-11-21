@@ -56,6 +56,8 @@ The manifest is last, so a download that was cut off has no manifest and is refu
 
 Format version 2 records whether each note is read-only (`jot-spec.md` §3). A version 1 backup (made before read-only notes) restores with every note writable.
 
+Format version 4 adds the user's sections and each note's section ID (`sections-spec.md` §8; version 3 added Inbox notes). A restore checks that every note names a section in the backup and that there is a `default` section. Older backups restore with every note in Default.
+
 ### 3.4 Taking a backup
 
 1. Read all of the user's records in a single database read transaction, so the backup is one moment in time.
