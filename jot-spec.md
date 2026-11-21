@@ -121,6 +121,8 @@ The toolbar matches the screenshots, left to right:
 
 The writing area uses the full width of the window beside the left bar. A right margin marker shows where lines wrap: a faint 1 px vertical line (#b4c88c) down the full height of the writing area at the right edge of the text, topped by a small downward-pointing accent-green (#4d7c0f) triangle just under the toolbar, with a gutter to its right. Text wraps exactly at the line. The marker stays put while the note scrolls and is never part of the note.
 
+The end of the note is marked just below its last line, always (also on read-only notes): a thin 1 px rule in the Border colour across the text width (from the text's left edge to the margin marker) with a small muted END in its middle, about 12 px under the last line. It moves down as lines are added. Display only: drawn by the stylesheet, never part of the note, saved, copied, searched, backed up or printed, and not selectable; clicking below the text still puts the cursor at the end of the note.
+
 Links: Ctrl+click (Cmd+click on a Mac) opens a link in a new tab (noopener, noreferrer); a plain click places the cursor so the link text can be edited, and the link shows the hint "Ctrl+click to open". In a read-only note a plain click opens it. A web address typed into a note (https://… followed by a space or Enter) becomes a link; links made with the link button behave the same. Only http, https and mailto links.
 
 No vertical scrollbar is drawn anywhere in Jot (pages, the editor, lists, menus, dialogs); scrolling with the wheel, trackpad, touch and keyboard still works.

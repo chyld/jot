@@ -971,3 +971,9 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   `@media print` block at the end of `styles.css` hides everything but the title and body
   and undoes the app's fixed heights and scrolling so long notes run over many pages.
   Tests: `tests/component/save-pdf.test.tsx`, `e2e/specs/save-pdf.spec.ts`.
+- **End-of-note marker (owner request, mockup variant 4 "Rule with label").** A `::after`
+  pseudo-element on the editor element (`.note-body`) draws a 1px Border-colour rule with
+  END in the middle just below the last block. CSS only, so it is never in the note's
+  content, saves, backups or copies; `pointer-events: none` keeps clicks below the text
+  placing the caret at the end as before. No toggle. Hidden in the `@media print` block.
+  Tests: `tests/component/end-marker.test.tsx`, `e2e/specs/end-marker.spec.ts`.
