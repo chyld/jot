@@ -173,7 +173,7 @@ a.rail-new, a.btn { text-decoration: none; }
 .note-status .note-dates { flex-shrink: 1; min-width: 0; margin-left: auto; display: flex; gap: 0.3em; overflow: hidden; }
 .note-created { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 @container (max-width: 560px) { .note-created { display: none; } }
-@media print { .wrap-marker, .note-status { display: none; } }
+/* Printing (Save as PDF) is at the end of this file. */
 
 /* tag input */
 .tag-input { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; }
@@ -480,3 +480,25 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .section-delete { margin-right: auto; }
 .section-delete-confirm { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .section-new { display: grid; place-items: center; border: 1px dashed var(--border); background: transparent; min-height: 140px; }
+
+/* ---------------------------------------------------------------- print (Save as PDF)
+   Only the note prints: its title and body, on white pages. Everything else is hidden,
+   and the app's fixed heights and scrolling are undone so a long note runs over as many
+   pages as it needs instead of being cut off after one. Last in the file so it wins. */
+@page { margin: 18mm; }
+@media print {
+  html, body, #root, .app, .main, .note-pane, .note-pane.full, .note, .note-page, .note-scroll { display: block; height: auto; min-height: 0; overflow: visible; }
+  html, body, .main, .note-pane, .note-header { background: #fff; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* highlights, text colours, photo borders, code blocks */
+  .rail, .toolbar-wrap, .note-status, .wrap-marker, .banner, .readonly-confirm, .modal-backdrop, .rail-error,
+  .note-header > :not(.note-title), .jot-photo-handle, .note-body .column-resize-handle { display: none !important; }
+  .note-header { display: block; padding: 0 0 12px; }
+  .note-title { display: block; width: 100%; max-width: none; padding: 0; }
+  .note-content { padding: 0; }
+  .inv-space::after, .inv-tab::after, .inv-para::after, .inv-break::after, .note-body .empty-line::after { content: none; }
+  .note-body .selectedCell::after { content: none; }
+  .jot-photo.is-selected img { outline: none; }
+  .note-body .tableWrapper { overflow: visible; }
+  .jot-photo, .note-body tr, .note-body pre { break-inside: avoid; }
+  .note-body h1, .note-body h2, .note-body h3 { break-after: avoid; }
+}

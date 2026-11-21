@@ -16,6 +16,7 @@ import { useData } from '../data';
 import { jotExtensions } from '../editor/extensions';
 import { pasteProps, PHOTO_TYPE_MESSAGE, PHOTO_TYPES } from '../editor/paste';
 import { currentFormat } from '../editor/stamp';
+import { printNote } from '../editor/print';
 import { Toolbar } from '../editor/Toolbar';
 import { takeNewNote } from '../newNotes';
 import { homeHref, navigate } from '../router';
@@ -136,6 +137,13 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Could not make the note read-only.');
     }
+  };
+
+  // Save as PDF: what was typed is saved first (as for the other buttons), then the
+  // browser's print dialog opens with the note's title as the suggested file name.
+  const saveAsPdf = async () => {
+    await autosave.flush();
+    await printNote(title, editor?.view.dom ?? null);
   };
 
   const saveSelectionAsStyle = (ed: Editor) => {
@@ -348,6 +356,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           onPickImage={(f) => void pickImage(f)}
           readOnly={readOnly}
           onMakeReadOnly={makeReadOnly}
+          onSaveAsPdf={() => void saveAsPdf()}
         />
       )}
       <div className="note-page">

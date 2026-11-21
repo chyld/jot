@@ -961,3 +961,13 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   edited counts from the top. A note no longer in the list at the click does nothing.
   Tests: `tests/component/note-nav.test.tsx`, `e2e/specs/note-nav.spec.ts`, and the home
   order is pinned in `tests/api/notes.test.ts`.
+- **Save as PDF (owner request).** A toolbar button just left of the lock calls the
+  browser's own `window.print()`; the user picks "Save as PDF" in the print dialog. No
+  server-side renderer or PDF library (no new dependency, no image change), and the PDF
+  is the page as the browser already draws it: the user's fonts, colours, photos and
+  tables, with selectable text. The click saves pending edits (`autosave.flush()`), waits
+  for `document.fonts.ready` and the note's photos, and sets `document.title` to the note
+  title while the dialog is open (the suggested file name), restoring it afterwards. The
+  `@media print` block at the end of `styles.css` hides everything but the title and body
+  and undoes the app's fixed heights and scrolling so long notes run over many pages.
+  Tests: `tests/component/save-pdf.test.tsx`, `e2e/specs/save-pdf.spec.ts`.

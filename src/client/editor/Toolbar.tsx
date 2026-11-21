@@ -28,6 +28,7 @@ import {
   Undo2,
   Heading,
   SeparatorHorizontal,
+  FileDown,
   Lock,
   LockOpen,
   RemoveFormatting,
@@ -605,6 +606,8 @@ export interface ToolbarProps {
   readOnly?: boolean;
   /** Shows the read-only toggle at the end; called after the in-page confirmation. */
   onMakeReadOnly?: () => Promise<void> | void;
+  /** Shows Save as PDF (just left of the lock): opens the browser's print dialog for the note. */
+  onSaveAsPdf?: () => void;
 }
 
 /** Shows spaces, tabs and line ends. It changes nothing, so it stays enabled on read-only notes. */
@@ -718,6 +721,15 @@ export function Toolbar(props: ToolbarProps) {
           <InvisiblesToggle editor={editor} />
           <EmptyLinesToggle editor={editor} />
         </div>
+        {props.onSaveAsPdf && (
+          <>
+            <span className="tb-sep" />
+            {/* Changes nothing, so it works on read-only notes too. */}
+            <ToolButton label="Save as PDF" alwaysEnabled onClick={props.onSaveAsPdf}>
+              <FileDown size={ICON} />
+            </ToolButton>
+          </>
+        )}
         {props.onMakeReadOnly && (
           <>
             <span className="tb-sep" />

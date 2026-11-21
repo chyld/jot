@@ -265,7 +265,7 @@ test('empty lines show a gutter dot on demand, right after the pilcrow, and neve
   const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
   const labels = await toolbar.getByRole('button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
   const i = labels.indexOf('Show spaces, tabs and line ends');
-  expect(labels.slice(i, i + 3)).toEqual(['Show spaces, tabs and line ends', 'Show empty lines', 'Make read-only']);
+  expect(labels.slice(i, i + 3)).toEqual(['Show spaces, tabs and line ends', 'Show empty lines', 'Save as PDF']);
   const toggle = toolbar.getByRole('button', { name: 'Show empty lines' });
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await toggle.click();
