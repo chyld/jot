@@ -1,9 +1,22 @@
 // Section rules (sections-spec.md §1), shared by the server (authoritative) and the
 // Sections page. A section's ID follows the tag rules; its name is what the interface
-// shows; its colour is one of six names (the client's theme.ts holds their values).
+// shows; its colour is one of twelve names (the client's theme.ts holds their values).
 import { normalizeTag } from './tags';
 
-export const SECTION_COLOURS = ['olive', 'blue', 'violet', 'amber', 'teal', 'slate'] as const;
+export const SECTION_COLOURS = [
+  'olive',
+  'forest',
+  'teal',
+  'cyan',
+  'blue',
+  'indigo',
+  'violet',
+  'plum',
+  'crimson',
+  'terracotta',
+  'amber',
+  'slate',
+] as const;
 export type SectionColour = (typeof SECTION_COLOURS)[number];
 
 /** Every user has this section, created with the account. It cannot be deleted (every other section can). */

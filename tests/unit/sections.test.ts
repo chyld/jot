@@ -30,9 +30,23 @@ describe('section names', () => {
 });
 
 describe('colours', () => {
-  it('are the six, with no rose or pink', () => {
-    expect(SECTION_COLOURS).toEqual(['olive', 'blue', 'violet', 'amber', 'teal', 'slate']);
+  it('are the twelve, with no rose or pink', () => {
+    expect(SECTION_COLOURS).toEqual([
+      'olive',
+      'forest',
+      'teal',
+      'cyan',
+      'blue',
+      'indigo',
+      'violet',
+      'plum',
+      'crimson',
+      'terracotta',
+      'amber',
+      'slate',
+    ]);
     expect(isSectionColour('teal')).toBe(true);
+    expect(isSectionColour('terracotta')).toBe(true);
     for (const v of ['pink', 'rose', 'Olive', '', null]) expect(isSectionColour(v)).toBe(false);
   });
   it('each have the same eight values, and Olive is today’s theme', () => {

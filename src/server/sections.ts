@@ -20,7 +20,7 @@ export class SectionError extends Error {
   }
 }
 
-const COLOUR_ERROR = 'Choose one of the six colours.';
+const COLOUR_ERROR = 'Choose one of the twelve colours.';
 
 /** Gives a user their Default section (new accounts and the upgrade). */
 export function addDefaultSection(db: DB, userId: string, at: string) {
