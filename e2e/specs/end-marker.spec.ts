@@ -46,10 +46,10 @@ test('the END marker sits just below the last line, moves down with new lines, i
   expect(before.bottom - before.lastBottom).toBeGreaterThan(18);
   expect(before.bottom - before.lastBottom).toBeLessThan(40);
   expect(before.text).not.toContain('END');
-  // The right edge of the text is the margin marker.
-  const right = await body(page).evaluate((el) => el.getBoundingClientRect().right);
-  const wrap = await page.getByTestId('wrap-marker').evaluate((el) => el.getBoundingClientRect().left);
-  expect(Math.abs(right - wrap)).toBeLessThan(2);
+  // The text has equal left and right margins inside the pane.
+  const pane = (await page.locator('.note-pane').boundingBox())!;
+  const editorBox = (await body(page).boundingBox())!;
+  expect(Math.abs((editorBox.x - pane.x) - (pane.x + pane.width - (editorBox.x + editorBox.width)))).toBeLessThan(2);
 
   // Clicking below the text (on the marker's row) still puts the caret at the end.
   const box = (await body(page).boundingBox())!;

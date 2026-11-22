@@ -101,7 +101,7 @@ test('Ctrl+click opens a link in a new tab, a plain click edits it; a typed web 
   await (await tab3).close();
 });
 
-test('the writing area fills the window, with a fixed right margin marker where lines wrap', async ({ page }) => {
+test('the writing area fills the window with equal left and right margins and no wrap marker', async ({ page }) => {
   await login(page, 'alice');
   await newNote(page, `Wide ${uniq()}`);
   const words = Array.from({ length: 400 }, (_, i) => `word${i}`).join(' ');
@@ -110,54 +110,33 @@ test('the writing area fills the window, with a fixed right margin marker where 
   const check = async () => {
     const pane = (await page.locator('.note-pane').boundingBox())!;
     const content = (await page.locator('.note-content').boundingBox())!;
+    const editorBox = (await body(page).boundingBox())!;
     expect(Math.round(content.width)).toBe(Math.round(pane.width)); // no narrower centred column
-    const marker = page.getByTestId('wrap-marker');
-    await expect(marker.locator('.wrap-marker-line')).toBeVisible();
-    const line = (await marker.locator('.wrap-marker-line').boundingBox())!;
-    const tri = (await marker.locator('.wrap-marker-triangle').boundingBox())!;
-    const toolbar = (await page.getByRole('toolbar', { name: 'Formatting' }).boundingBox())!;
-    // Line: 1px, full height of the writing area, near the right edge with a gutter beyond it.
-    expect(Math.round(line.width)).toBe(1);
-    expect(line.x).toBeLessThan(pane.x + pane.width - 24);
-    expect(line.x).toBeGreaterThan(pane.x + pane.width - 80);
-    expect(Math.abs(line.y - (toolbar.y + toolbar.height))).toBeLessThan(2);
-    // ... down to the status line, which sits at the bottom of the pane below the writing area.
+    await expect(page.getByTestId('wrap-marker')).toHaveCount(0);
+    // Equal left and right margins for the text.
+    const leftMargin = editorBox.x - pane.x;
+    const rightMargin = pane.x + pane.width - (editorBox.x + editorBox.width);
+    expect(Math.abs(leftMargin - rightMargin)).toBeLessThan(1.5);
+    expect(Math.round(leftMargin)).toBe(32);
+    // The status line sits at the bottom of the pane below the writing area.
     const status = (await page.getByLabel('Note status').boundingBox())!;
-    expect(Math.abs(line.y + line.height - status.y)).toBeLessThan(2);
     expect(Math.abs(status.y + status.height - (pane.y + pane.height))).toBeLessThan(2);
-    // The triangle sits on the line just under the toolbar.
-    expect(Math.abs(tri.x + tri.width / 2 - (line.x + 0.5))).toBeLessThan(1.5);
-    expect(Math.abs(tri.y - (toolbar.y + toolbar.height))).toBeLessThan(2);
-    // Text wraps exactly at the line: the longest line ends just before it.
+    // Text wraps within the right margin.
     const right = await body(page).locator('p').first().evaluate((el) => {
       const r = document.createRange();
       r.selectNodeContents(el);
       return Math.max(...Array.from(r.getClientRects()).map((x) => x.right));
     });
-    expect(right).toBeLessThanOrEqual(line.x + 0.5);
-    expect(right).toBeGreaterThan(line.x - 70);
-    return line;
+    expect(right).toBeLessThanOrEqual(editorBox.x + editorBox.width + 0.5);
+    expect(right).toBeGreaterThan(editorBox.x + editorBox.width - 70);
+    return editorBox;
   };
   const wide = await check();
-  await expect(page.getByTestId('wrap-marker').locator('.wrap-marker-line')).toHaveCSS('background-color', 'rgb(224, 232, 205)'); // the border colour #e0e8cd (sections-spec.md §5)
-  await expect(page.getByTestId('wrap-marker').locator('.wrap-marker-triangle')).toHaveCSS('border-top-color', 'rgb(77, 124, 15)');
-  await expect(page.getByTestId('wrap-marker')).toHaveCSS('pointer-events', 'none');
-  await expect(page.getByTestId('wrap-marker')).toHaveCSS('user-select', 'none');
-  expect(await page.locator('.ProseMirror [data-testid="wrap-marker"]').count()).toBe(0); // not part of the note
-  await page.screenshot({ path: 'test-results/screens/wrap-marker.png' });
-
-  // It stays put while the note scrolls.
-  await page.locator('.note-scroll').hover();
-  await page.mouse.wheel(0, 1500);
-  await expect.poll(() => page.locator('.note-scroll').evaluate((el) => el.scrollTop)).toBeGreaterThan(500);
-  const afterScroll = (await page.getByTestId('wrap-marker').locator('.wrap-marker-line').boundingBox())!;
-  expect(afterScroll.x).toBe(wide.x);
-  expect(afterScroll.y).toBe(wide.y);
 
   // The width tracks the window.
   await page.setViewportSize({ width: 1000, height: 800 });
   const narrow = await check();
-  expect(narrow.x).toBeLessThan(wide.x - 300);
+  expect(narrow.width).toBeLessThan(wide.width - 300);
   await page.setViewportSize({ width: 1440, height: 900 });
   expect(JSON.stringify(await saved(page))).not.toMatch(/marker/);
 });

@@ -30,7 +30,6 @@ test('Save as PDF prints only the note, over as many pages as it needs', async (
   await expect(toolbar).toBeHidden();
   await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden();
   await expect(page.getByLabel('Note status')).toBeHidden();
-  await expect(page.getByTestId('wrap-marker')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Move to trash' })).toBeHidden();
   await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
   await expect(body(page)).toBeVisible();

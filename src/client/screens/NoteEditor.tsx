@@ -371,11 +371,6 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
         <div className="note-scroll">
           <EditorContent editor={editor} className="note-content" />
         </div>
-        {/* The right margin: where lines wrap. Outside the editor, so never part of the note. */}
-        <div className="wrap-marker" data-testid="wrap-marker" aria-hidden="true">
-          <span className="wrap-marker-line" />
-          <span className="wrap-marker-triangle" />
-        </div>
       </div>
       {/* One row under the writing area: the note's size, how the save is going and its dates. */}
       <footer className="note-status" aria-label="Note status">
