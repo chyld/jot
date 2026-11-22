@@ -445,13 +445,14 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 /* Empty lines (display only: a CSS dot in the left gutter on an empty paragraph or heading). */
 .note-body .empty-line { position: relative; }
 .note-body .empty-line::after { content: ''; position: absolute; left: -18px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: #9aa588; pointer-events: none; user-select: none; }
-/* End of note: a thin rule with END in the middle, just below the last line, across the
-   text width. Drawn by CSS on the editor element, so it is never part of the note, and it
-   lets clicks through to the body so clicking below the text still puts the caret at the end. */
+/* End of note: a thin rule with END in the middle, just below the last line, spanning half
+   the text width (halfway from END to each edge). Drawn by CSS on the editor element, so it
+   is never part of the note, and it lets clicks through to the body so clicking below the
+   text still puts the caret at the end. */
 .note-body::after {
   content: 'END'; display: block; clear: both; margin-top: 12px; padding-left: 0.18em; text-align: center;
   font: 600 10px/12px Inter, system-ui, sans-serif; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
-  background: linear-gradient(to right, var(--border) calc(50% - 24px), transparent calc(50% - 24px), transparent calc(50% + 24px), var(--border) calc(50% + 24px)) center / 100% 1px no-repeat;
+  background: linear-gradient(to right, var(--border) calc(50% - 24px), transparent calc(50% - 24px), transparent calc(50% + 24px), var(--border) calc(50% + 24px)) center / 50% 1px no-repeat;
   pointer-events: none; user-select: none;
 }
 
