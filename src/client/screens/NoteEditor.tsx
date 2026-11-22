@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Bot, Check, ArrowLeft, ArrowRight, Lock, RotateCcw, Trash2 } from 'lucide-react';
+import { Bot, Check, ArrowLeft, ArrowRight, Lock, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { useAutosave, type SaveStatus } from '../autosave';
 import { useNow } from '../components/NoteCard';
+import { NewNoteLink } from '../components/NewNoteLink';
 import { blankStyle, StyleDialog } from '../components/StyleDialog';
 import { NoteSection } from '../components/NoteSection';
 import { RailToggleButton } from '../components/Sidebar';
@@ -230,7 +231,12 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   return (
     <article className="note" aria-label="Note" data-note-id={note.id}>
       <header className="note-header">
-        <RailToggleButton />
+        <div className="note-header-actions">
+          <RailToggleButton />
+          <NewNoteLink className="rail-toggle-btn" label="New note" bump={bumpNotes} onError={setMessage}>
+            <Plus size={18} />
+          </NewNoteLink>
+        </div>
         <input
           className="note-title"
           spellCheck={false}

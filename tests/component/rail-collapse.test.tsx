@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RailProvider, RailToggleButton, Sidebar } from '../../src/client/components/Sidebar';
 import { DataProvider } from '../../src/client/data';
+import { NoteEditor } from '../../src/client/screens/NoteEditor';
 import { FONTS } from './setup';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -17,6 +18,25 @@ beforeEach(() => {
       if (url === '/api/styles') return json({ styles: [] });
       if (url === '/api/inbox') return json({ notes: [] });
       if (url === '/api/sections') return json({ sections: [{ id: 'general', name: 'General', theme: 'olive', sortOrder: 0, noteCount: 0 }] });
+      if (url === '/api/notes?section=general') return json({ notes: [] });
+      if (url === '/api/notes/note-1') {
+        return json({
+          note: {
+            id: 'note-1',
+            title: 'Test',
+            preview: '',
+            tags: [],
+            createdAt: '2026-11-21T10:00:00Z',
+            updatedAt: '2026-11-21T10:00:00Z',
+            deletedAt: null,
+            readOnly: false,
+            inbox: false,
+            botName: null,
+            section: 'general',
+            content: { type: 'doc', content: [{ type: 'paragraph' }] },
+          },
+        });
+      }
       return json({ error: 'unexpected' }, 500);
     }),
   );
@@ -75,5 +95,22 @@ describe('collapsible left rail', () => {
     fireEvent.keyDown(window, { key: '\\', ctrlKey: true });
     expect(nav.classList.contains('is-collapsed')).toBe(true);
     expect(localStorage.getItem('jot.railCollapsed')).toBe('1');
+  });
+
+  it('places the New note (+) button right of the collapse button and left of the title in NoteEditor', async () => {
+    render(
+      <DataProvider user={{ id: 'u1', username: 'bob' }} onLogout={() => {}}>
+        <RailProvider>
+          <NoteEditor noteId="note-1" onTrashed={() => {}} />
+        </RailProvider>
+      </DataProvider>,
+    );
+    await screen.findByLabelText('Note status');
+    const header = document.querySelector('header.note-header') as HTMLElement;
+    const collapseBtn = within(header).getByRole('button', { name: 'Collapse sidebar' });
+    const newBtn = within(header).getByRole('button', { name: 'New note' });
+    const title = within(header).getByLabelText('Title');
+    expect(collapseBtn.compareDocumentPosition(newBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(newBtn.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
