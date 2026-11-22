@@ -192,6 +192,7 @@ a.rail-new, a.btn { text-decoration: none; }
 .tag-error { color: var(--danger); font-size: 12.5px; max-width: 320px; }
 
 /* ---------------------------------------------------------------- toolbar */
+.toolbar-toggle-btn { display: none; }
 .toolbar-wrap { position: relative; z-index: 5; }
 .toolbar { background: var(--toolbar); color: var(--toolbar-text); border-bottom: 1px solid var(--toolbar-border); display: flex; align-items: center; gap: 2px; padding: 6px 12px; flex-wrap: wrap; }
 .tb-group { display: flex; align-items: center; gap: 2px; }
@@ -493,6 +494,35 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .section-delete { margin-right: auto; }
 .section-delete-confirm { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .section-new { display: grid; place-items: center; border: 1px dashed var(--border); background: transparent; min-height: 140px; }
+
+/* ---------------------------------------------------------------- mobile (phones)
+   Collapse the formatting toolbar by default behind an Aa toggle pill in the note header,
+   and tighten spacing so the editor stays spacious on narrow viewports. */
+@media (max-width: 768px) {
+  .note-header { padding: 8px 12px; gap: 8px; }
+  .note-title { font-size: 20px; }
+  .note-meta { gap: 6px; }
+  .note-content { padding: 20px 20px 80px 20px; }
+  .toolbar-toggle-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 32px; min-width: 38px; padding: 0 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--toolbar); color: var(--accent-dark);
+    font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .toolbar-toggle-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .toolbar-toggle-btn.is-open { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .toolbar-wrap { display: none; }
+  .toolbar-wrap.is-mobile-open { display: block; }
+  .toolbar { padding: 6px 8px; gap: 2px; }
+  .tb-sep { display: none; }
+  .tb-btn { height: 32px; min-width: 28px; }
+  .tb-select { padding: 0 7px; font-size: 13.5px; }
+  .tb-styles { width: 108px; }
+  .tb-font { width: 112px; }
+  .tb-size-input { width: 40px; height: 32px; font-size: 14px; }
+  .menu-styles, .menu-fonts { width: min(280px, calc(100vw - 24px)); }
+}
 
 /* ---------------------------------------------------------------- print (Save as PDF)
    Only the note prints: its title and body, on white pages. Everything else is hidden,

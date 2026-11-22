@@ -608,6 +608,8 @@ export interface ToolbarProps {
   onMakeReadOnly?: () => Promise<void> | void;
   /** Shows Save as PDF (just left of the lock): opens the browser's print dialog for the note. */
   onSaveAsPdf?: () => void;
+  /** On narrow/phone screens, whether the collapsible toolbar is currently expanded. */
+  mobileOpen?: boolean;
 }
 
 /** Shows spaces, tabs and line ends. It changes nothing, so it stays enabled on read-only notes. */
@@ -691,7 +693,7 @@ export function Toolbar(props: ToolbarProps) {
   }) as { inTable: boolean; photo: boolean };
   return (
     <ToolbarDisabled.Provider value={readOnly}>
-    <div className="toolbar-wrap">
+    <div className={`toolbar-wrap${props.mobileOpen ? ' is-mobile-open' : ''}`}>
       <div className="toolbar" role="toolbar" aria-label="Formatting">
         <StylesDropdown editor={editor} styles={props.styles} onSaveSelection={props.onSaveSelectionAsStyle} onManage={props.onManageStyles} />
         <span className="tb-sep" />

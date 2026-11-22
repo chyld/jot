@@ -92,6 +92,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   const [title, setTitle] = useState(restored?.title ?? note.title);
   const [styleDraft, setStyleDraft] = useState<StyleInput | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [mobileToolbarOpen, setMobileToolbarOpen] = useState(false);
 
   // A pasted image goes through the same upload as Insert → Image (set below, once pickImage exists).
   const pasteFile = useRef<(file: File) => void>(() => {});
@@ -272,6 +273,19 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
         />
         <NoteSection section={note.section} disabled={locked} onMove={(s) => void moveTo(s)} />
         <div className="note-meta">
+          {editor && !trashed && (
+            <button
+              type="button"
+              className={`toolbar-toggle-btn${mobileToolbarOpen ? ' is-open' : ''}`}
+              aria-label="Formatting toolbar"
+              aria-expanded={mobileToolbarOpen}
+              title={mobileToolbarOpen ? 'Hide formatting toolbar' : 'Show formatting toolbar'}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setMobileToolbarOpen((v) => !v)}
+            >
+              Aa
+            </button>
+          )}
           {note.inbox && !trashed && !readOnly && (
             <button
               type="button"
@@ -365,6 +379,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           readOnly={readOnly}
           onMakeReadOnly={makeReadOnly}
           onSaveAsPdf={() => void saveAsPdf()}
+          mobileOpen={mobileToolbarOpen}
         />
       )}
       <div className="note-page">

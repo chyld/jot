@@ -141,6 +141,31 @@ test('the writing area fills the window with equal left and right margins and no
   expect(JSON.stringify(await saved(page))).not.toMatch(/marker/);
 });
 
+test('on phone viewports the formatting toolbar collapses behind an Aa toggle pill in the header', async ({ page }) => {
+  await login(page, 'alice');
+  await newNote(page, `Mobile ${uniq()}`);
+  const toggle = page.getByRole('button', { name: 'Formatting toolbar' });
+  const toolbar = page.getByRole('toolbar', { name: 'Formatting' });
+
+  // Desktop: toolbar visible, mobile toggle hidden.
+  await expect(toggle).toBeHidden();
+  await expect(toolbar).toBeVisible();
+
+  // Phone viewport: toolbar collapsed by default, toggle visible.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toolbar).toBeHidden();
+
+  // Tap Aa to expand, tap again to collapse.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(toolbar).toBeVisible();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toolbar).toBeHidden();
+});
+
 test('no element shows a vertical scrollbar, yet long notes, lists and menus still scroll', async ({ page }) => {
   await login(page, 'alice');
   const scrollbars = () =>
