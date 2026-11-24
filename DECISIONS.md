@@ -1013,3 +1013,41 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   the sidebar expanded or collapsed), and hidden by the existing `@media print` rules.
   Pending edits are flushed by `useAutosave`'s unmount cleanup when leaving the note.
   Tests: `tests/component/back-to-notes.test.tsx`, `e2e/specs/back-to-notes.spec.ts`.
+- **Style buttons (owner request).** Ten fixed per-user toolbar shortcuts (numbered 1–10,
+  coloured in order from `PALETTE[slot - 1].text` in `src/shared/palette.ts`).
+  - **Schema v8 (`style_buttons`).** Keyed by `(user_id, slot)` with `slot CHECK (1..10)`,
+    `style_id REFERENCES styles(id) ON DELETE SET NULL`, `hidden INTEGER NOT NULL DEFAULT 0`,
+    and `user_id REFERENCES users(id) ON DELETE CASCADE`. Stored sparsely: a missing row
+    means unbound and shown (no backfill needed for existing users), and updating a slot back
+    to unbound + shown deletes its row. Deleting a style clears bindings via `ON DELETE SET NULL`.
+  - **API (`src/server/buttons.ts`, `src/server/app.ts`).** `GET /api/buttons` returns all ten
+    slots in order 1–10; `PATCH /api/buttons/:slot` validates the slot (strict integer 1–10)
+    and patch body (`styleId` and/or `hidden`, refusing unknown fields/types via shared
+    `src/shared/buttons.ts`) and verifies ownership of `styleId` (another user's style ID
+    returns the same 400 "Choose one of your styles." as a non-existent one).
+  - **Backup format 5 (`src/server/backup/personal.ts`).** `data.json` adds `buttons`: ten
+    entries `{ slot, styleId, defaultStyle, hidden }`. User styles are referenced by ID (remapped
+    to new IDs on restore); default styles are referenced by standard name (`Body`..`Code`) so
+    bindings survive restores across accounts and never collide with a user style of the same
+    name. Older backups (versions 1–4) restore with all ten buttons unbound and shown. Full
+    system backups (`jot.db`) carry `style_buttons` automatically.
+  - **Client.** `ButtonsScreen` at `/buttons` (reached from a "Buttons" link in `Sidebar`
+    between Styles and Account, `LayoutGrid` icon), synced through `DataProvider` so changes
+    appear in the editor toolbar without reload (and deleting a style on `/styles` reloads
+    buttons too). Every slot shows its chip (outlined when unbound), style picker previewed in
+    each style's look plus "No style", and an eye toggle (faded with crossed-out eye when
+    hidden); no delete control. In `Toolbar.tsx`, `StyleButtonGroup` sits immediately after
+    Link (absent with its separator when no button is bound and shown), disabled wherever
+    `ToolbarDisabled` is true, and uses `.tb-style-btn` (separate from `.tb-btn`) so the in-use
+    state renders only the 3 px rounded underline in the button's colour (no filled background).
+    `uniformFormat(editor)` in `src/client/editor/stamp.ts` walks all text nodes overlapping a
+    non-empty selection and returns `null` when style-relevant marks differ across the selection
+    (or no text is selected), ensuring no button is underlined on mixed formatting.
+  - **Tests.** `tests/unit/buttons.test.ts`, `tests/db/migration-v8.test.ts` (against
+    `tests/fixtures/jot-v7.db`), `tests/api/buttons.test.ts`,
+    `tests/isolation/buttons-isolation.test.ts`, `tests/component/buttons.test.tsx`,
+    `e2e/specs/buttons.spec.ts`, plus updates to `tests/api/backup.test.ts`,
+    `tests/api/sections.test.ts`, `tests/cli/backup-cli.test.ts`,
+    `tests/security/security.test.ts`, `tests/security/backup-security.test.ts`,
+    `tests/db/migration-v7.test.ts`, `tests/db/restore-crash.test.ts`,
+    `tests/helpers/backup.ts`, and `tests/component/backup.test.tsx`.

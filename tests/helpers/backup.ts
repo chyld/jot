@@ -60,6 +60,36 @@ export function accountSnapshot(db: DB, dataDir: string, userId: string) {
   const styles = (
     db.prepare('SELECT s.*, f.family FROM styles s JOIN fonts f ON f.id = s.font_id WHERE s.user_id = ?').all(userId) as any[]
   ).map(({ id: _id, user_id: _u, font_id: _f, ...rest }) => rest);
+  const buttons = (
+    db
+      .prepare(
+        `SELECT b.slot, b.hidden, s.name, s.is_default, f.family, s.size, s.bold, s.italic, s.underline, s.strike, s.text_color, s.highlight
+         FROM style_buttons b
+         LEFT JOIN styles s ON s.id = b.style_id
+         LEFT JOIN fonts f ON f.id = s.font_id
+         WHERE b.user_id = ?
+         ORDER BY b.slot`,
+      )
+      .all(userId) as any[]
+  ).map((r) => ({
+    slot: r.slot,
+    hidden: !!r.hidden,
+    style:
+      r.name === null
+        ? null
+        : {
+            name: r.name,
+            isDefault: !!r.is_default,
+            family: r.family,
+            size: r.size,
+            bold: !!r.bold,
+            italic: !!r.italic,
+            underline: !!r.underline,
+            strike: !!r.strike,
+            textColor: r.text_color,
+            highlight: r.highlight,
+          },
+  }));
   const tags = (db.prepare('SELECT name FROM tags WHERE user_id = ? ORDER BY name').all(userId) as any[]).map((t) => t.name);
   const fts = (db.prepare('SELECT title, body, tags FROM notes_fts WHERE user_id = ?').all(userId) as any[]).map((r) => ({ ...r }));
   const sortBy = <T>(xs: T[]) => xs.map((x) => JSON.stringify(x)).sort();
@@ -68,6 +98,7 @@ export function accountSnapshot(db: DB, dataDir: string, userId: string) {
     photos: sortBy(photos.map((p) => ({ mime: p.mime, size: p.size, name: p.original_name, createdAt: p.created_at, sha: fileSha(join(udir, 'photos', p.id)) }))),
     fonts: sortBy(fonts),
     styles: sortBy(styles),
+    buttons: sortBy(buttons),
     tags,
     fts: sortBy(fts),
   };

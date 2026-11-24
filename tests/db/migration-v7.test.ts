@@ -37,8 +37,8 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 it('gives every user a Default section holding every note, tags intact; nothing else changes', () => {
   const db = openDatabase(file);
-  expect(SCHEMA_VERSION).toBe(7);
-  expect(db.pragma('user_version', { simple: true })).toBe(7);
+  expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(7);
+  expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
   const users = db.prepare('SELECT id, created_at FROM users ORDER BY id').all() as any[];
   const sections = db.prepare('SELECT * FROM sections ORDER BY user_id').all();
   expect(sections).toEqual(users.map((u) => ({ user_id: u.id, id: 'default', name: 'Default', colour: 'olive', created_at: u.created_at })));

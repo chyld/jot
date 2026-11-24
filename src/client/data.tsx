@@ -2,6 +2,7 @@
 // screens bump when the notes list should reload. It also loads the user's sections into
 // the current-section store and colours the interface in the current section's colour.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { defaultStyleButtons, type ButtonSlot, type StyleButton, type StyleButtonPatch } from '../shared/buttons';
 import type { Style } from '../shared/styles';
 import type { Font, User } from '../shared/types';
 import { api } from './api';
@@ -13,8 +14,11 @@ interface Data {
   user: User;
   fonts: Font[];
   styles: Style[];
+  buttons: StyleButton[];
   reloadFonts: () => Promise<void>;
   reloadStyles: () => Promise<void>;
+  reloadButtons: () => Promise<void>;
+  updateButton: (slot: ButtonSlot, patch: StyleButtonPatch) => Promise<StyleButton>;
   notesVersion: number;
   bumpNotes: () => void;
   /** How many notes are in the Inbox (simply a count; nothing tracks read or unread). */
@@ -67,6 +71,7 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
   useEffect(() => clearTheme, []); // logging out: the login page is always Olive
   const [fonts, setFonts] = useState<Font[]>([]);
   const [styles, setStyles] = useState<Style[]>([]);
+  const [buttons, setButtons] = useState<StyleButton[]>(defaultStyleButtons);
   const [fontsVersion, setFontsVersion] = useState(1);
   const [notesVersion, setNotesVersion] = useState(1);
   const [inboxCount, setInboxCount] = useState(0);
@@ -86,10 +91,23 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
     setFontsVersion((v) => v + 1);
   }, []);
   const reloadStyles = useCallback(async () => setStyles((await api.styles()).styles), []);
+  const reloadButtons = useCallback(async () => {
+    try {
+      setButtons((await api.buttons()).buttons ?? defaultStyleButtons());
+    } catch {
+      setButtons(defaultStyleButtons());
+    }
+  }, []);
+  const updateButton = useCallback(async (slot: ButtonSlot, patch: StyleButtonPatch) => {
+    const { button } = await api.updateButton(slot, patch);
+    setButtons((prev) => prev.map((b) => (b.slot === button.slot ? button : b)));
+    return button;
+  }, []);
   useEffect(() => {
     void reloadFonts();
     void reloadStyles();
-  }, [reloadFonts, reloadStyles]);
+    void reloadButtons();
+  }, [reloadFonts, reloadStyles, reloadButtons]);
   useFontStylesheet(fontsVersion);
 
   const logout = useCallback(async () => {
@@ -108,8 +126,11 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
         user: props.user,
         fonts,
         styles,
+        buttons,
         reloadFonts,
         reloadStyles,
+        reloadButtons,
+        updateButton,
         notesVersion,
         bumpNotes: () => setNotesVersion((v) => v + 1),
         inboxCount,

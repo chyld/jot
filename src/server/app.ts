@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
+import { parseButtonSlot, validateStyleButtonPatch } from '../shared/buttons';
 import { MAX_TITLE_LENGTH } from '../shared/constants';
 import { validateStyleInput } from '../shared/styles';
 import { isDefaultFont } from '../shared/starter';
@@ -43,6 +44,7 @@ import {
   type FontSourceConfig,
 } from './fonts';
 import { isId, newId } from './ids';
+import * as buttons from './buttons';
 import * as notes from './notes';
 import * as sections from './sections';
 import { burnPasswordCheck, verifyPassword } from './passwords';
@@ -704,6 +706,21 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const r = db.prepare('DELETE FROM styles WHERE id = ? AND user_id = ? AND is_default = 0').run(param(req, 'id'), uid(req));
     if (r.changes === 0) throw notFound('Style not found.');
     return reply.code(204).send();
+  });
+
+  // ---------------------------------------------------------------- style buttons
+  const buttonError = (e: unknown) => (e instanceof buttons.ButtonError ? new HttpError(e.status, e.message) : e);
+  app.get('/api/buttons', async (req) => ({ buttons: buttons.listButtons(db, uid(req)) }));
+  app.patch('/api/buttons/:slot', async (req) => {
+    const slot = parseButtonSlot((req.params as Record<string, string>).slot);
+    if (slot === null) throw bad('Button slot must be a whole number from 1 to 10.');
+    const r = validateStyleButtonPatch(req.body);
+    if (!r.ok) throw bad(r.error);
+    try {
+      return { button: buttons.updateButton(db, uid(req), slot, r.value) };
+    } catch (e) {
+      throw buttonError(e);
+    }
   });
 
   // ---------------------------------------------------------------- backup and restore

@@ -1,4 +1,4 @@
-import { Inbox, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, Plus, Tags, Type, UserRound } from 'lucide-react';
+import { Inbox, LayoutGrid, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, Plus, Tags, Type, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSections } from '../currentSection';
 import { useData } from '../data';
@@ -161,6 +161,9 @@ export function Sidebar(props: { path: string }) {
       </RailLink>
       <RailLink to="/styles" label="Styles" active={p === '/styles'}>
         <Paintbrush size={20} />
+      </RailLink>
+      <RailLink to="/buttons" label="Buttons" active={p === '/buttons'}>
+        <LayoutGrid size={20} />
       </RailLink>
       <RailLink to="/account" label="Account" active={p === '/account'}>
         <UserRound size={20} />

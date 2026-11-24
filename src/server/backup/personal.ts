@@ -15,6 +15,7 @@ import { link, mkdir, open, readdir, readFile, rm, stat, writeFile } from 'node:
 import { dirname, join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { isButtonSlot, STYLE_BUTTON_SLOTS, type ButtonSlot } from '../../shared/buttons';
 import { MAX_TITLE_LENGTH } from '../../shared/constants';
 import { validateStyleInput } from '../../shared/styles';
 import { DEFAULT_SECTION_ID, isSectionColour, normalizeSectionId, normalizeSectionName, type SectionColour } from '../../shared/sections';
@@ -25,7 +26,7 @@ import { fontsDir, photosDir, userDir, type JotContext } from '../context';
 import { syncDir, syncFile } from '../durable';
 import { FONT_FILE, isValidFamilyName, type FontFace } from '../fonts';
 import { isId, newId } from '../ids';
-import { ensureDefaultStyles } from '../defaultStyles';
+import { DEFAULT_STYLE_NAMES, ensureDefaultStyles } from '../defaultStyles';
 import { reindexNote } from '../notes';
 import { STARTER_STYLES } from '../starter';
 import { STARTER_FONT_FAMILIES } from '../../shared/starter';
@@ -43,7 +44,9 @@ export const PERSONAL_FORMAT = 'jot-personal-backup';
 // Format 3 added `inbox` and `botName` (older formats restore with every note outside the Inbox).
 // Format 4 added `sections` and each note's `section` (older formats restore with one
 // Default section holding every note).
-export const PERSONAL_VERSION = 4;
+// Format 5 added `buttons` (the ten style buttons, with default styles named by their
+// standard name so bindings survive restores; older formats restore unbound and shown).
+export const PERSONAL_VERSION = 5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------------------ what a backup holds
@@ -96,12 +99,21 @@ interface BStyle {
   createdAt: string;
   updatedAt: string;
 }
+interface BButton {
+  slot: ButtonSlot;
+  /** ID of a user-created style in data.styles, or null. */
+  styleId: string | null;
+  /** Name of one of the five default styles (Body, Title, Quote, Aside, Code), or null. */
+  defaultStyle: string | null;
+  hidden: boolean;
+}
 export interface PersonalData {
   sections: BSection[];
   notes: BNote[];
   photos: BPhoto[];
   fonts: BFont[];
   styles: BStyle[];
+  buttons: BButton[];
 }
 
 export interface Counts {
@@ -176,7 +188,30 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
       createdAt: s.created_at,
       updatedAt: s.updated_at,
     }));
-    return { sections, notes, photos, fonts, styles };
+    const buttonRows = new Map(
+      (
+        db
+          .prepare(
+            `SELECT b.slot, b.style_id, b.hidden, s.is_default, s.name AS style_name
+             FROM style_buttons b
+             LEFT JOIN styles s ON s.id = b.style_id AND s.user_id = b.user_id
+             WHERE b.user_id = ?`,
+          )
+          .all(userId) as Array<{ slot: number; style_id: string | null; hidden: number; is_default: number | null; style_name: string | null }>
+      ).map((r) => [r.slot, r]),
+    );
+    const buttons: BButton[] = STYLE_BUTTON_SLOTS.map((slot) => {
+      const r = buttonRows.get(slot);
+      if (!r) return { slot, styleId: null, defaultStyle: null, hidden: false };
+      const boundDefault = r.style_id !== null && r.is_default === 1;
+      return {
+        slot,
+        styleId: r.style_id !== null && !boundDefault ? r.style_id : null,
+        defaultStyle: boundDefault ? r.style_name : null,
+        hidden: r.hidden === 1,
+      };
+    });
+    return { sections, notes, photos, fonts, styles, buttons };
   })();
 }
 
@@ -453,6 +488,28 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
   // The default styles are rebuilt on the restored fonts, so the backup must have them.
   for (const family of STARTER_FONT_FAMILIES) if (!families.has(family)) fail(`it does not have the default font "${family}", which the default styles need.`);
 
+  // Style buttons (format 5). Older backups have none: buttons restore unbound and shown.
+  const ownStyleIds = new Set(styles.map((s) => s.id));
+  const buttons: BButton[] = [];
+  const seenSlots = new Set<number>();
+  if (manifest.version >= 5) {
+    if (!Array.isArray(raw.buttons) || raw.buttons.length > STYLE_BUTTON_SLOTS.length) {
+      fail('its data.json has no valid list of style buttons.');
+    }
+    for (const b of raw.buttons) {
+      if (!isObj(b) || !isButtonSlot(b.slot) || seenSlots.has(b.slot)) fail('a style button has an invalid or repeated slot.');
+      if (typeof b.hidden !== 'boolean') fail(`button ${b.slot} has an invalid hidden flag.`);
+      if (b.styleId !== null && (typeof b.styleId !== 'string' || !isId(b.styleId))) fail(`button ${b.slot} has an invalid style ID.`);
+      if (b.defaultStyle !== null && (typeof b.defaultStyle !== 'string' || !DEFAULT_STYLE_NAMES.includes(b.defaultStyle))) {
+        fail(`button ${b.slot} names an unknown default style.`);
+      }
+      if (b.styleId !== null && b.defaultStyle !== null) fail(`button ${b.slot} cannot name both a style and a default style.`);
+      if (b.styleId !== null && !ownStyleIds.has(b.styleId)) fail(`button ${b.slot} uses a style that is not in the backup.`);
+      seenSlots.add(b.slot);
+      buttons.push({ slot: b.slot, styleId: b.styleId, defaultStyle: b.defaultStyle, hidden: b.hidden });
+    }
+  }
+
   // Sections (format 4). Older backups have none: they restore with one Default section
   // holding every note.
   const sections: BSection[] = [];
@@ -557,7 +614,7 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
 
   return {
     summary: { createdAt: manifest.createdAt, counts, adjustedNotes: adjusted, missing: manifest.missing.map((m) => ({ name: m.name, what: m.what })) },
-    data: { sections, notes, photos, fonts, styles },
+    data: { sections, notes, photos, fonts, styles, buttons },
     present: [...seen.keys()],
   };
 }
@@ -764,6 +821,7 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
       .prepare('SELECT s.id, f.family FROM styles s JOIN fonts f ON f.id = s.font_id WHERE s.user_id = ? AND s.is_default = 1')
       .all(userId) as Array<{ id: string; family: string }>;
     db.pragma('defer_foreign_keys = ON'); // until the defaults point at the new fonts, below
+    db.prepare('DELETE FROM style_buttons WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM styles WHERE user_id = ? AND is_default = 0').run(userId);
     for (const t of ['notes_fts', 'note_tags', 'notes', 'tags', 'photos', 'fonts', 'sections']) {
       db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(userId);
@@ -781,8 +839,25 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
       `INSERT INTO styles (id, user_id, name, font_id, size, bold, italic, underline, strike, text_color, highlight, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
+    const styleMap = new Map<string, string>();
     for (const s of data.styles) {
-      insStyle.run(newId(), userId, s.name, fontMap.get(s.fontId), s.size, +s.bold, +s.italic, +s.underline, +s.strike, s.textColor, s.highlight, s.createdAt, s.updatedAt);
+      const id = newId();
+      styleMap.set(s.id, id);
+      insStyle.run(id, userId, s.name, fontMap.get(s.fontId), s.size, +s.bold, +s.italic, +s.underline, +s.strike, s.textColor, s.highlight, s.createdAt, s.updatedAt);
+    }
+    const defaultStyleIds = new Map(
+      (db.prepare('SELECT name, id FROM styles WHERE user_id = ? AND is_default = 1').all(userId) as Array<{ name: string; id: string }>).map((r) => [
+        r.name,
+        r.id,
+      ]),
+    );
+    const insButton = db.prepare('INSERT INTO style_buttons (user_id, slot, style_id, hidden) VALUES (?, ?, ?, ?)');
+    for (const b of data.buttons ?? []) {
+      const resolved =
+        b.defaultStyle !== null ? (defaultStyleIds.get(b.defaultStyle) ?? null) : b.styleId !== null ? (styleMap.get(b.styleId) ?? null) : null;
+      if (resolved !== null || b.hidden) {
+        insButton.run(userId, b.slot, resolved, b.hidden ? 1 : 0);
+      }
     }
     const tagIds = new Map<string, string>();
     const insTag = db.prepare('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)');

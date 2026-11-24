@@ -2,6 +2,7 @@
 // onto the text as plain formatting. Nothing links the text back to the style, so
 // editing or deleting the style later leaves existing text unchanged.
 import type { Editor } from '@tiptap/core';
+import type { Mark } from '@tiptap/pm/model';
 import { findPalette, highlightColorName, textColorName } from '../../shared/palette';
 import type { Style } from '../../shared/styles';
 
@@ -67,19 +68,70 @@ export function currentFormat(editor: Editor): CurrentFormat {
   };
 }
 
+/** True when a style's stamp matches the given formatting. */
+export function styleMatchesFormat(fmt: CurrentFormat, s: Style): boolean {
+  return (
+    fmt.fontFamily === s.fontFamily &&
+    fmt.size === s.size &&
+    fmt.bold === s.bold &&
+    fmt.italic === s.italic &&
+    fmt.underline === s.underline &&
+    fmt.strike === s.strike &&
+    fmt.textColor === (s.textColor ?? null) &&
+    fmt.highlight === (s.highlight ?? null)
+  );
+}
+
 /** The first style whose stamp matches the formatting at the cursor, if any. */
 export function matchingStyle(fmt: CurrentFormat, styles: Style[]): Style | null {
+  return styles.find((s) => styleMatchesFormat(fmt, s)) ?? null;
+}
+
+function formatFromMarks(marks: readonly Mark[]): CurrentFormat {
+  const ts = marks.find((m) => m.type.name === 'textStyle');
+  const hl = marks.find((m) => m.type.name === 'highlight');
+  const size = typeof ts?.attrs.fontSize === 'string' ? parseInt(ts.attrs.fontSize, 10) : NaN;
+  return {
+    fontFamily: unquoteFamily(ts?.attrs.fontFamily) || null,
+    size: Number.isFinite(size) ? size : null,
+    bold: marks.some((m) => m.type.name === 'bold'),
+    italic: marks.some((m) => m.type.name === 'italic'),
+    underline: marks.some((m) => m.type.name === 'underline'),
+    strike: marks.some((m) => m.type.name === 'strike'),
+    textColor: textColorName(ts?.attrs.color),
+    highlight: hl ? highlightColorName(hl.attrs.color) : null,
+  };
+}
+
+function sameFormat(a: CurrentFormat, b: CurrentFormat): boolean {
   return (
-    styles.find(
-      (s) =>
-        fmt.fontFamily === s.fontFamily &&
-        fmt.size === s.size &&
-        fmt.bold === s.bold &&
-        fmt.italic === s.italic &&
-        fmt.underline === s.underline &&
-        fmt.strike === s.strike &&
-        fmt.textColor === (s.textColor ?? null) &&
-        fmt.highlight === (s.highlight ?? null),
-    ) ?? null
+    a.fontFamily === b.fontFamily &&
+    a.size === b.size &&
+    a.bold === b.bold &&
+    a.italic === b.italic &&
+    a.underline === b.underline &&
+    a.strike === b.strike &&
+    a.textColor === b.textColor &&
+    a.highlight === b.highlight
   );
+}
+
+/**
+ * The formatting of the selection when every character in it shares the same style-relevant
+ * marks, or null when the selection has mixed formatting (or no text). At a collapsed caret,
+ * returns currentFormat(editor).
+ */
+export function uniformFormat(editor: Editor): CurrentFormat | null {
+  const { selection, doc } = editor.state;
+  if (selection.empty) return currentFormat(editor);
+  let common: CurrentFormat | null = null;
+  let mixed = false;
+  doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+    if (mixed || !node.isText) return;
+    if (Math.max(pos, selection.from) >= Math.min(pos + node.nodeSize, selection.to)) return;
+    const fmt = formatFromMarks(node.marks);
+    if (!common) common = fmt;
+    else if (!sameFormat(common, fmt)) mixed = true;
+  });
+  return mixed ? null : common;
 }

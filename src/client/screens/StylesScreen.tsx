@@ -68,7 +68,7 @@ export function StyleCard(props: { style: Style; onEdit: () => void; onDelete: (
 }
 
 export function StylesScreen() {
-  const { styles, fonts, reloadStyles } = useData();
+  const { styles, fonts, reloadStyles, reloadButtons } = useData();
   const [editing, setEditing] = useState<{ id: string | null; input: StyleInput } | null>(null);
   return (
     <div className="screen">
@@ -93,7 +93,7 @@ export function StylesScreen() {
             }
             onDelete={async () => {
               await api.deleteStyle(s.id);
-              await reloadStyles();
+              await Promise.all([reloadStyles(), reloadButtons()]);
             }}
           />
         ))}

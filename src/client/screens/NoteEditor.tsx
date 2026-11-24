@@ -70,7 +70,7 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
 }
 
 function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: Note) => void }) {
-  const { fonts, styles, reloadStyles, user, bumpNotes } = useData();
+  const { fonts, styles, buttons, reloadStyles, user, bumpNotes } = useData();
   const { current } = useSections();
   const note = props.note;
   // Opening a note makes its section current, and a moved note is followed to its new
@@ -394,6 +394,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           editor={editor}
           styles={styles}
           fonts={fonts}
+          buttons={buttons}
           onSaveSelectionAsStyle={() => saveSelectionAsStyle(editor)}
           onManageStyles={() => navigate('/styles')}
           onBrowseFonts={() => navigate('/fonts')}

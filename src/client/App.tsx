@@ -6,6 +6,7 @@ import { DataProvider, useData } from './data';
 import { createAndOpenNote } from './newNotes';
 import { match, navigate, useLocation } from './router';
 import { AccountScreen } from './screens/AccountScreen';
+import { ButtonsScreen } from './screens/ButtonsScreen';
 import { FontsScreen } from './screens/FontsScreen';
 import { InboxScreen } from './screens/InboxScreen';
 import { Login } from './screens/Login';
@@ -58,6 +59,7 @@ function Screen(props: { path: string; search: URLSearchParams }) {
   if (p === '/new') return <NewNoteScreen />;
   if (p === '/fonts') return <FontsScreen />;
   if (p === '/styles') return <StylesScreen />;
+  if (p === '/buttons') return <ButtonsScreen />;
   if (p === '/account') return <AccountScreen />;
   if (p === '/inbox') return <InboxScreen />;
   if (p === '/trash') return <TrashScreen />;

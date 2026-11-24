@@ -43,14 +43,15 @@ function makeVersion1(db: Database.Database) {
   db.exec('DROP INDEX IF EXISTS notes_bot_request');
   for (const c of ['inbox', 'bot_name', 'bot_request_id']) db.exec(`ALTER TABLE notes DROP COLUMN ${c}`);
   db.exec('DROP TABLE IF EXISTS bot_tokens');
+  db.exec('DROP TABLE IF EXISTS style_buttons');
   db.exec('ALTER TABLE notes DROP COLUMN section_id');
   db.exec('DROP TABLE IF EXISTS sections');
   db.exec('DROP TABLE IF EXISTS restore_files');
   db.pragma('user_version = 1');
 }
 
-// bot_tokens: full system backups carry the bots' tokens (agent-spec.md §2); sections ride along unchanged (sections-spec.md §8).
-const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'bot_tokens', 'sections'];
+// bot_tokens: full system backups carry the bots' tokens (agent-spec.md §2); sections and style_buttons ride along unchanged.
+const TABLES = ['users', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'bot_tokens', 'sections', 'style_buttons'];
 function dump(dbFile: string) {
   const db = new Database(dbFile, { readonly: true });
   const out: Record<string, unknown[]> = {};
@@ -87,6 +88,9 @@ beforeAll(async () => {
   }
   await alice.post('/api/fonts', { family: 'Roboto Slab' });
   expect((await alice.post('/api/bots', { name: 'Grok' })).status).toBe(201);
+  const aliceQuote = (await alice.get('/api/styles')).json.styles.find((s: any) => s.name === 'Quote');
+  expect((await alice.patch('/api/buttons/1', { styleId: aliceQuote.id, hidden: false })).status).toBe(200);
+  expect((await alice.patch('/api/buttons/4', { styleId: aliceQuote.id, hidden: true })).status).toBe(200);
   await bob.post(`/api/fonts/${(await bob.post('/api/fonts', { family: 'Bebas Neue' })).json.font.id}/archive`);
 });
 afterAll(async () => {

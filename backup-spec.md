@@ -11,7 +11,7 @@
 |---|---|---|
 | Where | In the web app | On the server, through the CLI |
 | Who | Every user, for their own data only | Whoever can run the CLI on the server |
-| Contains | That user's notes, tags, photos, fonts and styles | Everything: all users' data plus accounts and password hashes |
+| Contains | That user's notes, tags, photos, fonts, styles and style buttons | Everything: all users' data plus accounts and password hashes |
 | Restore means | Replace that user's data with the backup's | Rebuild the whole system from the backup |
 | Protects against | A user's own mistakes | Losing everything |
 
@@ -39,7 +39,7 @@ An "Account" item in the left bar opens the Account page (`/account`): the logge
 
 ### 3.2 What it contains
 
-Everything the user owns: notes (title, content, tags, dates, whether each is in the trash, and whether each is read-only), every photo including unused ones, every font including archived ones with its files, and every style the user made. The five default styles are part of the system, not the user's data, so they are not in a personal backup. It does not contain the username, the password, or anything belonging to another user.
+Everything the user owns: notes (title, content, tags, dates, whether each is in the trash, and whether each is read-only), every photo including unused ones, every font including archived ones with its files, every style the user made, and the user's ten style buttons (each button's bound style — or default style name — and whether it is hidden). The five default styles are part of the system, not the user's data, so they are not in a personal backup. It does not contain the username, the password, or anything belonging to another user.
 
 ### 3.3 Format
 
@@ -47,7 +47,7 @@ One uncompressed tar file:
 
 | Entry | Contents |
 |---|---|
-| `data.json` | Notes, tags, styles, and the photo and font records |
+| `data.json` | Notes, tags, sections, styles, style buttons, and the photo and font records |
 | `photos/<id>` | Each photo file |
 | `fonts/<id>/<n>.woff2` | Each font file |
 | `manifest.json` | Written last: format name and version, creation time, counts, the size and SHA-256 of every other entry, and a list of any missing files |
@@ -57,6 +57,8 @@ The manifest is last, so a download that was cut off has no manifest and is refu
 Format version 2 records whether each note is read-only (`jot-spec.md` §3). A version 1 backup (made before read-only notes) restores with every note writable.
 
 Format version 4 adds the user's sections and each note's section ID (`sections-spec.md` §8; version 3 added Inbox notes). A restore checks that every note names a section in the backup and that there is a `default` section. Older backups restore with every note in Default.
+
+Format version 5 adds the user's ten style buttons (`buttons` in `data.json`): each entry carries its `slot` (1–10), `styleId` (referencing a user style in `data.json` or `null`), `defaultStyle` (one of the five default style names or `null`, mutually exclusive with `styleId`) and `hidden` flag. Manifest counts are unchanged. A restore checks that every `styleId` exists in the backup's styles and every `defaultStyle` is one of the five default style names, remapping user styles to their new IDs and default styles to the target account's defaults. Older backups (versions 1–4) restore with all ten buttons unbound and shown.
 
 ### 3.4 Taking a backup
 
@@ -84,7 +86,7 @@ Default styles: a restore never touches the account's five default styles. They 
 3. **Confirm.** The user types RESTORE. From here until the end, that user's saves and uploads are refused with a "restore in progress" message. Other users are unaffected.
 4. **Safety backup.** A personal backup of the current data is taken (3.4) and kept on the server.
 5. **Write the new files.** Every note, photo, font, style and tag in the backup is given a new identifier, and references between them (a photo inside a note, a style's font) are updated to match. First the list of new file names is saved in the database. Then the new photo and font files are written under those names and forced to disk, along with their folders. A crash here leaves nothing behind (step 7).
-6. **Switch.** In one database transaction: delete the user's current notes, tags, styles, photo records and font records; insert the backup's; rebuild the user's search index; clear the list of new file names from step 5, since those files are now live; and record the list of old files that are no longer needed.
+6. **Switch.** In one database transaction: delete the user's current notes, tags, sections, style buttons, styles (keeping defaults), photo records and font records; insert the backup's (remapping style buttons onto the restored style IDs and the account's default styles); rebuild the user's search index; clear the list of new file names from step 5, since those files are now live; and record the list of old files that are no longer needed.
 7. **Tidy up.** Delete the old files and the staging folder. At every server start, Jot finishes any tidy-up that was interrupted: files still on the step 5 list belong to a restore that never committed and are removed, and files on the old-files list belong to a restore that did commit and are removed.
 
 What this gives:

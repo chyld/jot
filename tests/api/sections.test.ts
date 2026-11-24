@@ -313,7 +313,7 @@ describe('backups', () => {
     const sectionsBefore = (await c.get('/api/sections')).json.sections;
     const { file } = await takeBackup(c);
     const b = openBackup(file);
-    expect(b.manifest.version).toBe(4);
+    expect(b.manifest.version).toBeGreaterThanOrEqual(4);
     expect(b.data.sections.map((s: any) => [s.id, s.name, s.colour])).toEqual([
       ['default', 'Home', 'slate'],
       ['work', 'Work', 'blue'],

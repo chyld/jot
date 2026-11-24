@@ -223,6 +223,8 @@ describe('login bypass', () => {
     ['POST', '/api/styles'],
     ['PUT', '/api/styles/abc'],
     ['DELETE', '/api/styles/abc'],
+    ['GET', '/api/buttons'],
+    ['PATCH', '/api/buttons/1'],
   ];
 
   async function call(method: string, url: string, cookie?: string) {

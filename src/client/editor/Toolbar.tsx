@@ -1,5 +1,5 @@
 // The editor toolbar, left to right as in the reference screenshots:
-//  1 Styles  2 Font  3 Size  4 Text colour, highlight  5 B I U S code link
+//  1 Styles  2 Font  3 Size  4 Text colour, highlight  5 B I U S code link  [style buttons]
 //  6 Heading  7 List  8 Insert  9 Undo, redo, clear formatting, show invisibles, show empty lines
 // plus table controls (cursor in a table) and photo controls (photo selected).
 import { useContext, useEffect, useRef, useState } from 'react';
@@ -33,6 +33,7 @@ import {
   LockOpen,
   RemoveFormatting,
 } from 'lucide-react';
+import { buttonColor, type ButtonSlot, type StyleButton } from '../../shared/buttons';
 import { DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, MAX_FONT_SIZE, MIN_FONT_SIZE } from '../../shared/constants';
 import { findPalette, PALETTE } from '../../shared/palette';
 import type { Style } from '../../shared/styles';
@@ -41,7 +42,7 @@ import { Dropdown, MenuItem, ToolButton, ToolbarDisabled } from '../components/D
 import { clearFormatting } from './clear';
 import { emptyLinesOn, setEmptyLines } from './emptyLines';
 import { invisiblesOn, setInvisibles } from './invisibles';
-import { currentFormat, matchingStyle, quoteFamily, applyStyle, type CurrentFormat } from './stamp';
+import { currentFormat, matchingStyle, quoteFamily, applyStyle, styleMatchesFormat, uniformFormat, type CurrentFormat } from './stamp';
 import { PhotoControls } from './PhotoControls';
 import { TableControls } from './TableControls';
 
@@ -451,6 +452,38 @@ function MarkButtons(props: { editor: Editor }) {
   );
 }
 
+// ---------------------------------------------------------------- style buttons
+
+/** Bound, shown style buttons (1–10, in slot order). Underlined in their own colour when in use. */
+export function StyleButtonGroup(props: { editor: Editor; items: Array<{ slot: ButtonSlot; style: Style }> }) {
+  const fmt = useEditorState({ editor: props.editor, selector: ({ editor }) => uniformFormat(editor) }) as CurrentFormat | null;
+  const off = useContext(ToolbarDisabled);
+  return (
+    <div className="tb-group tb-style-buttons" role="group" aria-label="Style buttons">
+      {props.items.map(({ slot, style }) => {
+        const inUse = fmt !== null && styleMatchesFormat(fmt, style);
+        return (
+          <button
+            key={slot}
+            type="button"
+            className={`tb-style-btn${inUse ? ' is-in-use' : ''}`}
+            aria-label={`Style button ${slot}: ${style.name}`}
+            title={style.name}
+            aria-pressed={inUse}
+            disabled={off}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => applyStyle(props.editor, style)}
+          >
+            <span className="style-chip" style={{ '--chip-color': buttonColor(slot) } as React.CSSProperties} aria-hidden="true">
+              {slot}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------- 6-8. Heading, list, insert
 
 export function HeadingDropdown(props: { editor: Editor }) {
@@ -598,6 +631,7 @@ export interface ToolbarProps {
   editor: Editor;
   styles: Style[];
   fonts: Font[];
+  buttons?: StyleButton[];
   onSaveSelectionAsStyle: () => void;
   onManageStyles: () => void;
   onBrowseFonts: () => void;
@@ -691,6 +725,11 @@ export function Toolbar(props: ToolbarProps) {
     editor,
     selector: ({ editor }) => ({ inTable: editor.isActive('table'), photo: editor.isActive('image') }),
   }) as { inTable: boolean; photo: boolean };
+  const stylesById = new Map(props.styles.map((s) => [s.id, s]));
+  const visibleButtons = (props.buttons ?? [])
+    .filter((b) => !b.hidden && b.styleId !== null && stylesById.has(b.styleId))
+    .sort((a, b) => a.slot - b.slot)
+    .map((b) => ({ slot: b.slot, style: stylesById.get(b.styleId!)! }));
   return (
     <ToolbarDisabled.Provider value={readOnly}>
     <div className={`toolbar-wrap${props.mobileOpen ? ' is-mobile-open' : ''}`}>
@@ -707,6 +746,12 @@ export function Toolbar(props: ToolbarProps) {
         </div>
         <span className="tb-sep" />
         <MarkButtons editor={editor} />
+        {visibleButtons.length > 0 && (
+          <>
+            <span className="tb-sep" />
+            <StyleButtonGroup editor={editor} items={visibleButtons} />
+          </>
+        )}
         <span className="tb-sep" />
         <div className="tb-group">
           <HeadingDropdown editor={editor} />

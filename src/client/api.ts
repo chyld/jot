@@ -1,5 +1,6 @@
 // Thin JSON client for Jot's API.
 import type { BackupInfo, Bot, CatalogFont, Font, Note, NoteSummary, Photo, RestoreSummary, SafetyBackup, Tag, User } from '../shared/types';
+import type { ButtonSlot, StyleButton, StyleButtonPatch } from '../shared/buttons';
 import type { Section, SectionColour } from '../shared/sections';
 import type { Style, StyleInput } from '../shared/styles';
 import { currentSectionId } from './currentSection';
@@ -111,6 +112,10 @@ export const api = {
   createStyle: (s: StyleInput) => request<{ style: Style }>('POST', '/api/styles', s),
   updateStyle: (id: string, s: StyleInput) => request<{ style: Style }>('PUT', `/api/styles/${encodeURIComponent(id)}`, s),
   deleteStyle: (id: string) => request<void>('DELETE', `/api/styles/${encodeURIComponent(id)}`),
+
+  buttons: () => request<{ buttons: StyleButton[] }>('GET', '/api/buttons'),
+  updateButton: (slot: ButtonSlot, patch: StyleButtonPatch) =>
+    request<{ button: StyleButton }>('PATCH', `/api/buttons/${slot}`, patch),
 
   makeBackup: () => request<{ backup: BackupInfo }>('POST', '/api/backup', {}),
   backupUrl: (id: string) => `/api/backup/${encodeURIComponent(id)}`,

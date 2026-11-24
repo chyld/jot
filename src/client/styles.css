@@ -499,6 +499,37 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .section-delete-confirm { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .section-new { display: grid; place-items: center; border: 1px dashed var(--border); background: transparent; min-height: 140px; }
 
+/* ---------------------------------------------------------------- style buttons */
+.style-chip { position: relative; width: 22px; height: 22px; border-radius: 6px; background: var(--chip-color); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex: none; user-select: none; }
+.style-chip.is-empty { background: transparent; color: var(--chip-color); box-shadow: inset 0 0 0 1.5px var(--chip-color); opacity: 0.6; }
+/* Style buttons in the toolbar never take .tb-btn's filled active background: in-use is shown only by the underline bar. */
+.tb-style-btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; min-width: 30px; padding: 0 4px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
+.tb-style-btn:hover:not(:disabled) { background: var(--toolbar-hover); }
+.tb-style-btn:disabled { opacity: 0.45; cursor: default; }
+.tb-style-btn .style-chip { transform: translateY(-1px); }
+.tb-style-btn.is-in-use .style-chip::after { content: ''; position: absolute; left: 0; right: 0; bottom: -5px; height: 3px; border-radius: 2px; background: var(--chip-color); }
+.buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 10px; max-width: 980px; align-items: start; }
+.btn-slot { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 10px 10px; min-width: 0; }
+.btn-slot.is-empty { background: transparent; border-style: dashed; }
+.btn-slot.is-picking { border-color: var(--accent); border-style: solid; background: var(--surface); z-index: 10; }
+.btn-slot.is-hidden { background: transparent; }
+.btn-slot.is-hidden .style-chip, .btn-slot.is-hidden .btn-slot-select, .btn-slot.is-hidden .btn-slot-bind { opacity: 0.45; }
+.btn-slot-top { display: flex; align-items: center; gap: 4px; height: 26px; margin-bottom: 8px; }
+.btn-slot-eye { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+.btn-slot-eye:hover { background: var(--subtle); color: var(--accent-dark); }
+.btn-slot-eye[aria-pressed='true'] { color: var(--accent-dark); }
+.btn-slot-body { position: relative; }
+.btn-slot-select { width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; overflow: hidden; }
+.btn-slot-select:hover { border-color: var(--accent-ring); }
+.btn-slot-select.is-open { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.btn-slot-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-slot-caret { flex: none; color: var(--muted); }
+.btn-slot-bind { width: 100%; height: 34px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 13.5px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.btn-slot-bind:hover { background: var(--subtle); color: var(--accent-dark); }
+.btn-slot-menu { width: max(220px, 100%); max-width: min(300px, calc(100vw - 40px)); }
+.btn-slot-none { color: var(--muted); font-size: 14px; }
+.btn-slot-none.is-active { color: var(--accent-text); }
+
 /* ---------------------------------------------------------------- mobile (phones)
    Collapse the formatting toolbar by default behind an Aa toggle pill in the note header,
    and tighten spacing so the editor stays spacious on narrow viewports. */
@@ -521,6 +552,7 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
   .toolbar { padding: 6px 8px; gap: 2px; }
   .tb-sep { display: none; }
   .tb-btn { height: 32px; min-width: 28px; }
+  .tb-style-btn { height: 32px; min-width: 28px; }
   .tb-select { padding: 0 7px; font-size: 13.5px; }
   .tb-styles { width: 108px; }
   .tb-font { width: 112px; }

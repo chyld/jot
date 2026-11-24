@@ -112,12 +112,13 @@ The toolbar matches the screenshots, left to right:
 3. **Font size:** minus, number box, plus
 4. **Text colour** and **highlight colour**: colour swatches only, with no colour names as visible text (each swatch keeps an accessible label); then **Clear formatting** (tooltip "Clear formatting"): with text selected it removes all formatting from the selection (font, size, text colour, highlight, bold, italic, underline, strikethrough, inline code) and turns headings, list items and block quotes in it back into normal paragraphs, keeping the text, links, tables and photos; with nothing selected it does the same to the current paragraph. Either way what is typed next is plain (the toolbar shows no style, Inter, 16). One undo step
 5. **Bold, italic, underline, strikethrough, inline code, link**
-6. **Heading** dropdown: Normal text, Heading 1, Heading 2, Heading 3
-7. **List** dropdown: Bullet list, Numbered list, Task list
-8. **Insert** dropdown: Horizontal line, Block quote, Table, Image
-9. **Undo** and **redo**, then **Show spaces, tabs and line ends** (a toggle): a muted dot for each space, an arrow for each tab, a return mark at a line break and ¶ at the end of each paragraph. Display only: nothing is added to the note, saved, copied, searched or backed up. Remembered per browser, and enabled on read-only notes too (it changes nothing); then **Show empty lines** (a toggle, just right of it): a small muted dot in the left gutter beside each empty paragraph or heading in the note body, including the trailing one (not inside lists, quotes or tables). Display only, off by default, remembered per browser and enabled on read-only notes, the same as Show spaces, tabs and line ends
-10. **Save as PDF** (a file icon, just left of the lock): saves what was typed, then opens the browser's own print dialog; the user chooses "Save as PDF" there (or a printer). The suggested file name is the note's title. Only the note prints, its title and body, on white pages with about 18 mm margins; the left bar, header controls, toolbar, status line, margin marker, photo handles, invisibles and empty-line dots are left out, colours and highlights print, and a long note runs over as many pages as it needs. It changes nothing, so it works on read-only notes too
-11. **Read-only** toggle (a lock): makes the note read-only after an in-page confirmation (section 3)
+6. **Style buttons** (when any are bound and shown): the user's bound, non-hidden style buttons in number order 1–10 (section 9). Clicking one stamps its style (same as the Styles dropdown; one undo step); hovering shows the style's name; a 3 px rounded underline in the button's own colour marks the style in use (none on a mixed selection; if two buttons share a style, both are underlined). Disabled wherever the Styles dropdown is disabled (such as read-only notes); absent with its separator when none are shown
+7. **Heading** dropdown: Normal text, Heading 1, Heading 2, Heading 3
+8. **List** dropdown: Bullet list, Numbered list, Task list
+9. **Insert** dropdown: Horizontal line, Block quote, Table, Image
+10. **Undo** and **redo**, then **Show spaces, tabs and line ends** (a toggle): a muted dot for each space, an arrow for each tab, a return mark at a line break and ¶ at the end of each paragraph. Display only: nothing is added to the note, saved, copied, searched or backed up. Remembered per browser, and enabled on read-only notes too (it changes nothing); then **Show empty lines** (a toggle, just right of it): a small muted dot in the left gutter beside each empty paragraph or heading in the note body, including the trailing one (not inside lists, quotes or tables). Display only, off by default, remembered per browser and enabled on read-only notes, the same as Show spaces, tabs and line ends
+11. **Save as PDF** (a file icon, just left of the lock): saves what was typed, then opens the browser's own print dialog; the user chooses "Save as PDF" there (or a printer). The suggested file name is the note's title. Only the note prints, its title and body, on white pages with about 18 mm margins; the left bar, header controls, toolbar, status line, margin marker, photo handles, invisibles and empty-line dots are left out, colours and highlights print, and a long note runs over as many pages as it needs. It changes nothing, so it works on read-only notes too
+12. **Read-only** toggle (a lock): makes the note read-only after an in-page confirmation (section 3)
 
 The writing area uses the full width of the window beside the left bar. A right margin marker shows where lines wrap: a faint 1 px vertical line (#b4c88c) down the full height of the writing area at the right edge of the text, topped by a small downward-pointing accent-green (#4d7c0f) triangle just under the toolbar, with a gutter to its right. Text wraps exactly at the line. The marker stays put while the note scrolls and is never part of the note.
 
@@ -174,6 +175,14 @@ A style is made of:
 | Strikethrough | Optional |
 | Text colour | Optional |
 | Highlight colour | Optional |
+
+### Style buttons
+
+- Every user has ten fixed style buttons, numbered 1 to 10, private to that user. They cannot be created or deleted.
+- Each button is a pre-made 22 px rounded square (6 px radius) in the Nth Vivid palette text colour (section 11: 1 Jet, 2 Crimson, 3 Tangerine, 4 Sunflower, 5 Lime, 6 Jade, 7 Cyan, 8 Electric, 9 Violet, 10 Magenta) with its number in white bold text.
+- Each button has one of the user's styles bound to it (including default styles) or none; the same style may be bound to more than one button. Deleting a style clears every button bound to it back to no style.
+- Any button can be hidden and shown again; its binding is kept while hidden.
+- Managed on the Buttons page (`/buttons`), where changes save immediately and appear in the editor toolbar without a page reload.
 
 ## 10. Starter pack
 
@@ -232,13 +241,14 @@ The app's own interface (not note content) uses the "Olive" theme, light mode on
 | Note | The open note full screen (everything except the left bar): title, tags, toolbar and the note page. No notes list beside it. A read-only note shows a "Read-only" indicator and cannot be edited |
 | Fonts | Google Fonts catalogue with search; add a font; the user's fonts with an archive action (none for the five default fonts, which say "Default font"), and Restore for archived ones |
 | Styles | The user's styles as cards showing each one's parts; New, Edit, Delete |
+| Buttons (`/buttons`) | Ten fixed places in order 1–10, each with its coloured numbered chip (outlined when unbound), a style picker previewing the user's styles in their own look plus "No style" ("Bind a style" when unbound), and an eye toggle to hide/show (faded with a crossed-out eye when hidden). Changes save immediately; no delete control |
 | Trash | The current section's trashed notes, headed with whose trash it is ("Trash — Bob's Work"), with Restore and Delete permanently, and Empty trash (with an in-page confirmation). Opened from a section's card on the Sections page, not from the left bar (`sections-spec.md` §4) |
 | Tags (`/tags`) | Every tag with its number of notes; each name opens the home page filtered by it; Delete (with an in-page confirmation) removes the tag from every note and keeps the notes |
 | Sections (`/sections`) | One card per section, in its own colours: name, ID, number of notes, Edit, Open, and Trash with the number of its trashed notes ("Trash 2"); the current section's card has a "Current" tag in its corner instead of Open. Edit can also delete a section other than Default (its notes and trash move to Default). + New section. See `sections-spec.md` §4 |
 | Inbox (`/inbox`) | Notes bots wrote and the user has not kept yet, newest first, each with its bot's name and a Keep button. See `agent-spec.md` |
 | Account (`/account`) | The logged-in user's username at the top and a Log out button in the heading row, then Back up my data (download); Restore from a backup (choose a file, see a summary, type RESTORE to confirm); Safety backups (download or delete). See `backup-spec.md` §3.1. Then Bots: the address for bots (from `JOT_PUBLIC_URL`) and a setup snippet for a generic MCP client; create a bot by name; each bot's token always visible with Copy, Copy setup, its last-used time and Revoke (with a second-click confirm). No password change or other account settings (user administration is the CLI's). (The full system backup is described in the User manual note, not on this page.) There is no `/backup` page any more |
 
-A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page), the section link, a square in the current section's colour that opens the Sections page (`sections-spec.md` §3), the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles and, last, Account (a person icon). Log out is a button on the Account page, not in the bar. It has no notes icon and no Trash: each section's trash is opened from its card on the Sections page (`sections-spec.md` §4). The bar is 48 px wide with 36 px buttons.
+A left bar links the screens. From the top: the Jot logo (clicking it goes to the home page), the section link, a square in the current section's colour that opens the Sections page (`sections-spec.md` §3), the New note button, the Inbox (with the number of notes in it) and Tags; at the bottom: Fonts, Styles, Buttons and, last, Account (a person icon). Log out is a button on the Account page, not in the bar. It has no notes icon and no Trash: each section's trash is opened from its card on the Sections page (`sections-spec.md` §4). The bar is 48 px wide with 36 px buttons.
 
 ---
 

@@ -3,6 +3,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { PERSONAL_VERSION } from '../../src/server/backup/personal';
 import { newId } from '../../src/server/ids';
 import { doc, makeTestEnv, newUser, PNG_1PX, type Client, type TestEnv } from '../helpers/setup';
 import { accountSnapshot, makeTar, openBackup, packBackup, parseTar, sha256, stage, takeBackup, TAR, walk } from '../helpers/backup';
@@ -145,7 +146,7 @@ describe('wrong entries', () => {
   });
 
   it('a newer format version is refused', async () => {
-    await refused(edit((b) => (b.manifest.version = 5)), /newer/i);
+    await refused(edit((b) => (b.manifest.version = PERSONAL_VERSION + 1)), /newer/i);
   });
 
   it('another kind of file is refused', async () => {

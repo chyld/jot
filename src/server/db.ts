@@ -8,7 +8,7 @@ import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -218,6 +218,23 @@ function migrate(db: DB) {
         addDefaultSection(db, u.id, u.created_at);
       }
       db.pragma(`user_version = 7`);
+    })();
+  }
+  // Version 8: style buttons. Ten fixed slots (1–10) per user, each bound to a style or
+  // none and individually hideable. Missing rows mean unbound and shown (no backfill).
+  if (version < 8) {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE style_buttons (
+          user_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          slot     INTEGER NOT NULL CHECK (slot >= 1 AND slot <= 10),
+          style_id TEXT REFERENCES styles(id) ON DELETE SET NULL,
+          hidden   INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1)),
+          PRIMARY KEY (user_id, slot)
+        );
+        CREATE INDEX style_buttons_style ON style_buttons(style_id);
+      `);
+      db.pragma(`user_version = 8`);
     })();
   }
 }
