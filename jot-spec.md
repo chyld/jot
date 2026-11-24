@@ -160,7 +160,7 @@ Pasting (Ctrl+V or the browser's Paste menu) always inserts plain text: all form
 - No limit on the number of styles.
 - Create, edit and delete styles; save the current selection as a style.
 - **Default styles.** The five default styles (Body, Title, Quote, Aside, Code; section 10) are part of the system: every user has exactly one of each, and no one can edit, rename or delete them. The server refuses with a clear message, and the Styles screen shows "Default style" in place of Edit and Delete. They are marked by a flag on the style record, not by name, so a style the user makes (even one called "Body") is an ordinary style that stays editable and deletable. Default styles are in the editor's Styles dropdown and stamp text like any other. "Save selection as style" always makes an ordinary style.
-- **A style is a stamp.** Applying it copies its formatting onto the text. Editing the style afterwards does not change that text unless the style is applied again. Deleting a style leaves text that used it unchanged.
+- **A style is a stamp.** Applying it copies its formatting onto the text. With text selected, the selection is stamped. With nothing selected, nothing already written changes: the style applies to what is typed next, as with Bold, so two styles chosen one after the other while typing give one phrase in two styles. Editing the style afterwards does not change that text unless the style is applied again. Deleting a style leaves text that used it unchanged.
 
 A style is made of:
 

@@ -44,13 +44,35 @@ describe('Styles dropdown', () => {
     expect(marksOf(editor, 'Hello').textStyle).toBeUndefined();
   });
 
-  it('with no selection, stamps the whole current paragraph', () => {
+  it('with no selection, changes nothing already written: the style is what is typed next', () => {
     const editor = makeEditor('<p>First para</p><p>Second para</p>');
-    editor.commands.setTextSelection(3);
+    editor.commands.setTextSelection(11); // the end of "First para"
     applyStyle(editor, STYLES[2]);
-    expect(marksOf(editor, 'First para').bold).toBeDefined();
-    expect(marksOf(editor, 'First para').highlight.color).toBe('#FFE58F');
+    expect(marksOf(editor, 'First para').bold).toBeUndefined();
+    expect(marksOf(editor, 'First para').highlight).toBeUndefined();
+    editor.view.dispatch(editor.state.tr.insertText(' typed'));
+    expect(marksOf(editor, 'typed').bold).toBeDefined();
+    expect(marksOf(editor, 'typed').highlight.color).toBe('#FFE58F');
+    expect(marksOf(editor, 'First para').bold).toBeUndefined();
     expect(marksOf(editor, 'Second para').bold).toBeUndefined();
+  });
+
+  it('two styles applied one after the other while typing give one phrase in two styles', () => {
+    const editor = makeEditor('<p>Start </p>');
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    applyStyle(editor, STYLES[2]);
+    editor.view.dispatch(editor.state.tr.insertText('hello '));
+    applyStyle(editor, STYLES[1]);
+    editor.view.dispatch(editor.state.tr.insertText('world'));
+    expect(editor.state.doc.childCount).toBe(1); // still one paragraph
+    expect(marksOf(editor, 'Start').textStyle).toBeUndefined();
+    expect(marksOf(editor, 'hello').bold).toBeDefined();
+    expect(marksOf(editor, 'hello').highlight.color).toBe('#FFE58F');
+    // The second stamp replaces the first for what follows: no bold, no highlight carried over.
+    expect(marksOf(editor, 'world').textStyle).toMatchObject({ fontFamily: '"Lora"', fontSize: '20px', color: '#8F2AF4' });
+    expect(marksOf(editor, 'world').italic).toBeDefined();
+    expect(marksOf(editor, 'world').bold).toBeUndefined();
+    expect(marksOf(editor, 'world').highlight).toBeUndefined();
   });
 
   it('is a stamp: editing the style later does not change stamped text until reapplied', () => {

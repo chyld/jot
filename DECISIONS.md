@@ -336,8 +336,9 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   or another mouse button are left to the browser.
 
 - Font sizes are whole pixels from 6 to 200. Text with no size is 16 px Inter.
-- **Applying a style with nothing selected** stamps the whole current paragraph (and
-  the formatting carries on while typing in an empty paragraph).
+- **Applying a style with nothing selected** changes only what is typed next, as Bold
+  does; text already written is left alone. (Originally it stamped the whole current
+  paragraph; changed at the owner's request, see the entry near the end.)
 - A stamp replaces font, size, text colour, bold, italic, underline, strikethrough and
   highlight. It leaves inline code and links alone.
 - Style names are 1–60 characters; two styles may share a name. Styles are listed by name.
@@ -1075,3 +1076,12 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
     `aria-describedby` (so screen readers do not read the style name twice); the tooltip
     carries `role="tooltip"`.
   - **Tests:** `tests/component/buttons.test.tsx`, `e2e/specs/buttons.spec.ts`.
+- **A style with nothing selected applies to what is typed next (owner request).** It used
+  to select and restyle the whole current paragraph, so pressing a style button at the end
+  of a sentence restyled the sentence. Now `applyStyle` (`src/client/editor/stamp.ts`)
+  never changes the selection: with an empty selection its mark commands set the stored
+  marks, so only the text typed next takes the style, and choosing another style then
+  typing gives one phrase in two styles. With text selected it stamps the selection as
+  before. The Styles dropdown and the style buttons share the command, so both changed.
+  To restyle a whole paragraph, select it first (a triple click).
+  Tests: `tests/component/dropdowns.test.tsx`, `e2e/specs/style-typing.spec.ts`.

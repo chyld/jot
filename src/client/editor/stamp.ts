@@ -10,18 +10,11 @@ export const quoteFamily = (family: string) => `"${family}"`;
 export const unquoteFamily = (value: unknown) => (typeof value === 'string' ? value.trim().replace(/^["']|["']$/g, '') : null);
 
 /**
- * Stamps a style onto the selection. With an empty selection it stamps the whole
- * current paragraph (and the formatting carries on as you type).
+ * Stamps a style onto the selection. With an empty selection nothing already written
+ * changes: the style is what is typed next, as with Bold.
  */
 export function applyStyle(editor: Editor, style: Style): boolean {
-  const { selection } = editor.state;
   let chain = editor.chain().focus();
-  if (selection.empty) {
-    const { $from } = selection;
-    if ($from.parent.isTextblock && $from.parent.content.size > 0) {
-      chain = chain.setTextSelection({ from: $from.start(), to: $from.end() });
-    }
-  }
   chain = chain
     .unsetMark('bold')
     .unsetMark('italic')
