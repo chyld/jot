@@ -2,7 +2,7 @@
 // Type 7 (component): Save as PDF in the editor toolbar. It sits just left of the lock,
 // works on read-only notes, saves what was typed first, then opens the browser's print
 // dialog with the note's title as the page title (the suggested file name) and puts the
-// old title back afterwards. Rendered from the real NoteEditor with the API answered by a
+// open note's tab title ("<title> · Jot") back afterwards. Rendered from the real NoteEditor with the API answered by a
 // stubbed fetch.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -92,7 +92,7 @@ describe('Save as PDF', () => {
     await waitFor(() => expect(prints).toHaveLength(1));
     expect(prints[0].title).toBe('Typed title');
     expect(prints[0].callsSoFar).toContain('PATCH /api/notes/a'); // saved before the dialog opened
-    expect(document.title).toBe('Jot');
+    expect(document.title).toBe('Typed title · Jot'); // the open note's tab title is back
   });
 
   it('works on a read-only note', async () => {
@@ -103,6 +103,6 @@ describe('Save as PDF', () => {
     await userEvent.click(button);
     await waitFor(() => expect(prints).toHaveLength(1));
     expect(prints[0].title).toBe('Trip plan');
-    expect(document.title).toBe('Jot');
+    expect(document.title).toBe('Trip plan · Jot');
   });
 });

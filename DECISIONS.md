@@ -977,3 +977,10 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   content, saves, backups or copies; `pointer-events: none` keeps clicks below the text
   placing the caret at the end as before. No toggle. Hidden in the `@media print` block.
   Tests: `tests/component/end-marker.test.tsx`, `e2e/specs/end-marker.spec.ts`.
+- **Note title in the browser tab (owner request).** While a note is open the tab reads
+  `<note title> · Jot` (`Untitled · Jot` when the title is empty or only spaces), set by an
+  effect in `NoteEditor.tsx` that follows the title as it is typed (not only once saved)
+  and puts `Jot` back when the note is left. Every other screen stays `Jot`. Save as PDF
+  still swaps in the bare note title while the print dialog is open (the suggested file
+  name) and then restores the tab title it found.
+  Tests: `tests/component/tab-title.test.tsx`, `e2e/specs/tab-title.spec.ts`.

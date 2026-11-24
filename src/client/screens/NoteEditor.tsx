@@ -94,6 +94,15 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
   const [message, setMessage] = useState<string | null>(null);
   const [mobileToolbarOpen, setMobileToolbarOpen] = useState(false);
 
+  // The browser tab is named after the open note ("Trip plan · Jot"), following the title
+  // as it is typed, and goes back to "Jot" when the note is left.
+  useEffect(() => {
+    document.title = `${title.trim() || 'Untitled'} · Jot`;
+    return () => {
+      document.title = 'Jot';
+    };
+  }, [title]);
+
   // A pasted image goes through the same upload as Insert → Image (set below, once pickImage exists).
   const pasteFile = useRef<(file: File) => void>(() => {});
   const editor = useEditor({
