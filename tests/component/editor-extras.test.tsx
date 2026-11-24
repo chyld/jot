@@ -80,19 +80,22 @@ describe('Clear formatting', () => {
     expect(editor.getJSON()).toEqual(before);
   });
 
-  it('with nothing selected, clears the current paragraph only, and typing afterwards is plain', () => {
+  it('with nothing selected, leaves existing text and blocks alone and resets formatting for what is typed next', () => {
     const editor = makeEditor(DOC);
-    const at = select(editor, 'Head') + 2;
-    editor.commands.setTextSelection(at);
+    const before = editor.getJSON();
+    const endOfStyled = select(editor, 'Untouched') + 'Untouched'.length;
+    editor.commands.setTextSelection(endOfStyled);
     clearFormatting(editor);
-    const json = editor.getJSON() as any;
-    expect(json.content[1]).toEqual({ type: 'paragraph', content: [{ type: 'text', text: 'Head' }] });
-    expect(json.content[2].type).toBe('bulletList'); // the next block is untouched
-    expect(json.content[0].content[0].marks.length).toBe(6);
-    expect(editor.state.selection.from).toBe(at); // the cursor stays where it was
-    editor.view.dispatch(editor.state.tr.insertText('x'));
-    expect((editor.getJSON() as any).content[1]).toEqual({ type: 'paragraph', content: [{ type: 'text', text: 'Hexad' }] });
-    expect(currentFormat(editor)).toMatchObject({ fontFamily: null, size: null, bold: false });
+    expect(editor.getJSON()).toEqual(before);
+    expect(editor.state.selection.from).toBe(endOfStyled);
+    expect(editor.state.selection.empty).toBe(true);
+    expect(currentFormat(editor)).toMatchObject({ fontFamily: null, size: null, bold: false, italic: false, underline: false, strike: false, textColor: null, highlight: null });
+    editor.view.dispatch(editor.state.tr.insertText(' plain'));
+    const last = (editor.getJSON() as any).content.at(-1);
+    expect(last.content).toHaveLength(2);
+    expect(last.content[0]).toEqual((before as any).content.at(-1).content[0]);
+    expect(last.content[1]).toEqual({ type: 'text', text: ' plain' });
+    expect(currentFormat(editor)).toMatchObject({ fontFamily: null, size: null, bold: false, italic: false, textColor: null, highlight: null });
   });
 
   it('is a toolbar button after undo/redo, just left of the invisibles toggle, with its tooltip', async () => {

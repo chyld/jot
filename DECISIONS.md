@@ -231,13 +231,15 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
 ## Editor and styles
 
 - **Clear formatting** is one Tiptap chain, so one transaction and one undo step.
-  - With nothing selected it first selects the current paragraph, and puts the cursor
-    back where it was afterwards.
-  - Tiptap's `clearNodes` turns headings, list items, task items, quotes and code blocks
-    into paragraphs. It cannot lift anything out of a table cell, so tables stay. Photos
-    are untouched.
-  - It then unsets textStyle (font, size, colour), highlight, bold, italic, underline,
-    strikethrough and inline code, but not links, and empties the "next typed" marks.
+  - With nothing selected it leaves existing text and blocks alone and only empties the
+    "next typed" marks (`tr.setStoredMarks([])`), so what is typed next is plain.
+    (Originally it selected and cleared the whole current paragraph; changed at the
+    owner's request, see the entry near the end.)
+  - With text selected, Tiptap's `clearNodes` turns headings, list items, task items,
+    quotes and code blocks into paragraphs (it cannot lift anything out of a table cell,
+    so tables stay; photos are untouched), and it unsets textStyle (font, size, colour),
+    highlight, bold, italic, underline, strikethrough and inline code, but not links, and
+    empties the "next typed" marks.
   - It is disabled on read-only notes with the rest of the toolbar.
 - **Links**
   - A small extension handles clicks on links inside the editor: Ctrl or Cmd, or a
@@ -1085,3 +1087,15 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   before. The Styles dropdown and the style buttons share the command, so both changed.
   To restyle a whole paragraph, select it first (a triple click).
   Tests: `tests/component/dropdowns.test.tsx`, `e2e/specs/style-typing.spec.ts`.
+- **Clear formatting with nothing selected resets only what is typed next (owner request).**
+  It used to select and clear the whole current paragraph, so clicking Clear formatting at
+  the end of a formatted sentence stripped formatting from the whole line. Now
+  `clearFormatting` (`src/client/editor/clear.ts`) leaves existing text and blocks alone
+  when the selection is empty and only runs `tr.setStoredMarks([])`, resetting the toolbar
+  to normal so continued typing is plain. `currentFormat` (`src/client/editor/stamp.ts`)
+  now reads `state.storedMarks ?? state.selection.$from.marks()` at a collapsed caret so
+  the toolbar reflects emptied `storedMarks` (Tiptap's `getAttributes` falls back to
+  `$head.marks()` even when `storedMarks` is `[]`). With text selected, Clear formatting
+  clears marks and blocks as before. To clear a whole paragraph, select it first (a triple
+  click).
+  Tests: `tests/component/editor-extras.test.tsx`, `e2e/specs/editor-extras.spec.ts`.

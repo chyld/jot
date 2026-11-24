@@ -47,6 +47,13 @@ export interface CurrentFormat {
 }
 
 export function currentFormat(editor: Editor): CurrentFormat {
+  const { state } = editor;
+  // At a collapsed caret, ProseMirror uses storedMarks (even when empty) in place of
+  // $from.marks(); Tiptap's getAttributes appends $head.marks() regardless, which would
+  // keep reporting old textStyle attrs after Clear formatting empties storedMarks.
+  if (state.selection.empty) {
+    return formatFromMarks(state.storedMarks ?? state.selection.$from.marks());
+  }
   const ts = editor.getAttributes('textStyle');
   const size = typeof ts.fontSize === 'string' ? parseInt(ts.fontSize, 10) : NaN;
   return {

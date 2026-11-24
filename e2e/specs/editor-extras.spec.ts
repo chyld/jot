@@ -36,8 +36,9 @@ test('Clear formatting clears styled text, a heading and a list item; typing aft
   expect(doc.content.slice(0, 3)).toEqual([p('Styled words'), p('A heading'), p('A list item')]);
   expect(doc.content[3].content).toEqual([{ type: 'text', text: 'Kept link', marks: [{ type: 'link', attrs: expect.objectContaining({ href: 'https://example.com' }) }] }]);
 
-  // With nothing selected: the current paragraph, and what is typed next is plain.
-  await setContent(page, { type: 'doc', content: [p('Bold big', [{ type: 'bold' }, { type: 'textStyle', attrs: { fontFamily: '"Lora"', fontSize: '30px' } }]), p('Other', [{ type: 'bold' }])] });
+  // With nothing selected: existing text keeps its formatting, and what is typed next is plain.
+  const formatted = [{ type: 'bold' }, { type: 'italic' }, { type: 'textStyle', attrs: { fontFamily: '"Lora"', fontSize: '30px', color: '#E00631' } }];
+  await setContent(page, { type: 'doc', content: [p('Bold big', formatted), p('Other', [{ type: 'bold' }])] });
   await body(page).getByText('Bold big').click({ delay: 60 });
   await page.keyboard.press('End');
   await toolbar.getByRole('button', { name: 'Clear formatting' }).click();
@@ -45,9 +46,20 @@ test('Clear formatting clears styled text, a heading and a list item; typing aft
   await expect(toolbar.getByRole('button', { name: 'Font', exact: true })).toHaveText(/Inter/);
   await expect(toolbar.getByRole('textbox', { name: 'Font size' })).toHaveValue('16');
   await expect(toolbar.getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(toolbar.getByRole('button', { name: 'Italic' })).toHaveAttribute('aria-pressed', 'false');
   await page.keyboard.type(' plain');
   await waitSaved(page);
-  expect((await saved(page)).content).toEqual([p('Bold big plain'), p('Other', [{ type: 'bold' }])]);
+  const after = (await saved(page)).content;
+  expect(after[0].type).toBe('paragraph');
+  expect(after[0].content).toHaveLength(2);
+  expect(after[0].content[0].text).toBe('Bold big');
+  expect(after[0].content[0].marks).toEqual(expect.arrayContaining([
+    { type: 'bold' },
+    { type: 'italic' },
+    { type: 'textStyle', attrs: expect.objectContaining({ fontFamily: '"Lora"', fontSize: '30px', color: '#E00631' }) },
+  ]));
+  expect(after[0].content[1]).toEqual({ type: 'text', text: ' plain' });
+  expect(after[1]).toEqual(p('Other', [{ type: 'bold' }]));
 });
 
 test('Ctrl+click opens a link in a new tab, a plain click edits it; a typed web address becomes a link', async ({ page, context }) => {
