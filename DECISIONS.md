@@ -1051,3 +1051,27 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
     `tests/security/security.test.ts`, `tests/security/backup-security.test.ts`,
     `tests/db/migration-v7.test.ts`, `tests/db/restore-crash.test.ts`,
     `tests/helpers/backup.ts`, and `tests/component/backup.test.tsx`.
+- **Style button preview tooltips (owner request).** Replaced the native `title` attribute on
+  the toolbar's ten style buttons (`StyleButtonGroup` in `src/client/editor/Toolbar.tsx`)
+  with Jot's own preview tooltip (`.style-tooltip` in `src/client/styles.css`); all other
+  toolbar buttons keep their native `title`.
+  - **Content and look:** a small light card matching `.menu` (`var(--surface)`, border,
+    radius, shadow, `z-index: 20`, `pointer-events: none`), showing the style's name in small
+    muted text above the word `Sample` styled with `stylePreviewCss` (the same helper, font
+    quoting and 30 px size cap used by the Styles dropdown).
+  - **Positioning and viewport clamping:** each button sits in a `position: relative`
+    `.tb-style-item` wrapper and the tooltip is `position: absolute; top: calc(100% + 6px);
+    left: 50%; width: max-content;` with `transform: translateX(calc(-50% + var(--tip-shift, 0px)))`
+    so it never shifts the toolbar layout. `.toolbar` and `.toolbar-wrap` do not clip
+    overflow (`z-index: 5`), while `.main` has `overflow: hidden`; a `useLayoutEffect`
+    measures the rendered tooltip and sets `--tip-shift` to keep it at least 8 px inside both
+    the window and `.main` (re-checked on window resize).
+  - **Behaviour and accessibility:** opens after a 150 ms hover delay (preventing flicker
+    while sweeping across the row) or immediately on keyboard focus, and hides immediately on
+    mouse leave, blur, Escape (via a document keydown listener so Escape works on hover too)
+    or click. Never shown on disabled buttons (read-only notes); touch taps set a short
+    synthetic-mouse guard and hide immediately so a tap cannot leave a tooltip stuck open.
+    Buttons keep `aria-label="Style button N: <name>"` with no `title` and no
+    `aria-describedby` (so screen readers do not read the style name twice); the tooltip
+    carries `role="tooltip"`.
+  - **Tests:** `tests/component/buttons.test.tsx`, `e2e/specs/buttons.spec.ts`.

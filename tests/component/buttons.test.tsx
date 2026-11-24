@@ -3,7 +3,7 @@
 // group (position, tooltips, stamping, single undo, in-use underline, mixed selections,
 // read-only disabled), and live sync between /buttons and the editor without reload.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { defaultStyleButtons, type ButtonSlot, type StyleButton } from '../../src/shared/buttons';
 import { PALETTE } from '../../src/shared/palette';
@@ -13,17 +13,17 @@ import { applyStyle } from '../../src/client/editor/stamp';
 import { Toolbar } from '../../src/client/editor/Toolbar';
 import { ButtonsScreen } from '../../src/client/screens/ButtonsScreen';
 import { NoteEditor } from '../../src/client/screens/NoteEditor';
-import { FONTS, makeEditor, marksOf, select, STYLES } from './setup';
+import { FONTS, makeEditor, marksOf, select, style as makeStyle, STYLES } from './setup';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 describe('Toolbar style buttons', () => {
-  function renderBar(buttons?: StyleButton[], opts: { content?: unknown; readOnly?: boolean } = {}) {
+  function renderBar(buttons?: StyleButton[], opts: { content?: unknown; readOnly?: boolean; styles?: typeof STYLES } = {}) {
     const editor = makeEditor(opts.content ?? '<p>Hello world</p>');
     render(
       <Toolbar
         editor={editor}
-        styles={STYLES}
+        styles={opts.styles ?? STYLES}
         fonts={FONTS}
         buttons={buttons}
         readOnly={opts.readOnly}
@@ -64,14 +64,154 @@ describe('Toolbar style buttons', () => {
     const b1 = within(bar).getByRole('button', { name: 'Style button 1: Body' });
     const b5 = within(bar).getByRole('button', { name: 'Style button 5: Key Term' });
     const b8 = within(bar).getByRole('button', { name: 'Style button 8: Quote' });
-    expect(b1.getAttribute('title')).toBe('Body');
-    expect(b5.getAttribute('title')).toBe('Key Term');
-    expect(b8.getAttribute('title')).toBe('Quote');
+    // Style buttons replace the native title with Jot's preview tooltip; other buttons keep title.
+    expect(b1.getAttribute('title')).toBeNull();
+    expect(b5.getAttribute('title')).toBeNull();
+    expect(b8.getAttribute('title')).toBeNull();
+    expect(b1.getAttribute('aria-describedby')).toBeNull();
+    expect(within(bar).getByRole('button', { name: 'Bold' }).getAttribute('title')).toBe('Bold');
+    expect(within(bar).getByRole('button', { name: 'Link' }).getAttribute('title')).toBe('Link');
+    expect(within(bar).getByRole('button', { name: 'Heading' }).getAttribute('title')).toBe('Heading');
     // Must not use .tb-btn (which paints a filled pressed background).
     expect(b1.className).not.toContain('tb-btn');
     expect((b1.querySelector('.style-chip') as HTMLElement).style.getPropertyValue('--chip-color')).toBe(PALETTE[0].text);
     expect((b5.querySelector('.style-chip') as HTMLElement).style.getPropertyValue('--chip-color')).toBe(PALETTE[4].text);
     expect((b8.querySelector('.style-chip') as HTMLElement).style.getPropertyValue('--chip-color')).toBe(PALETTE[7].text);
+  });
+
+  it('hovering shows a preview tooltip after ~150 ms with style name and styled Sample, and mouse leave hides it immediately', () => {
+    vi.useFakeTimers();
+    try {
+      const bigTitle = makeStyle({ name: 'Big Title', fontFamily: 'Playfair Display', size: 40, bold: true, underline: true, strike: true });
+      const styles = [...STYLES, bigTitle];
+      const btns = defaultStyleButtons();
+      btns[0] = { slot: 1, styleId: STYLES[1].id, hidden: false }; // Quote
+      btns[1] = { slot: 2, styleId: STYLES[2].id, hidden: false }; // Key Term
+      btns[2] = { slot: 3, styleId: bigTitle.id, hidden: false }; // 40px Title (size capped at 30px)
+      const { bar } = renderBar(btns, { styles });
+
+      const b1 = within(bar).getByRole('button', { name: 'Style button 1: Quote' });
+      const b2 = within(bar).getByRole('button', { name: 'Style button 2: Key Term' });
+      const b3 = within(bar).getByRole('button', { name: 'Style button 3: Big Title' });
+
+      // Sweeping across buttons without dwelling does not flicker a tooltip.
+      fireEvent.mouseEnter(b1);
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+      fireEvent.mouseLeave(b1);
+      fireEvent.mouseEnter(b2);
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+      fireEvent.mouseLeave(b2);
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+
+      // Hovering Quote past the delay shows its name and styled Sample.
+      fireEvent.mouseEnter(b1);
+      act(() => {
+        vi.advanceTimersByTime(150);
+      });
+      let tip = screen.getByRole('tooltip');
+      expect(within(tip).getByText('Quote')).toBeTruthy();
+      let sample = within(tip).getByText('Sample') as HTMLElement;
+      expect(sample.style.fontFamily).toContain('Lora');
+      expect(sample.style.fontSize).toBe('20px');
+      expect(sample.style.fontStyle).toBe('italic');
+      expect(sample.style.color).toBe('rgb(143, 42, 244)');
+
+      // Mouse leave hides immediately.
+      fireEvent.mouseLeave(b1);
+      expect(screen.queryByRole('tooltip')).toBeNull();
+
+      // Hovering Key Term shows bold + Sunflower highlight.
+      fireEvent.mouseEnter(b2);
+      act(() => {
+        vi.advanceTimersByTime(150);
+      });
+      tip = screen.getByRole('tooltip');
+      expect(within(tip).getByText('Key Term')).toBeTruthy();
+      sample = within(tip).getByText('Sample') as HTMLElement;
+      expect(sample.style.fontWeight).toBe('700');
+      expect(sample.style.backgroundColor).toBe('rgb(255, 229, 143)');
+      fireEvent.mouseLeave(b2);
+
+      // Hovering a 40px style caps the preview size at 30px, matching stylePreviewCss.
+      fireEvent.mouseEnter(b3);
+      act(() => {
+        vi.advanceTimersByTime(150);
+      });
+      tip = screen.getByRole('tooltip');
+      expect(within(tip).getByText('Big Title')).toBeTruthy();
+      sample = within(tip).getByText('Sample') as HTMLElement;
+      expect(sample.style.fontFamily).toContain('Playfair Display');
+      expect(sample.style.fontSize).toBe('30px');
+      expect(sample.style.fontWeight).toBe('700');
+      expect(sample.style.textDecoration).toContain('underline');
+      expect(sample.style.textDecoration).toContain('line-through');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keyboard focus shows the preview tooltip and blur, Escape, or click hides it', () => {
+    vi.useFakeTimers();
+    try {
+      const btns = defaultStyleButtons();
+      btns[0] = { slot: 1, styleId: STYLES[1].id, hidden: false }; // Quote
+      const { editor, bar } = renderBar(btns, { content: '<p>hello</p>' });
+      const b1 = within(bar).getByRole('button', { name: 'Style button 1: Quote' });
+
+      // Focus shows tooltip; blur hides it.
+      fireEvent.focus(b1);
+      const tip = screen.getByRole('tooltip');
+      expect(within(tip).getByText('Quote')).toBeTruthy();
+      expect((within(tip).getByText('Sample') as HTMLElement).style.fontFamily).toContain('Lora');
+      fireEvent.blur(b1);
+      expect(screen.queryByRole('tooltip')).toBeNull();
+
+      // Focus then Escape hides it.
+      fireEvent.focus(b1);
+      expect(screen.getByRole('tooltip')).toBeTruthy();
+      fireEvent.keyDown(b1, { key: 'Escape' });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+
+      // Hover (button not focused) then document Escape hides it.
+      fireEvent.mouseEnter(b1);
+      act(() => {
+        vi.advanceTimersByTime(150);
+      });
+      expect(screen.getByRole('tooltip')).toBeTruthy();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+      fireEvent.mouseLeave(b1);
+
+      // Hover then click hides tooltip and stamps the style.
+      select(editor, 'hello');
+      fireEvent.mouseEnter(b1);
+      act(() => {
+        vi.advanceTimersByTime(150);
+      });
+      expect(screen.getByRole('tooltip')).toBeTruthy();
+      fireEvent.click(b1);
+      expect(screen.queryByRole('tooltip')).toBeNull();
+      expect(marksOf(editor, 'hello').italic).toBeDefined();
+
+      // Touch tap does not leave a tooltip open via synthetic mouseenter.
+      fireEvent.touchStart(b1);
+      fireEvent.mouseEnter(b1);
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clicking stamps the style in one undo step, underlines matching buttons, and shows no underline on a mixed selection', async () => {
@@ -137,12 +277,23 @@ describe('Toolbar style buttons', () => {
     expect(b1.className).not.toContain('is-in-use');
   });
 
-  it('disables style buttons on read-only notes', () => {
-    const btns = defaultStyleButtons();
-    btns[0] = { slot: 1, styleId: STYLES[1].id, hidden: false };
-    const { bar } = renderBar(btns, { readOnly: true });
-    const b1 = within(bar).getByRole('button', { name: 'Style button 1: Quote' }) as HTMLButtonElement;
-    expect(b1.disabled).toBe(true);
+  it('disables style buttons on read-only notes and shows no tooltip', () => {
+    vi.useFakeTimers();
+    try {
+      const btns = defaultStyleButtons();
+      btns[0] = { slot: 1, styleId: STYLES[1].id, hidden: false };
+      const { bar } = renderBar(btns, { readOnly: true });
+      const b1 = within(bar).getByRole('button', { name: 'Style button 1: Quote' }) as HTMLButtonElement;
+      expect(b1.disabled).toBe(true);
+      fireEvent.mouseEnter(b1);
+      fireEvent.focus(b1);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(screen.queryByRole('tooltip')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

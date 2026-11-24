@@ -2,7 +2,7 @@
 //  1 Styles  2 Font  3 Size  4 Text colour, highlight  5 B I U S code link  [style buttons]
 //  6 Heading  7 List  8 Insert  9 Undo, redo, clear formatting, show invisibles, show empty lines
 // plus table controls (cursor in a table) and photo controls (photo selected).
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {
@@ -454,30 +454,132 @@ function MarkButtons(props: { editor: Editor }) {
 
 // ---------------------------------------------------------------- style buttons
 
+const STYLE_TOOLTIP_DELAY_MS = 150;
+const STYLE_TOOLTIP_MARGIN = 8;
+
 /** Bound, shown style buttons (1–10, in slot order). Underlined in their own colour when in use. */
 export function StyleButtonGroup(props: { editor: Editor; items: Array<{ slot: ButtonSlot; style: Style }> }) {
   const fmt = useEditorState({ editor: props.editor, selector: ({ editor }) => uniformFormat(editor) }) as CurrentFormat | null;
   const off = useContext(ToolbarDisabled);
+  const [tipSlot, setTipSlot] = useState<ButtonSlot | null>(null);
+  const timerRef = useRef<number | null>(null);
+  const ignoreMouseUntil = useRef(0);
+  const tipRef = useRef<HTMLDivElement>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const hide = useCallback(() => {
+    clearTimer();
+    setTipSlot(null);
+  }, [clearTimer]);
+
+  const scheduleShow = useCallback(
+    (slot: ButtonSlot) => {
+      clearTimer();
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        setTipSlot(slot);
+      }, STYLE_TOOLTIP_DELAY_MS);
+    },
+    [clearTimer],
+  );
+
+  useEffect(() => () => clearTimer(), [clearTimer]);
+  useEffect(() => {
+    if (off) hide();
+  }, [off, hide]);
+
+  useEffect(() => {
+    if (tipSlot === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') hide();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [tipSlot, hide]);
+
+  const activeTip = !off && tipSlot !== null ? (props.items.find((it) => it.slot === tipSlot) ?? null) : null;
+
+  // Keep the tooltip inside both the viewport and .main (which clips horizontal overflow).
+  useLayoutEffect(() => {
+    const el = tipRef.current;
+    if (!el || !activeTip) return;
+    const adjust = () => {
+      el.style.setProperty('--tip-shift', '0px');
+      const r = el.getBoundingClientRect();
+      if (r.width === 0) return;
+      const clip = el.closest('.main')?.getBoundingClientRect();
+      const minLeft = Math.max(STYLE_TOOLTIP_MARGIN, clip ? clip.left + STYLE_TOOLTIP_MARGIN : STYLE_TOOLTIP_MARGIN);
+      const maxRight = Math.min(window.innerWidth - STYLE_TOOLTIP_MARGIN, clip ? clip.right - STYLE_TOOLTIP_MARGIN : window.innerWidth - STYLE_TOOLTIP_MARGIN);
+      let shift = 0;
+      if (r.right > maxRight) shift = maxRight - r.right;
+      if (r.left + shift < minLeft) shift = minLeft - r.left;
+      el.style.setProperty('--tip-shift', `${Math.round(shift)}px`);
+    };
+    adjust();
+    window.addEventListener('resize', adjust);
+    return () => window.removeEventListener('resize', adjust);
+  }, [activeTip?.slot, activeTip?.style]);
+
   return (
-    <div className="tb-group tb-style-buttons" role="group" aria-label="Style buttons">
+    <div
+      className="tb-group tb-style-buttons"
+      role="group"
+      aria-label="Style buttons"
+      onTouchStart={() => {
+        ignoreMouseUntil.current = Date.now() + 700;
+        hide();
+      }}
+    >
       {props.items.map(({ slot, style }) => {
         const inUse = fmt !== null && styleMatchesFormat(fmt, style);
+        const showTip = activeTip?.slot === slot;
         return (
-          <button
-            key={slot}
-            type="button"
-            className={`tb-style-btn${inUse ? ' is-in-use' : ''}`}
-            aria-label={`Style button ${slot}: ${style.name}`}
-            title={style.name}
-            aria-pressed={inUse}
-            disabled={off}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyStyle(props.editor, style)}
-          >
-            <span className="style-chip" style={{ '--chip-color': buttonColor(slot) } as React.CSSProperties} aria-hidden="true">
-              {slot}
-            </span>
-          </button>
+          <span key={slot} className="tb-style-item">
+            <button
+              type="button"
+              className={`tb-style-btn${inUse ? ' is-in-use' : ''}`}
+              aria-label={`Style button ${slot}: ${style.name}`}
+              aria-pressed={inUse}
+              disabled={off}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => {
+                if (off || Date.now() < ignoreMouseUntil.current) return;
+                scheduleShow(slot);
+              }}
+              onMouseLeave={hide}
+              onFocus={() => {
+                if (off || Date.now() < ignoreMouseUntil.current) return;
+                clearTimer();
+                setTipSlot(slot);
+              }}
+              onBlur={hide}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') hide();
+              }}
+              onClick={() => {
+                hide();
+                applyStyle(props.editor, style);
+              }}
+            >
+              <span className="style-chip" style={{ '--chip-color': buttonColor(slot) } as React.CSSProperties} aria-hidden="true">
+                {slot}
+              </span>
+            </button>
+            {showTip && (
+              <div ref={tipRef} role="tooltip" className="style-tooltip">
+                <span className="style-tooltip-name">{style.name}</span>
+                <span className="style-tooltip-sample" style={stylePreviewCss(style)}>
+                  Sample
+                </span>
+              </div>
+            )}
+          </span>
         );
       })}
     </div>

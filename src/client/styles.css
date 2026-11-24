@@ -503,11 +503,15 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .style-chip { position: relative; width: 22px; height: 22px; border-radius: 6px; background: var(--chip-color); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex: none; user-select: none; }
 .style-chip.is-empty { background: transparent; color: var(--chip-color); box-shadow: inset 0 0 0 1.5px var(--chip-color); opacity: 0.6; }
 /* Style buttons in the toolbar never take .tb-btn's filled active background: in-use is shown only by the underline bar. */
+.tb-style-item { position: relative; display: inline-flex; }
 .tb-style-btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; min-width: 30px; padding: 0 4px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
 .tb-style-btn:hover:not(:disabled) { background: var(--toolbar-hover); }
 .tb-style-btn:disabled { opacity: 0.45; cursor: default; }
 .tb-style-btn .style-chip { transform: translateY(-1px); }
 .tb-style-btn.is-in-use .style-chip::after { content: ''; position: absolute; left: 0; right: 0; bottom: -5px; height: 3px; border-radius: 2px; background: var(--chip-color); }
+.style-tooltip { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(calc(-50% + var(--tip-shift, 0px))); z-index: 20; width: max-content; max-width: min(260px, calc(100vw - 16px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; pointer-events: none; user-select: none; }
+.style-tooltip-name { font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 11.5px; font-weight: 500; line-height: 1.25; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.style-tooltip-sample { line-height: 1.25; white-space: nowrap; padding: 1px 0; }
 .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 10px; max-width: 980px; align-items: start; }
 .btn-slot { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 10px 10px; min-width: 0; }
 .btn-slot.is-empty { background: transparent; border-style: dashed; }
