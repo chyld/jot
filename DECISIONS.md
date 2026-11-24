@@ -1003,3 +1003,13 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   around it does not move). Keyboard behaviour is unchanged: another arrow press moves on,
   Backspace or Delete removes the line. The accent is used as for selected table cells.
   Test: `e2e/specs/hr-selected.spec.ts`.
+- **Back to notes button in the editor header (owner request).** A third square icon button
+  (`.rail-toggle-btn`, lucide-react `List` icon) sits in `.note-header-actions` right after
+  Collapse/Expand sidebar and New note, before the title, so returning to the notes list is
+  reachable even when the sidebar is collapsed. Accessible name and tooltip are "Back to
+  notes". It is a real `<a href="/">` link (middle-click and modified clicks open `/` in a
+  new tab; a plain left-click calls `navigate('/')` in-app without a full reload), shown
+  whenever the editor header is shown (including read-only, Inbox and trashed notes, with
+  the sidebar expanded or collapsed), and hidden by the existing `@media print` rules.
+  Pending edits are flushed by `useAutosave`'s unmount cleanup when leaving the note.
+  Tests: `tests/component/back-to-notes.test.tsx`, `e2e/specs/back-to-notes.spec.ts`.

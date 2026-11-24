@@ -99,7 +99,7 @@ Specified in `agent-spec.md`. Bots (AI assistants with an MCP client) write note
 
 ## 6. Editor
 
-Built on Tiptap. Opening a note shows the editor full screen (everything except the left bar): a header with the title, tags, the Keep button (Inbox notes), the trash button, and Previous note and Next note, then the toolbar, the note page and a status line. No notes list is shown beside it.
+Built on Tiptap. Opening a note shows the editor full screen (everything except the left bar): a header with the sidebar toggle, New note and Back to notes buttons, the title, tags, the Keep button (Inbox notes), the trash button, and Previous note and Next note, then the toolbar, the note page and a status line. No notes list is shown beside it.
 
 **Previous note and Next note** are two arrow icon buttons in a pill just right of the trash button. They walk the note's section in exactly the home page order (its live notes: not trashed, not in the Inbox; the whole section, ignoring any tag filter or search): Next opens the note after this one in that list, Previous the one before. They wrap around: Next on the last note opens the first, Previous on the first opens the last. What was typed is saved first, as when leaving a note any other way; the neighbour is worked out from the list as it is at the click, so a note just edited (now at the top) counts from the top. They are not shown on a trashed note, an Inbox note, or the only note of its section; they work on read-only notes.
 
