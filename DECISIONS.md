@@ -984,3 +984,14 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   still swaps in the bare note title while the print dialog is open (the suggested file
   name) and then restores the tab title it found.
   Tests: `tests/component/tab-title.test.tsx`, `e2e/specs/tab-title.spec.ts`.
+- **Inline code chip (owner request).** Inline code inside note content (`.note-body code`)
+  is styled as a violet chip: `#f3e9ff` background, `#7a1fd6` text, `1px solid #dcc2fb`
+  border, `5px` radius and `0.1em 0.4em` padding (keeping `Fira Code` and `0.9em`). Code
+  blocks are unchanged: `.note-body pre code` also resets `border: 0` and `border-radius: 0`
+  so it does not pick up the chip edge. Tiptap renders `textStyle` outside `<code>` and
+  `highlight` (`<mark>`) inside `<code>`, so `.note-body span[style*='color'] code { color:
+  inherit; }` lets an explicit text colour win over the default violet without affecting
+  font-only spans, and `<mark>`'s inline background naturally wins inside the chip. Other
+  `code` elements outside `.note-body` (such as `.bot-address code` on the Account page)
+  are untouched, and `@media print` prints the chip as drawn.
+  Tests: `tests/component/inline-code.test.tsx`, `e2e/specs/inline-code.spec.ts`.

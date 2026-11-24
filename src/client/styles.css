@@ -254,9 +254,10 @@ select.ctx-input { width: auto; }
 .note-body h3 { font-size: 1.25em; margin: 0.6em 0 0.3em; }
 .note-body blockquote { border-left: 3px solid #cfd4db; margin: 0.6em 0; padding-left: 16px; color: #374151; }
 .note-body hr { border: 0; border-top: 1px solid #d5d9df; margin: 1.2em 0; }
-.note-body code { background: #f1f3f5; border-radius: 4px; padding: 0.1em 0.3em; font-family: 'Fira Code', ui-monospace, monospace; font-size: 0.9em; }
+.note-body code { background: #f3e9ff; color: #7a1fd6; border: 1px solid #dcc2fb; border-radius: 5px; padding: 0.1em 0.4em; font-family: 'Fira Code', ui-monospace, monospace; font-size: 0.9em; }
+.note-body span[style*='color'] code { color: inherit; }
 .note-body pre { background: #1e2533; color: #eef1f5; padding: 12px 16px; border-radius: 8px; overflow: auto; }
-.note-body pre code { background: none; color: inherit; padding: 0; }
+.note-body pre code { background: none; color: inherit; border: 0; border-radius: 0; padding: 0; }
 .note-body a { color: #0a47ff; text-decoration: underline; }
 .note-body mark { border-radius: 2px; padding: 0 1px; }
 /* Lists: item text starts 28px in from the paragraph edge at every level and in every list
