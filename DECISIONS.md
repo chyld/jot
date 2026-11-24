@@ -995,3 +995,11 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   `code` elements outside `.note-body` (such as `.bot-address code` on the Account page)
   are untouched, and `@media print` prints the chip as drawn.
   Tests: `tests/component/inline-code.test.tsx`, `e2e/specs/inline-code.spec.ts`.
+- **Selected horizontal line is visible (owner report).** Arrowing onto a horizontal line
+  selects the line itself (a ProseMirror node selection), so the text caret is gone, and
+  the selected-node outline is switched off for the whole note body: the cursor seemed to
+  vanish. A selected line is now drawn 3px thick in the section's accent colour with a
+  soft accent halo (`.note-body hr.ProseMirror-selectednode`, a `box-shadow`, so the text
+  around it does not move). Keyboard behaviour is unchanged: another arrow press moves on,
+  Backspace or Delete removes the line. The accent is used as for selected table cells.
+  Test: `e2e/specs/hr-selected.spec.ts`.

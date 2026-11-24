@@ -294,6 +294,9 @@ select.ctx-input { width: auto; }
 .note-body.resize-cursor, .ProseMirror.resize-cursor { cursor: col-resize; }
 .note-body .tableWrapper { overflow-x: auto; }
 .note-body .ProseMirror-selectednode { outline: none; }
+/* Arrowing onto a horizontal line selects the line itself, so there is no text caret: the
+   line shows it instead, thicker and in the accent colour (a shadow, so nothing moves). */
+.note-body hr.ProseMirror-selectednode { border-top-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft); }
 .note-body p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #a3a9b3; float: left; height: 0; pointer-events: none; }
 
 /* photos */
