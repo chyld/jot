@@ -137,16 +137,16 @@ export function Sidebar(props: { path: string }) {
       >
         <NotebookPen size={20} />
       </a>
-      {/* The section square (sections-spec.md §3): the current section's colour and first letter; it opens the Sections page. */}
-      <RailLink to="/sections" label={`Sections (current: ${current.name})`} active={p === '/sections'} className="rail-section">
-        <SectionSquare name={current.name} />
-      </RailLink>
       <NewNoteLink className="rail-btn" label="New note" bump={bumpNotes} onError={setNewError}>
         <FileText size={20} />
       </NewNoteLink>
       <NewNoteLink className="rail-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
         <Sheet size={20} />
       </NewNoteLink>
+      {/* The section square (sections-spec.md §3): the current section's colour and first letter; it opens the Sections page. */}
+      <RailLink to="/sections" label={`Sections (current: ${current.name})`} active={p === '/sections'} className="rail-section">
+        <SectionSquare name={current.name} />
+      </RailLink>
       <RailLink to="/inbox" label="Inbox" title={`Inbox: ${inboxCount} ${inboxCount === 1 ? 'note' : 'notes'} from bots`} active={p === '/inbox'}>
         <span className="rail-inbox">
           <Inbox size={20} />
