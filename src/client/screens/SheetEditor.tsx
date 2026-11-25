@@ -241,7 +241,7 @@ export default function SheetEditor(props: { note: Note; onTrashed: () => void; 
   return (
     <article className={`note sheet-note ${readOnly ? 'is-read-only' : ''}`} data-note-id={note.id} data-note-kind="sheet" aria-label="Spreadsheet">
       <header className="note-header">
-        <div className="note-header-nav">
+        <div className="note-header-actions">
           <RailToggleButton />
           <NewNoteLink className="rail-toggle-btn" label="New note" bump={bumpNotes} onError={setNewError}>
             <FileText size={18} />
