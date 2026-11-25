@@ -50,6 +50,7 @@ interface Bot {
 
 interface Row {
   id: string;
+  kind: string;
   title: string;
   body_text: string;
   updated_at: string;
@@ -64,6 +65,7 @@ function describeNote(r: Row): string {
   const author = r.bot_name ?? 'user';
   return [
     `id: ${r.id}`,
+    `kind: ${r.kind}`,
     `author: ${author}`,
     `in inbox: ${r.inbox ? 'yes' : 'no'}`,
     `tags: ${r.tag_list ? r.tag_list.split(' ').join(', ') : '(none)'}`,
@@ -198,7 +200,7 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
         params.push(match, bot.userId);
       }
       const rows = db
-        .prepare(`SELECT n.id, n.title, n.body_text, n.updated_at, n.inbox, n.bot_name, ${TAGS_OF} FROM notes n WHERE ${where.join(' AND ')} ORDER BY n.updated_at DESC, n.id LIMIT ? OFFSET ?`)
+        .prepare(`SELECT n.id, n.kind, n.title, n.body_text, n.updated_at, n.inbox, n.bot_name, ${TAGS_OF} FROM notes n WHERE ${where.join(' AND ')} ORDER BY n.updated_at DESC, n.id LIMIT ? OFFSET ?`)
         .all(...params, PAGE + 1, offset) as Row[];
       const page = rows.slice(0, PAGE);
       const next = rows.length > PAGE ? String(offset + PAGE) : 'none';
@@ -211,7 +213,7 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
     'read_note',
     {
       description:
-        'Read one of the user’s notes in full, as Markdown, with its title, tags and author. Only Markdown features are kept: fonts, sizes, colours, highlights and underline are dropped, ' +
+        'Read one of the user’s notes in full, as Markdown (or tab-separated rows per worksheet for spreadsheets), with its kind, title, tags and author. Only Markdown features are kept: fonts, sizes, colours, highlights and underline are dropped, ' +
         'a task list becomes a plain list, and a photo becomes [photo] (photos cannot be downloaded). Trashed notes cannot be read. ' +
         UNTRUSTED_RULE,
       inputSchema: { id: z.string().describe('The note’s id, from list_notes or create_note.') },
@@ -223,6 +225,7 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
       return ok(
         [
           `id: ${note.id}`,
+          `kind: ${note.kind}`,
           `author: ${author}`,
           `in inbox: ${note.inbox ? 'yes' : 'no'}`,
           `tags: ${note.tags.length ? note.tags.join(', ') : '(none)'}`,

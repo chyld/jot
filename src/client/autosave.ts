@@ -35,7 +35,12 @@ function describe(err: unknown): string {
     : `Not saved: ${why}.`;
 }
 
-export function useAutosave(noteId: string, onSaved: (note: Note) => void, userId: string, opts: { readOnly?: boolean } = {}) {
+export function useAutosave(
+  noteId: string,
+  onSaved: (note: Note) => void,
+  userId: string,
+  opts: { readOnly?: boolean; summary?: boolean; onBeforeUnload?: () => void } = {},
+) {
   // Edits from an earlier visit that the server never confirmed come back first; a
   // read-only note can never take them, so they are dropped.
   const [restored] = useState(() => {
@@ -54,14 +59,24 @@ export function useAutosave(noteId: string, onSaved: (note: Note) => void, userI
   const chain = useRef<Promise<void>>(Promise.resolve());
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
+  const summaryRef = useRef(Boolean(opts.summary));
+  summaryRef.current = Boolean(opts.summary);
+  const beforeUnloadRef = useRef(opts.onBeforeUnload);
+  beforeUnloadRef.current = opts.onBeforeUnload;
   const [status, setStatus] = useState<SaveStatus>(restored ? 'pending' : 'idle');
   const [error, setError] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState(false);
 
   /** Mirrors everything not yet confirmed into this browser's storage. */
   const persist = useCallback(() => {
     const all = { ...inflight.current, ...pending.current };
-    if (isEmpty(all)) clearUnsaved(userId, noteId);
-    else storeUnsaved(userId, noteId, all);
+    if (isEmpty(all)) {
+      clearUnsaved(userId, noteId);
+      setStorageWarning(false);
+    } else {
+      const ok = storeUnsaved(userId, noteId, all);
+      setStorageWarning(!ok);
+    }
   }, [noteId, userId]);
 
   const flush = useCallback((): Promise<void> => {
@@ -76,7 +91,7 @@ export function useAutosave(noteId: string, onSaved: (note: Note) => void, userI
       inflight.current = patch;
       setStatus('saving');
       try {
-        const { note } = await api.updateNote(noteId, patch);
+        const { note } = await api.updateNote(noteId, patch, { summary: summaryRef.current });
         inflight.current = {};
         persist();
         attempts.current = 0;
@@ -114,14 +129,16 @@ export function useAutosave(noteId: string, onSaved: (note: Note) => void, userI
     mounted.current = true;
     if (!isEmpty(pending.current)) timer.current = setTimeout(() => void flush(), AUTOSAVE_DELAY_MS);
     const onUnload = () => {
+      beforeUnloadRef.current?.();
       const all = { ...inflight.current, ...pending.current };
       if (isEmpty(all)) return;
       // A last attempt; the copy in this browser stays until a later save is confirmed.
-      // Browser fetch keepalive caps bodies at 64 KB; drop keepalive for larger snapshots.
+      // Browser fetch keepalive caps bodies at 64 KiB (UTF-8 bytes); drop keepalive for larger snapshots.
       const body = JSON.stringify(all);
-      void fetch(`/api/notes/${encodeURIComponent(noteId)}`, {
+      const byteLength = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(body).byteLength : body.length * 3;
+      void fetch(`/api/notes/${encodeURIComponent(noteId)}${summaryRef.current ? '?summary=1' : ''}`, {
         method: 'PATCH',
-        keepalive: body.length < 60_000,
+        keepalive: byteLength < 60_000,
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
         body,
@@ -135,5 +152,5 @@ export function useAutosave(noteId: string, onSaved: (note: Note) => void, userI
     };
   }, [noteId, flush]);
 
-  return { schedule, flush, status, error, restored };
+  return { schedule, flush, status, error, restored, storageWarning };
 }

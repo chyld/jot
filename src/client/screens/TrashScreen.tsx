@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { FileText, RotateCcw, Sheet, Trash2 } from 'lucide-react';
 import { relativeTime } from '../../shared/time';
 import type { NoteSummary } from '../../shared/types';
 import { api } from '../api';
@@ -10,8 +10,17 @@ import { useData } from '../data';
 function TrashItem(props: { note: NoteSummary; now: Date; onRestore: () => void; onPurge: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const n = props.note;
+  const isSheet = n.kind === 'sheet';
   return (
     <li className="card trash-item" data-note-id={n.id} aria-label={n.title || 'Untitled'}>
+      <span
+        className={`note-card-kind-tile ${isSheet ? 'is-sheet' : 'is-doc'}`}
+        role="img"
+        aria-label={isSheet ? 'Spreadsheet' : 'Document'}
+        title={isSheet ? 'Spreadsheet' : 'Document'}
+      >
+        {isSheet ? <Sheet size={16} /> : <FileText size={16} />}
+      </span>
       <div className="trash-text">
         <div className="note-card-title">{n.title || 'Untitled'}</div>
         {n.preview && <div className="note-card-preview">{n.preview}</div>}

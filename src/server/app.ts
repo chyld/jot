@@ -311,7 +311,13 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       if (!kind) throw notFound('Note not found.');
       patch.content = readContent(b.content, kind);
     }
-    return updated(notes.updateNote(db, uid(req), id, patch));
+    const res = updated(notes.updateNote(db, uid(req), id, patch));
+    // Optional ?summary=1 omits the content blob on large saves (e.g. spreadsheets).
+    if ((req.query as Record<string, unknown>).summary === '1') {
+      const { content: _omit, ...summary } = res.note;
+      return { note: summary };
+    }
+    return res;
   });
 
   app.delete('/api/notes/:id', async (req) => {
@@ -801,7 +807,15 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   const clientDir = opts.clientDir ?? join(REPO_ROOT, 'dist', 'client');
   const indexHtml = join(clientDir, 'index.html');
   if (existsSync(indexHtml)) {
-    await app.register(fastifyStatic, { root: clientDir, wildcard: false, index: false });
+    await app.register(fastifyStatic, {
+      root: clientDir,
+      wildcard: false,
+      index: false,
+      setHeaders(reply, path) {
+        // Vite emits content-hashed filenames under /assets/; cache them immutably so the lazy sheet chunk isn't revalidated.
+        if (path.includes('/assets/')) reply.header('cache-control', 'public, max-age=31536000, immutable');
+      },
+    });
   }
   app.setNotFoundHandler((req: FastifyRequest, reply: FastifyReply) => {
     const path = req.url.split('?')[0];

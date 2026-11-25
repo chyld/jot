@@ -19,12 +19,21 @@ export function loadUnsaved(userId: string, noteId: string): UnsavedPatch | null
   }
 }
 
-export function storeUnsaved(userId: string, noteId: string, patch: UnsavedPatch) {
-  if (loggedOut.has(userId)) return; // e.g. the editor's last save failing after logout
+/** Returns true if saved locally, false if storage quota/access prevented saving (and clears any stale copy). */
+export function storeUnsaved(userId: string, noteId: string, patch: UnsavedPatch): boolean {
+  if (loggedOut.has(userId)) return true; // e.g. the editor's last save failing after logout
+  const key = unsavedKey(userId, noteId);
   try {
-    localStorage.setItem(unsavedKey(userId, noteId), JSON.stringify(patch));
+    localStorage.setItem(key, JSON.stringify(patch));
+    return true;
   } catch {
-    // Storage full or blocked: the edit is still on screen and still being saved.
+    // Storage full or blocked: remove any older, smaller copy so reload cannot restore stale data over newer edits.
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* nothing to do */
+    }
+    return false;
   }
 }
 

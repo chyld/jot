@@ -1132,14 +1132,22 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   - Schema v9 adds `notes.kind TEXT NOT NULL DEFAULT 'doc' CHECK (kind IN ('doc','sheet'))`.
     Spreadsheets live in `notes` with `{ type: 'sheet', version: 1, workbook }` JSON in
     `content`, so sections, tags, trash, read-only lock, FTS search, previews and `/n/:id`
-    routing all work unchanged. `src/server/sheet.ts` validates snapshots (8 MB cap, depth
-    and sheet-count limits, prototype-key and unsafe-URL filtering), extracts cell text into
-    `body_text`, checks emptiness, and renders plain text for MCP `read_note`.
+    routing all work unchanged. `src/server/sheet.ts` validates snapshots (depth-checked walk
+    before serialization, 8 MB cap, 1–50 sheets, bounded `rowCount`/`columnCount`, plain-object
+    `cellData`, `sheetOrder` subset check, prototype-key and recursive `custom` stripping,
+    allowlisted Univer plugin `resources`, and safe URL/internal `#gid=` filtering), extracts
+    up to 200,000 characters of cell text into `body_text` for FTS, checks emptiness, and
+    renders column-aligned tab-separated rows (capped at 50k chars) for MCP `read_note`.
   - Personal backups bumped to format 6 to persist and restore `kind` (older formats default
     to `'doc'`).
-  - Client adds a dedicated **New spreadsheet** link (`/new?kind=sheet`) beside `+` in the
-    sidebar and home header (keeping `+` / `/new` 1-click for documents), shows a
-    spreadsheet icon on list cards, and `React.lazy`-loads `SheetEditor.tsx` so note-only
-    users never download Univer's bundle.
-  Tests: `tests/unit/sheet.test.ts`, `tests/api/sheets.test.ts`,
+  - Client adds a dedicated **New spreadsheet** (`Sheet` grid icon, `/new?kind=sheet`) beside
+    **New note** (`FileText` doc icon, `/new`) in the sidebar, editor headers, and home header
+    (**New doc** / **New sheet**), shows color-coded Document/Spreadsheet icon tiles on list
+    and trash cards, replaces Univer's built-in font list with the user's Jot fonts (defaulting
+    new sheets to `Inter`), left-aligns Univer's ribbon, and `React.lazy`-loads `SheetEditor.tsx`
+    behind an error boundary so note-only users never download Univer's bundle. Static hashed
+    `/assets/*` responses carry immutable cache headers, and sheet autosaves pass `?summary=1`
+    on `PATCH /api/notes/:id` so multi-MB workbooks aren't echoed back on every save. Printing
+    spreadsheets via browser Print/PDF is out of scope for v1.
+  Tests: `tests/unit/sheet.test.ts`, `tests/db/migration-v9.test.ts`, `tests/api/sheets.test.ts`,
   `e2e/specs/spreadsheet.spec.ts`.

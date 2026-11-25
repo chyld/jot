@@ -192,7 +192,7 @@ export function NotesScreen(props: { tag: string | null }) {
       </div>
       <div className="notes-list wide" data-testid="notes-list">
         {notes === null && <div className="muted pad">Loading…</div>}
-        {notes?.length === 0 && <div className="muted pad">{filtering ? 'No notes match.' : 'No notes yet. Create one with New.'}</div>}
+        {notes?.length === 0 && <div className="muted pad">{filtering ? 'No notes match.' : 'No notes yet. Create one with New doc or New sheet.'}</div>}
         {notes?.map((n) => <NoteCard key={n.id} note={n} now={now} onTrash={() => void trash(n)} />)}
       </div>
     </div>

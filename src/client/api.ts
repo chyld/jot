@@ -65,8 +65,8 @@ export const api = {
   note: (id: string) => request<{ note: Note }>('GET', `/api/notes/${encodeURIComponent(id)}`),
   createNote: (kind?: NoteKind) => request<{ note: Note }>('POST', inSection('/api/notes'), kind && kind !== 'doc' ? { kind } : {}),
   moveNote: (id: string, section: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/section`, { section }),
-  updateNote: (id: string, patch: { title?: string; content?: unknown }) =>
-    request<{ note: Note }>('PATCH', `/api/notes/${encodeURIComponent(id)}`, patch),
+  updateNote: (id: string, patch: { title?: string; content?: unknown }, opts: { summary?: boolean } = {}) =>
+    request<{ note: Note }>('PATCH', `/api/notes/${encodeURIComponent(id)}${opts.summary ? '?summary=1' : ''}`, patch),
   inbox: () => request<{ notes: NoteSummary[] }>('GET', '/api/inbox'),
   keep: (id: string) => request<{ note: Note }>('POST', inSection(`/api/notes/${encodeURIComponent(id)}/keep`), {}),
   bots: () => request<{ publicUrl: string; mcpUrl: string; bots: Bot[] }>('GET', '/api/bots'),

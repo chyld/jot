@@ -20,7 +20,7 @@ const fresh = new Set<string>();
 export async function createAndOpenNote(bump: () => void, opts: { replace?: boolean; kind?: NoteKind } = {}): Promise<string | null> {
   try {
     const { note } = await api.createNote(opts.kind);
-    fresh.add(note.id);
+    if (note.kind !== 'sheet') fresh.add(note.id);
     bump();
     navigate(`/n/${note.id}`, { replace: opts.replace });
     return null;

@@ -13,6 +13,7 @@ import { clearAllUnsaved, resumeUnsaved } from './unsaved';
 interface Data {
   user: User;
   fonts: Font[];
+  fontsLoaded: boolean;
   styles: Style[];
   buttons: StyleButton[];
   reloadFonts: () => Promise<void>;
@@ -70,6 +71,7 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
   useEffect(() => applyTheme(colour), [colour]);
   useEffect(() => clearTheme, []); // logging out: the login page is always Olive
   const [fonts, setFonts] = useState<Font[]>([]);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
   const [styles, setStyles] = useState<Style[]>([]);
   const [buttons, setButtons] = useState<StyleButton[]>(defaultStyleButtons);
   const [fontsVersion, setFontsVersion] = useState(1);
@@ -87,8 +89,14 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
   }, [reloadInbox, notesVersion]);
 
   const reloadFonts = useCallback(async () => {
-    setFonts((await api.fonts()).fonts);
-    setFontsVersion((v) => v + 1);
+    try {
+      setFonts((await api.fonts()).fonts ?? []);
+      setFontsVersion((v) => v + 1);
+    } catch {
+      /* keep existing fonts (or empty fallback) so screens never stall */
+    } finally {
+      setFontsLoaded(true);
+    }
   }, []);
   const reloadStyles = useCallback(async () => setStyles((await api.styles()).styles), []);
   const reloadButtons = useCallback(async () => {
@@ -125,6 +133,7 @@ export function DataProvider(props: { user: User; onLogout: () => void; children
       value={{
         user: props.user,
         fonts,
+        fontsLoaded,
         styles,
         buttons,
         reloadFonts,

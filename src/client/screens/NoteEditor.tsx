@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import { Bot, Check, ArrowLeft, ArrowRight, FileText, List, Lock, RotateCcw, Sheet, Trash2 } from 'lucide-react';
@@ -44,6 +44,34 @@ const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
 const LazySheetEditor = lazy(() => import('./SheetEditor'));
 
+class SheetErrorBoundary extends Component<{ noteId: string; children: ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidUpdate(prevProps: { noteId: string }) {
+    if (prevProps.noteId !== this.props.noteId && this.state.error) this.setState({ error: null });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="empty-state" role="alert">
+          <p>Could not load the spreadsheet editor.</p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+              Reload page
+            </button>
+            <a href="/" className="btn" onClick={(e) => (e.preventDefault(), navigate('/'))}>
+              Back to notes
+            </a>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
   const [note, setNote] = useState<Note | null>(null);
   const [missing, setMissing] = useState(false);
@@ -70,9 +98,11 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
   if (!note) return <div className="empty-state muted">Loading…</div>;
   if (note.kind === 'sheet') {
     return (
-      <Suspense fallback={<div className="empty-state muted">Loading spreadsheet…</div>}>
-        <LazySheetEditor note={note} onTrashed={props.onTrashed} onChange={setNote} />
-      </Suspense>
+      <SheetErrorBoundary noteId={note.id}>
+        <Suspense fallback={<div className="empty-state muted">Loading spreadsheet…</div>}>
+          <LazySheetEditor note={note} onTrashed={props.onTrashed} onChange={setNote} />
+        </Suspense>
+      </SheetErrorBoundary>
     );
   }
   return <LoadedNote note={note} onTrashed={props.onTrashed} onChange={setNote} />;
