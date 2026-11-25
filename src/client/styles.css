@@ -217,7 +217,9 @@ a.rail-new, a.btn { text-decoration: none; }
 .menu-right { left: auto; right: 0; }
 .menu-scroll { max-height: 360px; overflow: auto; display: flex; flex-direction: column; }
 .menu-styles { width: 320px; }
-.menu-fonts { width: 280px; }
+.menu-fonts { width: min(640px, calc(100vw - 48px)); }
+.menu-fonts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 4px; }
+.menu-fonts-grid .menu-item { display: block; width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 7px 10px; }
 .menu-item { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 16px; white-space: nowrap; }
 .menu-item:hover, .menu-item.is-active { background: var(--accent-soft); }
 .menu-sep { height: 1px; background: var(--border); margin: 6px 4px; }
@@ -568,6 +570,7 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
   .tb-font { width: 112px; }
   .tb-size-input { width: 40px; height: 32px; font-size: 14px; }
   .menu-styles, .menu-fonts { width: min(280px, calc(100vw - 24px)); }
+  .menu-fonts-grid { grid-template-columns: 1fr; }
 }
 
 /* ---------------------------------------------------------------- print (Save as PDF)

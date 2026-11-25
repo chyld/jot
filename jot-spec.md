@@ -108,7 +108,7 @@ The **status line** is a thin bar (28 px, muted 12.5 px text, a line above it) p
 The toolbar matches the screenshots, left to right:
 
 1. **Styles** dropdown: the user's custom styles on top (or a muted empty note if none exist), a horizontal rule, then the default styles below, each previewed in its own look, then "Save selection as style…" and "Manage styles…"
-2. **Font** dropdown: the user's added active (non-archived) fonts on top (or a muted empty note if none exist), a horizontal rule, then the default fonts below, each previewed in its own typeface, then "Browse fonts…"
+2. **Font** dropdown: a 3-column scrollable grid on desktop (1 column on phones) with the user's added active (non-archived) fonts on top (or a muted empty note if none exist), a horizontal rule, then the default fonts below, each previewed in its own typeface, then "Browse fonts…"
 3. **Font size:** minus, number box, plus
 4. **Text colour** and **highlight colour**: colour swatches only, with no colour names as visible text (each swatch keeps an accessible label); then **Clear formatting** (tooltip "Clear formatting"): with text selected it removes all formatting from the selection (font, size, text colour, highlight, bold, italic, underline, strikethrough, inline code) and turns headings, list items and block quotes in it back into normal paragraphs, keeping the text, links, tables and photos; with nothing selected nothing already written changes—only the pending formatting is reset so what is typed next is plain. Either way what is typed next is plain (the toolbar shows no style, Inter, 16). One undo step
 5. **Bold, italic, underline, strikethrough, inline code, link**

@@ -55,12 +55,13 @@ export function Dropdown(props: {
   );
 }
 
-export function MenuItem(props: { onSelect: () => void; children: ReactNode; active?: boolean; style?: React.CSSProperties; label?: string }) {
+export function MenuItem(props: { onSelect: () => void; children: ReactNode; active?: boolean; style?: React.CSSProperties; label?: string; title?: string }) {
   return (
     <button
       type="button"
       role="menuitem"
       aria-label={props.label}
+      title={props.title}
       className={`menu-item ${props.active ? 'is-active' : ''}`}
       style={props.style}
       onMouseDown={keepFocus}

@@ -144,6 +144,7 @@ export function FontDropdown(props: { editor: Editor; fonts: Font[]; onBrowse: (
     <MenuItem
       key={f.id}
       label={f.family}
+      title={f.family}
       active={f.family === shown}
       style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}
       onSelect={() => {
@@ -170,12 +171,16 @@ export function FontDropdown(props: { editor: Editor; fonts: Font[]; onBrowse: (
         <>
           <div className="menu-scroll">
             <div className="menu-group-label">Your fonts</div>
-            {custom.length === 0 ? <div className="menu-empty">No custom fonts yet</div> : custom.map((f) => renderFont(f, close))}
+            {custom.length === 0 ? (
+              <div className="menu-empty">No custom fonts yet</div>
+            ) : (
+              <div className="menu-fonts-grid">{custom.map((f) => renderFont(f, close))}</div>
+            )}
             {defaults.length > 0 && (
               <>
                 <div className="menu-sep" role="separator" />
                 <div className="menu-group-label">Default fonts</div>
-                {defaults.map((f) => renderFont(f, close))}
+                <div className="menu-fonts-grid">{defaults.map((f) => renderFont(f, close))}</div>
               </>
             )}
           </div>

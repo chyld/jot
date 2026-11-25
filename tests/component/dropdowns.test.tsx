@@ -126,6 +126,7 @@ describe('Styles dropdown', () => {
     const sep = within(menu).getByRole('separator');
     expect(items[0].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sep.compareDocumentPosition(items[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(menu.querySelectorAll('.menu-fonts-grid')).toHaveLength(0);
     unmount();
 
     render(<StylesDropdown editor={editor} styles={mixed.filter((s) => s.isDefault)} onSaveSelection={vi.fn()} onManage={vi.fn()} />);
@@ -193,6 +194,8 @@ describe('Font dropdown', () => {
     const sep = within(menu).getByRole('separator');
     expect(items[0].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sep.compareDocumentPosition(items[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(menu.querySelectorAll('.menu-fonts-grid')).toHaveLength(2);
+    expect(items[0].getAttribute('title')).toBe('Roboto Slab');
     unmount();
 
     render(<FontDropdown editor={editor} fonts={FONTS} onBrowse={vi.fn()} />);

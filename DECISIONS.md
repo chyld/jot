@@ -1119,7 +1119,10 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
     **Archived** underneath when present.
   - The editor toolbar's Styles and Font dropdowns (`Toolbar.tsx`) and the `/buttons` style
     picker (`ButtonsScreen.tsx`) list custom items on top (or a muted empty note), a
-    horizontal separator line (`.menu-sep`), and default items below. The New/Edit Style
-    dialog's Font `<select>` (`StyleDialog.tsx`) likewise groups custom fonts above defaults.
+    horizontal separator line (`.menu-sep`), and default items below. The Font dropdown
+    lays each group out in a 3-column scrollable grid (`.menu-fonts-grid`, collapsing to 1
+    column on mobile) with ellipsis truncation and full-name tooltips so large font
+    collections stay scannable; Styles stays single-column. The New/Edit Style dialog's
+    Font `<select>` (`StyleDialog.tsx`) likewise groups custom fonts above defaults.
   Tests: `tests/component/fonts-trash.test.tsx`, `tests/component/dropdowns.test.tsx`,
   `e2e/specs/defaults-empty-trash.spec.ts`.
