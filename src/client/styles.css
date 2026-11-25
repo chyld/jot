@@ -120,7 +120,7 @@ a.rail-new, a.btn { text-decoration: none; }
 .notes-subhead { font-weight: 600; padding: 14px 6px 8px; }
 .notes-list { overflow: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; }
 .notes-list.wide { max-width: 640px; }
-.note-card { display: block; position: relative; background: var(--surface); border-radius: var(--radius); padding: 12px 14px; border: 2px solid transparent; }
+.note-card { display: flex; align-items: center; gap: 12px; position: relative; background: var(--surface); border-radius: var(--radius); padding: 12px 14px; border: 2px solid transparent; }
 /* The title link covers the whole card; tag links sit above it. */
 .note-card-link { text-decoration: none; color: inherit; }
 .note-card-link::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius); }
@@ -130,10 +130,11 @@ a.rail-new, a.btn { text-decoration: none; }
 .note-card-tags a:hover { background: var(--tag-text); color: #fff; }
 .note-card:hover { border-color: var(--accent-ring); }
 .note-card.is-selected { border-color: var(--accent-ring); }
-/* With a trash button the card is a row: the note's text, then the button (above the stretched title link). */
-.note-card.has-trash { display: flex; align-items: center; gap: 12px; padding-right: 8px; }
-.note-card-body { min-width: 0; }
-.note-card.has-trash .note-card-body { flex: 1; }
+.note-card.has-trash { padding-right: 8px; }
+.note-card-kind-tile { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: 0 0 auto; }
+.note-card-kind-tile.is-doc { background: #eef2ff; color: #3b5bdb; }
+.note-card-kind-tile.is-sheet { background: #dcfce7; color: #15803d; }
+.note-card-body { min-width: 0; flex: 1; }
 .note-card-trash { position: relative; z-index: 1; flex-shrink: 0; width: 32px; height: 32px; border: 0; border-radius: 8px; padding: 0; display: grid; place-items: center; background: transparent; color: var(--muted); cursor: pointer; }
 .note-card-trash:hover { background: var(--subtle); color: var(--danger); }
 .note-card-trash:focus-visible { outline: 2px solid var(--accent-ring); }
@@ -549,7 +550,6 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .sheet-host [data-u-comp="ribbon-toolbar"],
 .sheet-host .univer-justify-center:has(> [data-u-comp="ribbon-toolbar"]) { justify-content: flex-start !important; }
 .sheet-kind-badge { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-weight: 500; }
-.note-card-sheet-icon { color: var(--accent); display: inline-flex; align-items: center; flex: 0 0 auto; }
 
 /* ---------------------------------------------------------------- mobile (phones)
    Collapse the formatting toolbar by default behind an Aa toggle pill in the note header,

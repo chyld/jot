@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bot, Lock, Sheet, Trash2 } from 'lucide-react';
+import { Bot, FileText, Lock, Sheet, Trash2 } from 'lucide-react';
 import { relativeTime } from '../../shared/time';
 import type { NoteSummary } from '../../shared/types';
 import { homeHref, navigate } from '../router';
@@ -29,15 +29,19 @@ export function NoteCard(props: { note: NoteSummary; selected?: boolean; now: Da
   const href = props.href ?? `/n/${n.id}`;
   // A read-only note cannot be moved to the trash, so its card has no trash button.
   const canTrash = props.onTrash !== undefined && !n.readOnly;
+  const isSheet = n.kind === 'sheet';
   return (
     <article className={`note-card ${props.selected ? 'is-selected' : ''} ${canTrash ? 'has-trash' : ''}`} data-note-id={n.id} aria-label={n.title || 'Untitled'}>
+      <span
+        className={`note-card-kind-tile ${isSheet ? 'is-sheet' : 'is-doc'}`}
+        role="img"
+        aria-label={isSheet ? 'Spreadsheet' : 'Document'}
+        title={isSheet ? 'Spreadsheet' : 'Document'}
+      >
+        {isSheet ? <Sheet size={16} /> : <FileText size={16} />}
+      </span>
       <div className="note-card-body">
         <div className="note-card-top">
-          {n.kind === 'sheet' && (
-            <span className="note-card-sheet-icon" role="img" aria-label="Spreadsheet" title="Spreadsheet">
-              <Sheet size={15} />
-            </span>
-          )}
           <a href={href} className="note-card-title note-card-link" aria-current={props.selected ? 'true' : undefined} onClick={go(href)}>
             {n.title || 'Untitled'}
           </a>
