@@ -5,7 +5,7 @@
 // current section's: the heading is its name, and the list, chips, search, New and
 // "Delete N empty" work on it alone.
 import { useEffect, useState } from 'react';
-import { FileText, Search, Sheet, Trash2 } from 'lucide-react';
+import { FileText, PenTool, Search, Sheet, Trash2 } from 'lucide-react';
 import type { NoteSummary, Tag } from '../../shared/types';
 import { api } from '../api';
 import { NoteCard, useNow } from '../components/NoteCard';
@@ -133,6 +133,9 @@ export function NotesScreen(props: { tag: string | null }) {
         <NewNoteLink className="btn btn-primary" kind="sheet" bump={bumpNotes} onError={setNewError}>
           <Sheet size={16} /> New sheet
         </NewNoteLink>
+        <NewNoteLink className="btn btn-primary" kind="board" bump={bumpNotes} onError={setNewError}>
+          <PenTool size={16} /> New board
+        </NewNoteLink>
       </div>
       {newError && (
         <div role="alert" className="banner banner-error">
@@ -192,7 +195,7 @@ export function NotesScreen(props: { tag: string | null }) {
       </div>
       <div className="notes-list wide" data-testid="notes-list">
         {notes === null && <div className="muted pad">Loading…</div>}
-        {notes?.length === 0 && <div className="muted pad">{filtering ? 'No notes match.' : 'No notes yet. Create one with New doc or New sheet.'}</div>}
+        {notes?.length === 0 && <div className="muted pad">{filtering ? 'No notes match.' : 'No notes yet. Create one with New doc, New sheet, or New board.'}</div>}
         {notes?.map((n) => <NoteCard key={n.id} note={n} now={now} onTrash={() => void trash(n)} />)}
       </div>
     </div>

@@ -20,6 +20,7 @@ import { isId, newId } from '../ids';
 import { createBotNote, findBotRequest, getNote } from '../notes';
 import { buildFtsQuery } from '../search';
 import { detectImageType } from '../uploads';
+import { boardToMarkdown } from '../board';
 import { docToMarkdown, markdownToDoc, noteTitle } from './markdown';
 import { sheetToMarkdown } from '../sheet';
 import { botForToken } from './tokens';
@@ -213,7 +214,7 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
     'read_note',
     {
       description:
-        'Read one of the user’s notes in full, as Markdown (or tab-separated rows per worksheet for spreadsheets), with its kind, title, tags and author. Only Markdown features are kept: fonts, sizes, colours, highlights and underline are dropped, ' +
+        'Read one of the user’s notes in full, as Markdown (tab-separated rows per worksheet for spreadsheets, or a text outline for whiteboards), with its kind, title, tags and author. Only Markdown features are kept: fonts, sizes, colours, highlights and underline are dropped, ' +
         'a task list becomes a plain list, and a photo becomes [photo] (photos cannot be downloaded). Trashed notes cannot be read. ' +
         UNTRUSTED_RULE,
       inputSchema: { id: z.string().describe('The note’s id, from list_notes or create_note.') },
@@ -222,6 +223,12 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
       const note = isId(args.id) ? getNote(db, bot.userId, args.id) : null;
       if (!note || note.deletedAt) return fail('Note not found.');
       const author = note.botName ?? 'user';
+      const rendered =
+        note.content.type === 'sheet'
+          ? sheetToMarkdown(note.content)
+          : note.content.type === 'board'
+            ? boardToMarkdown(note.content)
+            : docToMarkdown(note.content);
       return ok(
         [
           `id: ${note.id}`,
@@ -230,7 +237,7 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
           `in inbox: ${note.inbox ? 'yes' : 'no'}`,
           `tags: ${note.tags.length ? note.tags.join(', ') : '(none)'}`,
           `updated: ${note.updatedAt}`,
-          untrusted(author, `title: ${note.title}\n\n${note.content.type === 'sheet' ? sheetToMarkdown(note.content) : docToMarkdown(note.content)}`),
+          untrusted(author, `title: ${note.title}\n\n${rendered}`),
         ].join('\n'),
       );
     },

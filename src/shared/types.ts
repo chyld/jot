@@ -4,7 +4,7 @@ export interface User {
   username: string;
 }
 
-export type NoteKind = 'doc' | 'sheet';
+export type NoteKind = 'doc' | 'sheet' | 'board';
 
 export interface NoteSummary {
   id: string;
@@ -39,7 +39,15 @@ export interface SheetDoc {
   workbook: Record<string, unknown>;
 }
 
-export type NoteContent = TiptapDoc | SheetDoc;
+export interface BoardDoc {
+  type: 'board';
+  version: 1;
+  elements: Array<Record<string, unknown>>;
+  appState: Record<string, unknown>;
+  files: Record<string, unknown>;
+}
+
+export type NoteContent = TiptapDoc | SheetDoc | BoardDoc;
 
 export interface Note extends NoteSummary {
   content: NoteContent;

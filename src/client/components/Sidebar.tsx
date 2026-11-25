@@ -1,4 +1,4 @@
-import { FileText, Inbox, LayoutGrid, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, Sheet, Tags, Type, UserRound } from 'lucide-react';
+import { FileText, Inbox, LayoutGrid, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, PenTool, Sheet, Tags, Type, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSections } from '../currentSection';
 import { useData } from '../data';
@@ -142,6 +142,9 @@ export function Sidebar(props: { path: string }) {
       </NewNoteLink>
       <NewNoteLink className="rail-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
         <Sheet size={20} />
+      </NewNoteLink>
+      <NewNoteLink className="rail-btn" kind="board" label="New whiteboard" bump={bumpNotes} onError={setNewError}>
+        <PenTool size={20} />
       </NewNoteLink>
       {/* The section square (sections-spec.md §3): the current section's colour and first letter; it opens the Sections page. */}
       <RailLink to="/sections" label={`Sections (current: ${current.name})`} active={p === '/sections'} className="rail-section">

@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Bot, Check, ArrowLeft, ArrowRight, FileText, List, Lock, RotateCcw, Sheet, Trash2 } from 'lucide-react';
+import { Bot, Check, ArrowLeft, ArrowRight, FileText, List, Lock, PenTool, RotateCcw, Sheet, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note, TiptapDoc } from '../../shared/types';
@@ -43,8 +43,9 @@ function textCounts(editor: Editor | null): { words: number; chars: number } {
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
 const LazySheetEditor = lazy(() => import('./SheetEditor'));
+const LazyBoardEditor = lazy(() => import('./BoardEditor'));
 
-class SheetErrorBoundary extends Component<{ noteId: string; children: ReactNode }, { error: Error | null }> {
+class LazyEditorErrorBoundary extends Component<{ noteId: string; kindLabel: string; children: ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
   static getDerivedStateFromError(error: Error) {
     return { error };
@@ -56,7 +57,7 @@ class SheetErrorBoundary extends Component<{ noteId: string; children: ReactNode
     if (this.state.error) {
       return (
         <div className="empty-state" role="alert">
-          <p>Could not load the spreadsheet editor.</p>
+          <p>Could not load the {this.props.kindLabel} editor.</p>
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
               Reload page
@@ -98,11 +99,20 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
   if (!note) return <div className="empty-state muted">Loading…</div>;
   if (note.kind === 'sheet') {
     return (
-      <SheetErrorBoundary noteId={note.id}>
+      <LazyEditorErrorBoundary noteId={note.id} kindLabel="spreadsheet">
         <Suspense fallback={<div className="empty-state muted">Loading spreadsheet…</div>}>
           <LazySheetEditor note={note} onTrashed={props.onTrashed} onChange={setNote} />
         </Suspense>
-      </SheetErrorBoundary>
+      </LazyEditorErrorBoundary>
+    );
+  }
+  if (note.kind === 'board') {
+    return (
+      <LazyEditorErrorBoundary noteId={note.id} kindLabel="whiteboard">
+        <Suspense fallback={<div className="empty-state muted">Loading whiteboard…</div>}>
+          <LazyBoardEditor note={note} onTrashed={props.onTrashed} onChange={setNote} />
+        </Suspense>
+      </LazyEditorErrorBoundary>
     );
   }
   return <LoadedNote note={note} onTrashed={props.onTrashed} onChange={setNote} />;
@@ -287,6 +297,9 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
           </NewNoteLink>
           <NewNoteLink className="rail-toggle-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setMessage}>
             <Sheet size={18} />
+          </NewNoteLink>
+          <NewNoteLink className="rail-toggle-btn" kind="board" label="New whiteboard" bump={bumpNotes} onError={setMessage}>
+            <PenTool size={18} />
           </NewNoteLink>
           <a
             href="/"

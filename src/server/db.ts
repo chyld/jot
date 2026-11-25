@@ -8,7 +8,7 @@ import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -243,6 +243,19 @@ function migrate(db: DB) {
     db.transaction(() => {
       db.exec(`ALTER TABLE notes ADD COLUMN kind TEXT NOT NULL DEFAULT 'doc' CHECK (kind IN ('doc', 'sheet'))`);
       db.pragma(`user_version = 9`);
+    })();
+  }
+  // Version 10: whiteboards alongside documents and spreadsheets (kind = 'doc' | 'sheet' | 'board').
+  // Swapping the column in place preserves rowids and avoids dropping notes (which would cascade-delete note_tags).
+  if (version < 10) {
+    db.transaction(() => {
+      db.exec(`
+        ALTER TABLE notes ADD COLUMN kind_new TEXT NOT NULL DEFAULT 'doc' CHECK (kind_new IN ('doc', 'sheet', 'board'));
+        UPDATE notes SET kind_new = kind;
+        ALTER TABLE notes DROP COLUMN kind;
+        ALTER TABLE notes RENAME COLUMN kind_new TO kind;
+      `);
+      db.pragma(`user_version = 10`);
     })();
   }
 }

@@ -89,7 +89,7 @@ describe('personal backup and restore of style buttons', () => {
 
     const { file } = await takeBackup(src);
     const opened = openBackup(file);
-    expect(opened.manifest.version).toBe(6);
+    expect(opened.manifest.version).toBe(7);
     expect(opened.data.buttons).toHaveLength(10);
     expect(opened.data.buttons[0]).toEqual({ slot: 1, styleId: null, defaultStyle: 'Quote', hidden: false });
     expect(opened.data.buttons[1]).toEqual({ slot: 2, styleId: shout.id, defaultStyle: null, hidden: false });

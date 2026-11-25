@@ -134,6 +134,7 @@ a.btn { text-decoration: none; }
 .note-card-kind-tile { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: 0 0 auto; }
 .note-card-kind-tile.is-doc { background: #eef2ff; color: #3b5bdb; }
 .note-card-kind-tile.is-sheet { background: #dcfce7; color: #15803d; }
+.note-card-kind-tile.is-board { background: #fef3c7; color: #b45309; }
 .note-card-body { min-width: 0; flex: 1; }
 .note-card-trash { position: relative; z-index: 1; flex-shrink: 0; width: 32px; height: 32px; border: 0; border-radius: 8px; padding: 0; display: grid; place-items: center; background: transparent; color: var(--muted); cursor: pointer; }
 .note-card-trash:hover { background: var(--subtle); color: var(--danger); }
@@ -551,6 +552,13 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .sheet-host [data-u-comp="ribbon-toolbar"],
 .sheet-host .univer-justify-center:has(> [data-u-comp="ribbon-toolbar"]) { justify-content: flex-start !important; }
 .sheet-kind-badge { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-weight: 500; }
+
+/* Whiteboard editor (Excalidraw) */
+.board-note { overflow: hidden; }
+.board-host { flex: 1 1 0; min-height: 0; width: 100%; position: relative; background: var(--surface); }
+.board-host .excalidraw { width: 100%; height: 100%; }
+.board-host .default-sidebar-trigger { display: none !important; }
+.board-kind-badge { display: inline-flex; align-items: center; gap: 4px; color: #b45309; font-weight: 500; }
 
 /* ---------------------------------------------------------------- mobile (phones)
    Collapse the formatting toolbar by default behind an Aa toggle pill in the note header,

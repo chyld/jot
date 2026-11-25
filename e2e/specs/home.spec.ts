@@ -28,17 +28,18 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   expect(Math.round(pane.x)).toBe(Math.round(rail.width));
   expect(Math.round(pane.width)).toBe(viewport.width - Math.round(rail.width));
 
-  // The left bar: logo, new note, new spreadsheet, section link, Inbox and Tags, then Fonts, Styles, Buttons and Account.
+  // The left bar: logo, new note, new spreadsheet, new whiteboard, section link, Inbox and Tags, then Fonts, Styles, Buttons and Account.
   // No notes icon, and no Trash: each section's trash is opened from its card on the Sections page.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'New note', 'New spreadsheet', 'Sections (current: Default)', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Buttons', 'Account']);
+  expect(controls).toEqual(['Jot home: all notes', 'New note', 'New spreadsheet', 'New whiteboard', 'Sections (current: Default)', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Buttons', 'Account']);
   await goHome(page);
 
-  // Home: search, New doc, New sheet, tag filter and the list, no editor.
+  // Home: search, New doc, New sheet, New board, tag filter and the list, no editor.
   await expect(page.getByRole('searchbox', { name: 'Search notes' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'New doc', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'New sheet', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New board', exact: true })).toBeVisible();
   await expect(page.locator('.note-body')).toHaveCount(0);
   await expect(page.getByRole('toolbar', { name: 'Formatting' })).toHaveCount(0);
   const list = page.getByTestId('notes-list');

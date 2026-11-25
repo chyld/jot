@@ -28,6 +28,7 @@ import {
 } from './backup/personal';
 import { registerMcp } from './agent/mcp';
 import { BotError, createBot, listBots, revokeBot } from './agent/tokens';
+import { sanitizeBoard } from './board';
 import { ContentError, sanitizeDoc } from './content';
 import { sanitizeSheet } from './sheet';
 import { DEFAULT_STARTER_FONTS_DIR, fontsDir, photosDir, REPO_ROOT, type JotContext } from './context';
@@ -249,12 +250,14 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return v.replace(/[\u0000-\u001f\u007f]/g, ' ');
   };
   const readKind = (v: unknown): NoteKind => {
-    if (v === 'doc' || v === 'sheet') return v;
-    throw bad('Kind must be "doc" or "sheet".');
+    if (v === 'doc' || v === 'sheet' || v === 'board') return v;
+    throw bad('Kind must be "doc", "sheet", or "board".');
   };
   const readContent = (v: unknown, kind: NoteKind): NoteContent => {
     try {
-      return kind === 'sheet' ? sanitizeSheet(v) : sanitizeDoc(v);
+      if (kind === 'sheet') return sanitizeSheet(v);
+      if (kind === 'board') return sanitizeBoard(v);
+      return sanitizeDoc(v);
     } catch (e) {
       if (e instanceof ContentError) throw bad(e.message);
       throw e;

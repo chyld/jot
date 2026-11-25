@@ -15,7 +15,7 @@ export function NewNoteLink(props: {
   children: React.ReactNode;
 }) {
   const kind = props.kind ?? 'doc';
-  const href = kind === 'sheet' ? '/new?kind=sheet' : '/new';
+  const href = kind === 'sheet' ? '/new?kind=sheet' : kind === 'board' ? '/new?kind=board' : '/new';
   const create = () => void createAndOpenNote(props.bump, { kind }).then(props.onError);
   return (
     <a

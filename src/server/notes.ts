@@ -4,7 +4,8 @@
 // The functions behind the home page, search, New, "Delete N empty" and the trash take the
 // current section and add it to their queries (sections-spec.md §2). The app checks that
 // the section is the user's before calling them.
-import type { Note, NoteContent, NoteKind, NoteSummary, SheetDoc, Tag, TiptapDoc } from '../shared/types';
+import type { BoardDoc, Note, NoteContent, NoteKind, NoteSummary, SheetDoc, Tag, TiptapDoc } from '../shared/types';
+import { boardText, emptyBoard, isEmptyBoard } from './board';
 import { docText, emptyDoc, previewOf } from './content';
 import { now, type DB } from './db';
 import { newId } from './ids';
@@ -32,10 +33,15 @@ const SUMMARY_COLS = `n.id, n.kind, n.user_id, n.title, n.body_text, n.created_a
   (SELECT group_concat(t.name, ' ' ORDER BY t.name) FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
      WHERE nt.note_id = n.id) AS tag_list`;
 
+function normalizeNoteKind(kind: unknown): NoteKind {
+  if (kind === 'sheet' || kind === 'board') return kind;
+  return 'doc';
+}
+
 function toSummary(r: NoteRow): NoteSummary {
   return {
     id: r.id,
-    kind: r.kind === 'sheet' ? 'sheet' : 'doc',
+    kind: normalizeNoteKind(r.kind),
     title: r.title,
     preview: previewOf(r.body_text),
     tags: r.tag_list ? r.tag_list.split(' ') : [],
@@ -81,7 +87,7 @@ export function getNote(db: DB, userId: string, id: string): Note | null {
 export function getNoteKind(db: DB, userId: string, id: string): NoteKind | null {
   const r = db.prepare('SELECT kind FROM notes WHERE id = ? AND user_id = ?').get(id, userId) as { kind: string } | undefined;
   if (!r) return null;
-  return r.kind === 'sheet' ? 'sheet' : 'doc';
+  return normalizeNoteKind(r.kind);
 }
 
 export function listNotes(db: DB, userId: string, section: string, tag?: string): NoteSummary[] {
@@ -108,12 +114,14 @@ export function listTrash(db: DB, userId: string, section: string): NoteSummary[
 }
 
 function contentText(content: NoteContent): string {
-  return content.type === 'sheet' ? sheetText(content) : docText(content);
+  if (content.type === 'sheet') return sheetText(content);
+  if (content.type === 'board') return boardText(content);
+  return docText(content);
 }
 
 export function createNote(db: DB, userId: string, section: string, title: string, content: NoteContent | undefined, kind: NoteKind = 'doc'): Note {
   const id = newId();
-  const body = content ?? (kind === 'sheet' ? emptySheet() : emptyDoc());
+  const body = content ?? (kind === 'sheet' ? emptySheet() : kind === 'board' ? emptyBoard() : emptyDoc());
   const t = now();
   db.transaction(() => {
     db.prepare(
@@ -221,11 +229,12 @@ export function trashNote(db: DB, userId: string, id: string): Note | null | 're
   })();
 }
 
-/** A body with nothing in it: empty paragraphs for docs, or no populated cells for sheets. */
+/** A body with nothing in it: empty paragraphs for docs, no populated cells for sheets, or no elements for boards. */
 function isEmptyContent(json: string, kind: string): boolean {
   try {
     const parsed = JSON.parse(json);
     if (kind === 'sheet') return isEmptySheet(parsed as SheetDoc);
+    if (kind === 'board') return isEmptyBoard(parsed as BoardDoc);
     const nodes = (parsed as TiptapDoc).content ?? [];
     return nodes.every((n) => n.type === 'paragraph' && !n.content?.length);
   } catch {

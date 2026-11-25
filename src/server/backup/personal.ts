@@ -21,6 +21,7 @@ import { validateStyleInput } from '../../shared/styles';
 import { DEFAULT_SECTION_ID, isSectionColour, normalizeSectionId, normalizeSectionName, type SectionColour } from '../../shared/sections';
 import { normalizeTag } from '../../shared/tags';
 import type { NoteContent, NoteKind, TiptapDoc, TiptapNode } from '../../shared/types';
+import { boardText, sanitizeBoard } from '../board';
 import { ContentError, docText, sanitizeDoc } from '../content';
 import { sanitizeSheet, sheetText } from '../sheet';
 import { fontsDir, photosDir, userDir, type JotContext } from '../context';
@@ -48,7 +49,8 @@ export const PERSONAL_FORMAT = 'jot-personal-backup';
 // Format 5 added `buttons` (the ten style buttons, with default styles named by their
 // standard name so bindings survive restores; older formats restore unbound and shown).
 // Format 6 added `kind` on notes ('doc' | 'sheet'; older formats restore as 'doc').
-export const PERSONAL_VERSION = 6;
+// Format 7 added 'board' (whiteboard) as a note kind.
+export const PERSONAL_VERSION = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------------------ what a backup holds
@@ -144,7 +146,7 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
     const tagsOf = db.prepare('SELECT t.name FROM note_tags nt JOIN tags t ON t.id = nt.tag_id WHERE nt.note_id = ? ORDER BY t.name');
     const notes = (db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY created_at, id').all(userId) as any[]).map((n) => ({
       id: n.id,
-      kind: (n.kind === 'sheet' ? 'sheet' : 'doc') as NoteKind,
+      kind: (n.kind === 'sheet' || n.kind === 'board' ? n.kind : 'doc') as NoteKind,
       title: n.title,
       content: JSON.parse(n.content),
       tags: (tagsOf.all(n.id) as any[]).map((t) => t.name),
@@ -549,11 +551,11 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
     const label = (n.title || 'Untitled').slice(0, 60);
     // eslint-disable-next-line no-control-regex
     const title = n.title.replace(/[\u0000-\u001f\u007f]/g, ' ');
-    if (n.kind !== undefined && n.kind !== 'doc' && n.kind !== 'sheet') fail(`note "${label}" has an invalid kind.`);
-    const kind: NoteKind = n.kind === 'sheet' ? 'sheet' : 'doc';
+    if (n.kind !== undefined && n.kind !== 'doc' && n.kind !== 'sheet' && n.kind !== 'board') fail(`note "${label}" has an invalid kind.`);
+    const kind: NoteKind = n.kind === 'sheet' || n.kind === 'board' ? n.kind : 'doc';
     let content: NoteContent;
     try {
-      content = kind === 'sheet' ? sanitizeSheet(n.content) : sanitizeDoc(n.content);
+      content = kind === 'sheet' ? sanitizeSheet(n.content) : kind === 'board' ? sanitizeBoard(n.content) : sanitizeDoc(n.content);
     } catch (err) {
       if (err instanceof ContentError) fail(`note "${label}" has content Jot cannot read.`);
       throw err;
@@ -877,7 +879,7 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
     for (const n of data.notes) {
       const id = newId();
       const content = n.content.type === 'doc' ? remapPhotoRefs(n.content, photoMap) : n.content;
-      const bodyText = content.type === 'sheet' ? sheetText(content) : docText(content);
+      const bodyText = content.type === 'sheet' ? sheetText(content) : content.type === 'board' ? boardText(content) : docText(content);
       insNote.run(id, n.kind, userId, n.title, JSON.stringify(content), bodyText, n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0, n.inbox ? 1 : 0, n.botName, n.section);
       for (const t of n.tags) {
         if (!tagIds.has(t)) {

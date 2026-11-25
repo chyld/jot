@@ -179,7 +179,7 @@ describe('schema versions 2 and 3', () => {
     raw.close();
     const db = openDatabase(file);
     expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
-    expect(SCHEMA_VERSION).toBe(9);
+    expect(SCHEMA_VERSION).toBe(10);
     const cols = db.prepare('PRAGMA table_info(restore_files)').all().map((c: any) => c.name);
     expect(cols).toEqual(expect.arrayContaining(['path', 'state', 'user_id']));
     expect((db.prepare('SELECT COUNT(*) AS n FROM notes WHERE read_only = 0').get() as any).n).toBe(2);

@@ -67,14 +67,14 @@ async function renderEditor() {
 }
 
 describe('Back to notes button in editor header', () => {
-  it('is fourth in the header button group, points to "/", and sits before the title', async () => {
+  it('is fifth in the header button group, points to "/", and sits before the title', async () => {
     const header = await renderEditor();
     const actions = header.querySelector('.note-header-actions') as HTMLElement;
     const children = Array.from(actions.children);
-    expect(children.map((el) => el.getAttribute('aria-label'))).toEqual(['Collapse sidebar', 'New note', 'New spreadsheet', 'Back to notes']);
+    expect(children.map((el) => el.getAttribute('aria-label'))).toEqual(['Collapse sidebar', 'New note', 'New spreadsheet', 'New whiteboard', 'Back to notes']);
 
     const backLink = within(actions).getByRole('link', { name: 'Back to notes' });
-    expect(backLink).toBe(children[3]);
+    expect(backLink).toBe(children[4]);
     expect(backLink.getAttribute('href')).toBe('/');
     expect(backLink.getAttribute('title')).toBe('Back to notes');
     expect(backLink.classList.contains('rail-toggle-btn')).toBe(true);

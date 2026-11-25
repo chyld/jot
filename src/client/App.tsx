@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { User } from '../shared/types';
+import type { NoteKind, User } from '../shared/types';
 import { api, setUnauthorizedHandler } from './api';
 import { RailProvider, RailToggleButton, Sidebar, useRail } from './components/Sidebar';
 import { DataProvider, useData } from './data';
@@ -22,7 +22,7 @@ import { TrashScreen } from './screens/TrashScreen';
  * with the note's address, so Back and Refresh never return here or make a second note.
  * The ref keeps React StrictMode's second effect from creating another.
  */
-function NewNoteScreen(props: { kind: 'doc' | 'sheet' }) {
+function NewNoteScreen(props: { kind: NoteKind }) {
   const { bumpNotes } = useData();
   const started = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,10 @@ function NewNoteScreen(props: { kind: 'doc' | 'sheet' }) {
     started.current = true;
     create();
   }, []);
-  if (!error) return <div className="loading">{props.kind === 'sheet' ? 'Creating spreadsheet…' : 'Creating note…'}</div>;
+  if (!error) {
+    const label = props.kind === 'sheet' ? 'Creating spreadsheet…' : props.kind === 'board' ? 'Creating whiteboard…' : 'Creating note…';
+    return <div className="loading">{label}</div>;
+  }
   return (
     <div className="screen">
       <div role="alert" className="form-error">
@@ -48,15 +51,20 @@ function NewNoteScreen(props: { kind: 'doc' | 'sheet' }) {
   );
 }
 
-/** After logging in, go back to the address that sent you to /login. Only /new (and /new?kind=sheet) is kept. */
-const RETURN_PATHS = ['/new', '/new?kind=sheet'];
+/** After logging in, go back to the address that sent you to /login. Only /new (and its kind variants) is kept. */
+const RETURN_PATHS = ['/new', '/new?kind=sheet', '/new?kind=board'];
+
+function parseNewKind(raw: string | null): NoteKind {
+  if (raw === 'sheet' || raw === 'board') return raw;
+  return 'doc';
+}
 
 function Screen(props: { path: string; search: URLSearchParams }) {
   const p = props.path;
   if (p === '/') return <NotesScreen tag={props.search.get('tag')} />;
   const note = match('/n/:id', p);
   if (note) return <NoteScreen noteId={note.id} />;
-  if (p === '/new') return <NewNoteScreen kind={props.search.get('kind') === 'sheet' ? 'sheet' : 'doc'} />;
+  if (p === '/new') return <NewNoteScreen kind={parseNewKind(props.search.get('kind'))} />;
   if (p === '/fonts') return <FontsScreen />;
   if (p === '/styles') return <StylesScreen />;
   if (p === '/buttons') return <ButtonsScreen />;
