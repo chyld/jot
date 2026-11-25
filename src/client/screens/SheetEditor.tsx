@@ -2,7 +2,7 @@
 // downloaded when working on regular text notes. Reuses Jot's note header (title, tags,
 // section, trash, prev/next nav), autosave, read-only lock, and status footer.
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Bot, Check, FileSpreadsheet, List, Lock, LockOpen, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Check, FileSpreadsheet, FileText, List, Lock, LockOpen, RotateCcw, Trash2 } from 'lucide-react';
 import { CommandType, createUniver, defaultTheme, LocaleType, mergeLocales } from '@univerjs/presets';
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core';
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US';
@@ -244,7 +244,7 @@ export default function SheetEditor(props: { note: Note; onTrashed: () => void; 
         <div className="note-header-nav">
           <RailToggleButton />
           <NewNoteLink className="rail-toggle-btn" label="New note" bump={bumpNotes} onError={setNewError}>
-            <Plus size={18} />
+            <FileText size={18} />
           </NewNoteLink>
           <NewNoteLink className="rail-toggle-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
             <FileSpreadsheet size={18} />

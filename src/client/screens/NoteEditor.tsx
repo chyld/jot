@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Bot, Check, ArrowLeft, ArrowRight, List, Lock, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Bot, Check, ArrowLeft, ArrowRight, FileText, List, Lock, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
 import type { Note, TiptapDoc } from '../../shared/types';
@@ -253,7 +253,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
         <div className="note-header-actions">
           <RailToggleButton />
           <NewNoteLink className="rail-toggle-btn" label="New note" bump={bumpNotes} onError={setMessage}>
-            <Plus size={18} />
+            <FileText size={18} />
           </NewNoteLink>
           <a
             href="/"
