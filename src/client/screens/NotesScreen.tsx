@@ -128,9 +128,9 @@ export function NotesScreen(props: { tag: string | null }) {
           </button>
         )}
         <NewNoteLink className="btn btn-primary" bump={bumpNotes} onError={setNewError}>
-          <FileText size={16} /> New
+          <FileText size={16} /> New doc
         </NewNoteLink>
-        <NewNoteLink className="btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
+        <NewNoteLink className="btn btn-primary" kind="sheet" bump={bumpNotes} onError={setNewError}>
           <Sheet size={16} /> New sheet
         </NewNoteLink>
       </div>

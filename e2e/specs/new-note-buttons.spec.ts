@@ -25,7 +25,7 @@ test('a double-click on + makes two notes', async ({ page }) => {
 test('a double-click on the home page’s + New makes two notes', async ({ page }) => {
   await goHome(page);
   const before = await count(page);
-  await page.getByRole('button', { name: 'New', exact: true }).dblclick();
+  await page.getByRole('button', { name: 'New doc', exact: true }).dblclick();
   await expect.poll(() => count(page)).toBe(before + 2);
   await opened(page);
 });

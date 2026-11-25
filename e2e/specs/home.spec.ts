@@ -28,16 +28,17 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   expect(Math.round(pane.x)).toBe(Math.round(rail.width));
   expect(Math.round(pane.width)).toBe(viewport.width - Math.round(rail.width));
 
-  // The left bar: logo, section link, new note, Inbox and Tags, then Fonts, Styles and Account.
+  // The left bar: logo, new note, new spreadsheet, section link, Inbox and Tags, then Fonts, Styles, Buttons and Account.
   // No notes icon, and no Trash: each section's trash is opened from its card on the Sections page.
   const nav = page.getByRole('navigation', { name: 'Main' });
   const controls = await nav.locator('a, button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
-  expect(controls).toEqual(['Jot home: all notes', 'Sections (current: Default)', 'New note', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Account']);
+  expect(controls).toEqual(['Jot home: all notes', 'New note', 'New spreadsheet', 'Sections (current: Default)', 'Inbox', 'Tags', 'Fonts', 'Styles', 'Buttons', 'Account']);
   await goHome(page);
 
-  // Home: search, New, tag filter and the list, no editor.
+  // Home: search, New doc, New sheet, tag filter and the list, no editor.
   await expect(page.getByRole('searchbox', { name: 'Search notes' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'New', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New doc', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New sheet', exact: true })).toBeVisible();
   await expect(page.locator('.note-body')).toHaveCount(0);
   await expect(page.getByRole('toolbar', { name: 'Formatting' })).toHaveCount(0);
   const list = page.getByTestId('notes-list');
@@ -65,8 +66,8 @@ test('home page, tag filter, logo and full-screen editor', async ({ page }) => {
   await goHome(page);
   await expect(filter.getByRole('button', { name: `#${blue}` })).toBeVisible();
 
-  // The New button on the home page opens a fresh note full screen.
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  // The New doc button on the home page opens a fresh note full screen.
+  await page.getByRole('button', { name: 'New doc', exact: true }).click();
   await expect(page).toHaveURL(/\/n\/[A-Za-z0-9_-]+$/);
   await typeInBody(page, 'From the home page');
   await waitSaved(page);
@@ -119,8 +120,7 @@ test('the Olive theme', async ({ page }) => {
   await railLink.hover();
   await expect(railLink).toHaveCSS('background-color', 'rgb(238, 245, 220)'); // hover tint #eef5dc
   const newNoteBtn = nav.getByRole('button', { name: 'New note' });
-  await expect(newNoteBtn).toHaveCSS('background-color', 'rgb(77, 124, 15)'); // #4d7c0f
-  await expect(newNoteBtn).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(newNoteBtn).toHaveCSS('color', 'rgb(107, 117, 87)'); // plain rail icon #6b7557
   const logo = nav.getByRole('link', { name: /Jot home/ });
   await expect(logo).toBeVisible();
   await expect(logo).toHaveCSS('background-color', 'rgb(228, 242, 196)'); // on home: active #e4f2c4
@@ -129,9 +129,12 @@ test('the Olive theme', async ({ page }) => {
   // App colours.
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 249, 241)'); // #f7f9f1
   await expect(page.locator('body')).toHaveCSS('color', 'rgb(29, 38, 16)'); // #1d2610
-  const newBtn = page.getByRole('button', { name: 'New', exact: true });
+  const newBtn = page.getByRole('button', { name: 'New doc', exact: true });
   await expect(newBtn).toHaveCSS('background-color', 'rgb(77, 124, 15)');
   await expect(newBtn).toHaveCSS('color', 'rgb(255, 255, 255)');
+  const newSheetBtn = page.getByRole('button', { name: 'New sheet', exact: true });
+  await expect(newSheetBtn).toHaveCSS('background-color', 'rgb(77, 124, 15)');
+  await expect(newSheetBtn).toHaveCSS('color', 'rgb(255, 255, 255)');
   await expect(page.getByRole('searchbox', { name: 'Search notes' }).locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(page.getByRole('searchbox', { name: 'Search notes' }).locator('..')).toHaveCSS('border-top-color', 'rgb(224, 232, 205)');
   const all = page.getByRole('group', { name: 'Filter by tag' }).getByRole('button', { name: 'All' });

@@ -35,7 +35,7 @@ test('a note made with the + button in the left bar opens ready to type', async 
 test('a note made with + New on the home page opens ready to type', async ({ page }) => {
   await login(page, 'alice');
   await goHome(page);
-  await typeWithoutClicking(page, () => page.getByRole('button', { name: 'New', exact: true }).click());
+  await typeWithoutClicking(page, () => page.getByRole('button', { name: 'New doc', exact: true }).click());
 });
 
 test('opening an existing note does not put the caret in the body', async ({ page }) => {

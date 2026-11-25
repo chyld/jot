@@ -25,7 +25,7 @@ export async function logout(page: Page) {
 
 export async function newNote(page: Page, title: string) {
   const before = page.url();
-  await page.getByRole('button', { name: 'New note' }).click();
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'New note' }).click();
   await expect(page).toHaveURL(/\/n\/[A-Za-z0-9_-]+$/);
   await expect(page).not.toHaveURL(before);
   // Wait for this note's own editor (the previous note may still be on screen for a moment).
