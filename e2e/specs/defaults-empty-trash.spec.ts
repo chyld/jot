@@ -7,9 +7,13 @@ test('default fonts have no Archive action, and the server refuses to archive th
   await login(page, 'carol');
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Fonts' }).click();
   const mine = page.getByRole('region', { name: 'Your fonts' });
+  const customFonts = page.getByTestId('custom-fonts');
+  const defaultFonts = page.getByTestId('default-fonts');
+  await expect(customFonts).toContainText(/No custom fonts added yet/i);
+  expect((await customFonts.boundingBox())!.y).toBeLessThan((await defaultFonts.boundingBox())!.y);
   for (const family of ['Inter', 'Lora', 'Playfair Display', 'Caveat', 'Fira Code']) {
     await expect(mine.getByRole('button', { name: `Archive ${family}` })).toHaveCount(0);
-    await expect(mine.getByRole('listitem').filter({ hasText: family })).toContainText(/default font/i);
+    await expect(defaultFonts.getByRole('listitem').filter({ hasText: family })).toContainText(/default font/i);
   }
   const fonts = (await (await page.request.get('/api/fonts')).json()).fonts;
   const inter = fonts.find((f: any) => f.family === 'Inter');
@@ -22,8 +26,12 @@ test('default fonts have no Archive action, and the server refuses to archive th
 test('default styles have no Edit or Delete; a style the user makes, even one called Body, does', async ({ page }) => {
   await login(page, 'carol');
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Styles' }).click();
+  const customStyles = page.getByTestId('custom-styles');
+  const defaultStyles = page.getByTestId('default-styles');
+  await expect(customStyles).toContainText(/No custom styles yet/i);
+  expect((await customStyles.boundingBox())!.y).toBeLessThan((await defaultStyles.boundingBox())!.y);
   for (const name of ['Body', 'Title', 'Quote', 'Aside', 'Code']) {
-    const card = page.getByTestId('style-card').filter({ hasText: 'Default style' }).and(page.getByRole('article', { name: `Style ${name}`, exact: true }));
+    const card = defaultStyles.getByTestId('style-card').filter({ hasText: 'Default style' }).and(page.getByRole('article', { name: `Style ${name}`, exact: true }));
     await expect(card).toHaveCount(1);
     await expect(card.getByRole('button', { name: /Edit|Delete/ })).toHaveCount(0);
   }
@@ -38,13 +46,15 @@ test('default styles have no Edit or Delete; a style the user makes, even one ca
   await dialog.getByLabel('Name').fill(name);
   await dialog.getByLabel('Size (px)').fill('27');
   await dialog.getByRole('button', { name: 'Save style' }).click();
-  const mine = page.getByTestId('style-card').filter({ hasNotText: 'Default style' }).and(page.getByRole('article', { name: 'Style Body', exact: true }));
+  const mine = customStyles.getByTestId('style-card').and(page.getByRole('article', { name: 'Style Body', exact: true }));
   await expect(mine).toHaveCount(1);
   await expect(mine.getByRole('button', { name: 'Edit' })).toBeVisible();
+  expect((await mine.boundingBox())!.y).toBeLessThan((await defaultStyles.boundingBox())!.y);
   await page.screenshot({ path: 'test-results/screens/styles-defaults.png' });
   await mine.getByRole('button', { name: /Delete/ }).click();
   await mine.getByRole('button', { name: 'Confirm delete' }).click();
   await expect(mine).toHaveCount(0);
+  await expect(customStyles).toContainText(/No custom styles yet/i);
 });
 
 test('Empty trash deletes every trashed note after a second click, and nothing else', async ({ page }) => {

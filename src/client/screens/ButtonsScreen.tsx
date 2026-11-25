@@ -29,6 +29,8 @@ export function ButtonsScreen() {
   }, [openSlot]);
 
   const stylesById = new Map(styles.map((s) => [s.id, s]));
+  const customStyles = styles.filter((s) => !s.isDefault);
+  const defaultStyles = styles.filter((s) => s.isDefault);
   const inUse = buttons.filter((b) => b.styleId !== null && stylesById.has(b.styleId)).length;
   const hiddenCount = buttons.filter((b) => b.hidden).length;
 
@@ -114,23 +116,51 @@ export function ButtonsScreen() {
                 {open && (
                   <div role="menu" aria-label={`Style for button ${b.slot}`} className="menu btn-slot-menu">
                     <div className="menu-scroll">
-                      {styles.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          role="menuitem"
-                          aria-label={s.name}
-                          className={`menu-item${bound?.id === s.id ? ' is-active' : ''}`}
-                          onClick={() => {
-                            setOpenSlot(null);
-                            void save(b.slot, { styleId: s.id });
-                          }}
-                        >
-                          <span className="style-preview" style={stylePreviewCss(s, 22)}>
-                            {s.name}
-                          </span>
-                        </button>
-                      ))}
+                      <div className="menu-group-label">Your styles</div>
+                      {customStyles.length === 0 ? (
+                        <div className="menu-empty">No custom styles yet</div>
+                      ) : (
+                        customStyles.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            role="menuitem"
+                            aria-label={s.name}
+                            className={`menu-item${bound?.id === s.id ? ' is-active' : ''}`}
+                            onClick={() => {
+                              setOpenSlot(null);
+                              void save(b.slot, { styleId: s.id });
+                            }}
+                          >
+                            <span className="style-preview" style={stylePreviewCss(s, 22)}>
+                              {s.name}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                      {defaultStyles.length > 0 && (
+                        <>
+                          <div className="menu-sep" role="separator" />
+                          <div className="menu-group-label">Default styles</div>
+                          {defaultStyles.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              role="menuitem"
+                              aria-label={s.name}
+                              className={`menu-item${bound?.id === s.id ? ' is-active' : ''}`}
+                              onClick={() => {
+                                setOpenSlot(null);
+                                void save(b.slot, { styleId: s.id });
+                              }}
+                            >
+                              <span className="style-preview" style={stylePreviewCss(s, 22)}>
+                                {s.name}
+                              </span>
+                            </button>
+                          ))}
+                        </>
+                      )}
                     </div>
                     <div className="menu-sep" />
                     <button

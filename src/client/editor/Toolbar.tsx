@@ -67,6 +67,23 @@ export function stylePreviewCss(s: Pick<Style, 'fontFamily' | 'size' | 'bold' | 
 export function StylesDropdown(props: { editor: Editor; styles: Style[]; onSaveSelection: () => void; onManage: () => void }) {
   const fmt = useEditorState({ editor: props.editor, selector: ({ editor }) => currentFormat(editor) }) as CurrentFormat;
   const match = matchingStyle(fmt, props.styles);
+  const custom = props.styles.filter((s) => !s.isDefault);
+  const defaults = props.styles.filter((s) => s.isDefault);
+  const renderItem = (s: Style, close: () => void) => (
+    <MenuItem
+      key={s.id}
+      label={s.name}
+      active={match?.id === s.id}
+      onSelect={() => {
+        applyStyle(props.editor, s);
+        close();
+      }}
+    >
+      <span className="style-preview" style={stylePreviewCss(s)}>
+        {s.name}
+      </span>
+    </MenuItem>
+  );
   return (
     <Dropdown
       label="Styles"
@@ -82,22 +99,15 @@ export function StylesDropdown(props: { editor: Editor; styles: Style[]; onSaveS
       {(close) => (
         <>
           <div className="menu-scroll">
-            {props.styles.length === 0 && <div className="menu-empty">No styles yet</div>}
-            {props.styles.map((s) => (
-              <MenuItem
-                key={s.id}
-                label={s.name}
-                active={match?.id === s.id}
-                onSelect={() => {
-                  applyStyle(props.editor, s);
-                  close();
-                }}
-              >
-                <span className="style-preview" style={stylePreviewCss(s)}>
-                  {s.name}
-                </span>
-              </MenuItem>
-            ))}
+            <div className="menu-group-label">Your styles</div>
+            {custom.length === 0 ? <div className="menu-empty">No custom styles yet</div> : custom.map((s) => renderItem(s, close))}
+            {defaults.length > 0 && (
+              <>
+                <div className="menu-sep" role="separator" />
+                <div className="menu-group-label">Default styles</div>
+                {defaults.map((s) => renderItem(s, close))}
+              </>
+            )}
           </div>
           <div className="menu-sep" />
           <MenuItem
@@ -127,7 +137,23 @@ export function StylesDropdown(props: { editor: Editor; styles: Style[]; onSaveS
 export function FontDropdown(props: { editor: Editor; fonts: Font[]; onBrowse: () => void }) {
   const family = useEditorState({ editor: props.editor, selector: ({ editor }) => currentFormat(editor).fontFamily }) as string | null;
   const active = props.fonts.filter((f) => !f.archived);
+  const custom = active.filter((f) => !f.isDefault);
+  const defaults = active.filter((f) => f.isDefault);
   const shown = family ?? DEFAULT_FONT_FAMILY;
+  const renderFont = (f: Font, close: () => void) => (
+    <MenuItem
+      key={f.id}
+      label={f.family}
+      active={f.family === shown}
+      style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}
+      onSelect={() => {
+        props.editor.chain().focus().setFontFamily(quoteFamily(f.family)).run();
+        close();
+      }}
+    >
+      {f.family}
+    </MenuItem>
+  );
   return (
     <Dropdown
       label="Font"
@@ -143,20 +169,15 @@ export function FontDropdown(props: { editor: Editor; fonts: Font[]; onBrowse: (
       {(close) => (
         <>
           <div className="menu-scroll">
-            {active.map((f) => (
-              <MenuItem
-                key={f.id}
-                label={f.family}
-                active={f.family === shown}
-                style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}
-                onSelect={() => {
-                  props.editor.chain().focus().setFontFamily(quoteFamily(f.family)).run();
-                  close();
-                }}
-              >
-                {f.family}
-              </MenuItem>
-            ))}
+            <div className="menu-group-label">Your fonts</div>
+            {custom.length === 0 ? <div className="menu-empty">No custom fonts yet</div> : custom.map((f) => renderFont(f, close))}
+            {defaults.length > 0 && (
+              <>
+                <div className="menu-sep" role="separator" />
+                <div className="menu-group-label">Default fonts</div>
+                {defaults.map((f) => renderFont(f, close))}
+              </>
+            )}
           </div>
           <div className="menu-sep" />
           <MenuItem

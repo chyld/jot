@@ -1111,3 +1111,15 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   and tabs (and from read-only notes). External pastes and `Ctrl+Shift+V` carry no Jot
   slice and continue to paste as plain text taking the cursor's formatting.
   Tests: `tests/component/paste.test.tsx`, `e2e/specs/paste.spec.ts`.
+- **Custom styles and fonts appear above defaults everywhere (owner request).**
+  - `/styles` (`StylesScreen.tsx`) splits into **Your styles** on top (showing a muted empty
+    notice when none have been created yet) and **Default styles** below.
+  - `/fonts` (`FontsScreen.tsx`) splits the top fonts panel into **Your fonts** (user-added,
+    with an empty notice when none have been added yet), **Default fonts** below it, and
+    **Archived** underneath when present.
+  - The editor toolbar's Styles and Font dropdowns (`Toolbar.tsx`) and the `/buttons` style
+    picker (`ButtonsScreen.tsx`) list custom items on top (or a muted empty note), a
+    horizontal separator line (`.menu-sep`), and default items below. The New/Edit Style
+    dialog's Font `<select>` (`StyleDialog.tsx`) likewise groups custom fonts above defaults.
+  Tests: `tests/component/fonts-trash.test.tsx`, `tests/component/dropdowns.test.tsx`,
+  `e2e/specs/defaults-empty-trash.spec.ts`.

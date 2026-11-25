@@ -101,7 +101,7 @@ describe('Styles dropdown', () => {
     expect(screen.getByRole('button', { name: 'Styles' }).textContent).toBe('Quote');
   });
 
-  it('runs "Save selection as style…" and "Manage styles…"', async () => {
+  it('"Save selection as style…" and "Manage styles…" run their handlers', async () => {
     const { onSaveSelection, onManage } = setup();
     await userEvent.click(screen.getByRole('button', { name: 'Styles' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Save selection as style…' }));
@@ -109,6 +109,30 @@ describe('Styles dropdown', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Styles' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Manage styles…' }));
     expect(onManage).toHaveBeenCalledOnce();
+  });
+
+  it('lists custom styles above default styles with a horizontal separator between them, and shows an empty note when none exist', async () => {
+    const editor = makeEditor();
+    const mixed = [
+      { ...style({ name: 'Aside', fontFamily: 'Caveat', size: 24 }), isDefault: true },
+      { ...style({ name: 'Body', fontFamily: 'Inter', size: 16 }), isDefault: true },
+      { ...style({ name: 'Zebra', fontFamily: 'Lora', size: 18 }), isDefault: false },
+    ];
+    const { unmount } = render(<StylesDropdown editor={editor} styles={mixed} onSaveSelection={vi.fn()} onManage={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Styles' }));
+    const menu = screen.getByRole('menu', { name: 'Styles' });
+    const items = within(menu).getAllByRole('menuitem');
+    expect(items.map((i) => i.textContent)).toEqual(['Zebra', 'Aside', 'Body', 'Save selection as style…', 'Manage styles…']);
+    const sep = within(menu).getByRole('separator');
+    expect(items[0].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sep.compareDocumentPosition(items[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    unmount();
+
+    render(<StylesDropdown editor={editor} styles={mixed.filter((s) => s.isDefault)} onSaveSelection={vi.fn()} onManage={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Styles' }));
+    const menu2 = screen.getByRole('menu', { name: 'Styles' });
+    expect(menu2.textContent).toContain('No custom styles yet');
+    expect(within(menu2).getByRole('separator')).toBeTruthy();
   });
 });
 
@@ -153,5 +177,28 @@ describe('Font dropdown', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Font' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Browse fonts…' }));
     expect(onBrowse).toHaveBeenCalledOnce();
+  });
+
+  it('lists custom fonts above default fonts with a horizontal separator between them, and shows an empty note when none exist', async () => {
+    const editor = makeEditor('<p>Hello</p>');
+    const withCustom = [
+      ...FONTS,
+      { id: 'f-roboto', family: 'Roboto Slab', category: 'Serif', archived: false, isDefault: false, createdAt: '2026-01-01T00:00:00Z' },
+    ];
+    const { unmount } = render(<FontDropdown editor={editor} fonts={withCustom} onBrowse={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Font' }));
+    const menu = screen.getByRole('menu', { name: 'Font' });
+    const items = within(menu).getAllByRole('menuitem');
+    expect(items.map((i) => i.textContent)).toEqual(['Roboto Slab', 'Inter', 'Lora', 'Caveat', 'Browse fonts…']);
+    const sep = within(menu).getByRole('separator');
+    expect(items[0].compareDocumentPosition(sep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sep.compareDocumentPosition(items[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    unmount();
+
+    render(<FontDropdown editor={editor} fonts={FONTS} onBrowse={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Font' }));
+    const menu2 = screen.getByRole('menu', { name: 'Font' });
+    expect(menu2.textContent).toContain('No custom fonts yet');
+    expect(within(menu2).getByRole('separator')).toBeTruthy();
   });
 });

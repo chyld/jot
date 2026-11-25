@@ -70,6 +70,24 @@ export function StyleCard(props: { style: Style; onEdit: () => void; onDelete: (
 export function StylesScreen() {
   const { styles, fonts, reloadStyles, reloadButtons } = useData();
   const [editing, setEditing] = useState<{ id: string | null; input: StyleInput } | null>(null);
+  const custom = styles.filter((s) => !s.isDefault);
+  const defaults = styles.filter((s) => s.isDefault);
+  const renderCard = (s: Style) => (
+    <StyleCard
+      key={s.id}
+      style={s}
+      onEdit={() =>
+        setEditing({
+          id: s.id,
+          input: { name: s.name, fontId: s.fontId, size: s.size, bold: s.bold, italic: s.italic, underline: s.underline, strike: s.strike, textColor: s.textColor, highlight: s.highlight },
+        })
+      }
+      onDelete={async () => {
+        await api.deleteStyle(s.id);
+        await Promise.all([reloadStyles(), reloadButtons()]);
+      }}
+    />
+  );
   return (
     <div className="screen">
       <div className="screen-head">
@@ -80,24 +98,22 @@ export function StylesScreen() {
         </button>
       </div>
       <p className="muted hint">A style is a stamp: applying it copies its formatting onto your text. Editing or deleting a style later does not change text it was applied to.</p>
-      <div className="card-grid">
-        {styles.map((s) => (
-          <StyleCard
-            key={s.id}
-            style={s}
-            onEdit={() =>
-              setEditing({
-                id: s.id,
-                input: { name: s.name, fontId: s.fontId, size: s.size, bold: s.bold, italic: s.italic, underline: s.underline, strike: s.strike, textColor: s.textColor, highlight: s.highlight },
-              })
-            }
-            onDelete={async () => {
-              await api.deleteStyle(s.id);
-              await Promise.all([reloadStyles(), reloadButtons()]);
-            }}
-          />
-        ))}
-      </div>
+      <section className="screen-section" aria-label="Your styles" data-testid="custom-styles">
+        <h2 className="screen-section-head">
+          Your styles <span className="muted">({custom.length})</span>
+        </h2>
+        {custom.length === 0 ? (
+          <p className="section-empty">No custom styles yet. Click “New style” to create one.</p>
+        ) : (
+          <div className="card-grid">{custom.map(renderCard)}</div>
+        )}
+      </section>
+      <section className="screen-section" aria-label="Default styles" data-testid="default-styles">
+        <h2 className="screen-section-head">
+          Default styles <span className="muted">({defaults.length})</span>
+        </h2>
+        <div className="card-grid">{defaults.map(renderCard)}</div>
+      </section>
       {editing && (
         <StyleDialog
           title={editing.id ? 'Edit style' : 'New style'}

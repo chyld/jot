@@ -115,6 +115,8 @@ export function FontsScreen() {
   const unarchive = (f: Font) => run(f.family, () => api.unarchiveFont(f.id));
 
   const active = fonts.filter((f) => !f.archived);
+  const custom = active.filter((f) => !f.isDefault);
+  const defaults = active.filter((f) => f.isDefault);
   const archived = fonts.filter((f) => f.archived);
 
   return (
@@ -123,24 +125,37 @@ export function FontsScreen() {
         <h1>Fonts</h1>
       </div>
       <section aria-label="Your fonts" className="my-fonts">
-        <div className="muted small">Your fonts ({active.length})</div>
-        <ul className="chips">
-          {active.map((f) => (
-            <li key={f.id} className="chip font-chip" style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}>
-              {f.family}
-              {f.isDefault ? (
-                // The starter fonts are defaults: they cannot be archived.
+        <div className="my-fonts-group" data-testid="custom-fonts">
+          <div className="muted small">Your fonts ({custom.length})</div>
+          {custom.length === 0 ? (
+            <p className="section-empty">No custom fonts added yet. Pick any font from the catalogue below.</p>
+          ) : (
+            <ul className="chips" aria-label="Custom fonts">
+              {custom.map((f) => (
+                <li key={f.id} className="chip font-chip" style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}>
+                  {f.family}
+                  <button type="button" className="chip-x" aria-label={`Archive ${f.family}`} title="Archive" onClick={() => void archive(f)} disabled={busy === f.family}>
+                    <Archive size={12} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="my-fonts-group" data-testid="default-fonts">
+          <div className="muted small">Default fonts ({defaults.length})</div>
+          <ul className="chips" aria-label="Default fonts">
+            {defaults.map((f) => (
+              <li key={f.id} className="chip font-chip" style={{ fontFamily: `${quoteFamily(f.family)}, sans-serif` }}>
+                {f.family}
+                {/* The starter fonts are defaults: they cannot be archived. */}
                 <span className="chip-note">Default font</span>
-              ) : (
-                <button type="button" className="chip-x" aria-label={`Archive ${f.family}`} title="Archive" onClick={() => void archive(f)} disabled={busy === f.family}>
-                  <Archive size={12} />
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
         {archived.length > 0 && (
-          <>
+          <div className="my-fonts-group">
             <div className="muted small">Archived ({archived.length}) — hidden from pickers; notes and styles that use them still work.</div>
             <ul className="chips" aria-label="Archived fonts">
               {archived.map((f) => (
@@ -152,7 +167,7 @@ export function FontsScreen() {
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         )}
       </section>
 

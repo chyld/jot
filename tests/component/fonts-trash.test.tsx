@@ -66,6 +66,31 @@ describe('Fonts screen', () => {
     expect(card.textContent).toMatch(/default font/i);
     expect(within(await screen.findByRole('article', { name: 'Roboto Slab' })).getByRole('button', { name: /Archive/ })).toBeTruthy();
   });
+
+  it('lists user-added fonts above default fonts, and keeps an empty notice when none are added', async () => {
+    inProvider(<FontsScreen />);
+    await waitFor(() => expect(screen.getByTestId('custom-fonts').textContent).toContain('Roboto Slab'));
+    const custom = screen.getByTestId('custom-fonts');
+    const defaults = screen.getByTestId('default-fonts');
+    expect(custom.compareDocumentPosition(defaults) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(custom.textContent).toContain('Roboto Slab');
+    expect(custom.textContent).not.toContain('Inter');
+    expect(defaults.textContent).toContain('Inter');
+    expect(defaults.textContent).toContain('Lora');
+    expect(defaults.textContent).not.toContain('Roboto Slab');
+  });
+
+  it('keeps the Your fonts section visible with an empty notice when only default fonts exist', async () => {
+    handler = (url) => {
+      if (url === '/api/fonts') return json({ fonts: [font('Inter'), font('Lora')] });
+      if (url === '/api/styles') return json({ styles: [] });
+      if (url === '/api/fonts/catalog') return json({ fonts: [{ family: 'Inter', category: 'Sans Serif' }] });
+      return json({ error: 'unexpected' }, 500);
+    };
+    inProvider(<FontsScreen />);
+    await waitFor(() => expect(screen.getByTestId('default-fonts').textContent).toContain('Inter'));
+    expect(screen.getByTestId('custom-fonts').textContent).toMatch(/No custom fonts added yet/i);
+  });
 });
 
 describe('Trash screen', () => {
@@ -153,5 +178,22 @@ describe('Styles screen', () => {
       expect(within(c).getByRole('button', { name: /Edit/ })).toBeTruthy();
       expect(within(c).getByRole('button', { name: /Delete/ })).toBeTruthy();
     }
+    const customSec = screen.getByTestId('custom-styles');
+    const defaultSec = screen.getByTestId('default-styles');
+    expect(customSec.compareDocumentPosition(defaultSec) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(customSec).getAllByTestId('style-card').map((c) => c.getAttribute('aria-label'))).toEqual(['Style Body', 'Style Mine']);
+    expect(within(defaultSec).getAllByTestId('style-card').map((c) => c.getAttribute('aria-label'))).toEqual(['Style Body', 'Style Quote']);
+  });
+
+  it('keeps the Your styles section visible with an empty notice when only default styles exist', async () => {
+    handler = (url) => {
+      if (url === '/api/fonts') return json({ fonts: [font('Inter')] });
+      if (url === '/api/styles') return json({ styles: [style('Body', true), style('Quote', true)] });
+      return json({ error: 'unexpected' }, 500);
+    };
+    inProvider(<StylesScreen />);
+    await waitFor(() => expect(screen.getAllByTestId('style-card').length).toBe(2));
+    expect(screen.getByTestId('custom-styles').textContent).toMatch(/No custom styles yet/i);
+    expect(within(screen.getByTestId('default-styles')).getAllByTestId('style-card')).toHaveLength(2);
   });
 });

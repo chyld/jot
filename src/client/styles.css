@@ -221,7 +221,8 @@ a.rail-new, a.btn { text-decoration: none; }
 .menu-item { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 16px; white-space: nowrap; }
 .menu-item:hover, .menu-item.is-active { background: var(--accent-soft); }
 .menu-sep { height: 1px; background: var(--border); margin: 6px 4px; }
-.menu-empty { padding: 8px 12px; color: var(--muted); }
+.menu-group-label { padding: 4px 12px 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.menu-empty { padding: 6px 12px; color: var(--muted); font-size: 13px; }
 .menu-h { font-weight: 600; font-size: 13px; width: 20px; }
 .style-preview { line-height: 1.25; padding: 2px 0; }
 .swatches { display: flex; flex-direction: column; }
@@ -319,6 +320,9 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 /* ---------------------------------------------------------------- screens */
 .screen { padding: 22px 28px 60px; overflow: auto; height: 100%; }
 .screen-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.screen-section { margin-bottom: 24px; }
+.screen-section-head { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 10px; display: flex; align-items: center; gap: 6px; }
+.section-empty { margin: 0; font-size: 13.5px; color: var(--muted); }
 .hint { margin: -6px 0 16px; font-size: 13.5px; }
 .card { background: var(--surface); border-radius: var(--radius); padding: 16px; border: 1px solid transparent; }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
@@ -345,7 +349,9 @@ body[data-photo-resizing] * { cursor: inherit !important; user-select: none; }
 .tag-item .form-error { flex-basis: 100%; }
 
 /* fonts */
-.my-fonts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.my-fonts { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.my-fonts-group { display: flex; flex-direction: column; gap: 4px; }
+.my-fonts-group .chips { margin-top: 2px; }
 .font-chip { font-size: 15px; padding: 3px 6px 3px 12px; }
 .font-chip.is-archived { opacity: 0.6; }
 .chip-x { border: 0; background: transparent; cursor: pointer; padding: 3px; border-radius: 50%; display: inline-flex; color: var(--muted); }

@@ -33,6 +33,8 @@ export function StyleDialog(props: {
   const [busy, setBusy] = useState(false);
   // Active fonts, plus this style's own font if it has been archived since.
   const fontChoices = props.fonts.filter((f) => !f.archived || f.id === props.initial.fontId);
+  const customFonts = fontChoices.filter((f) => !f.isDefault);
+  const defaultFonts = fontChoices.filter((f) => f.isDefault);
   const family = props.fonts.find((f) => f.id === s.fontId)?.family ?? DEFAULT_FONT_FAMILY;
   const set = (patch: Partial<StyleInput>) => {
     setS((cur) => ({ ...cur, ...patch }));
@@ -74,12 +76,26 @@ export function StyleDialog(props: {
           <label className="grow">
             Font
             <select value={s.fontId} onChange={(e) => set({ fontId: e.target.value })}>
-              {fontChoices.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.family}
-                  {f.archived ? ' (archived)' : ''}
-                </option>
-              ))}
+              {customFonts.length > 0 && (
+                <optgroup label="Your fonts">
+                  {customFonts.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.family}
+                      {f.archived ? ' (archived)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {defaultFonts.length > 0 && (
+                <optgroup label="Default fonts">
+                  {defaultFonts.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.family}
+                      {f.archived ? ' (archived)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </label>
           <label className="size-field">
