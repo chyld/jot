@@ -2,7 +2,7 @@
 // downloaded when working on regular text notes. Reuses Jot's note header (title, tags,
 // section, trash, prev/next nav), autosave, read-only lock, and status footer.
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Bot, Check, FileSpreadsheet, FileText, List, Lock, LockOpen, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, Check, FileText, List, Lock, LockOpen, RotateCcw, Sheet, Trash2 } from 'lucide-react';
 import { CommandType, createUniver, defaultTheme, LocaleType, mergeLocales } from '@univerjs/presets';
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core';
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US';
@@ -247,7 +247,7 @@ export default function SheetEditor(props: { note: Note; onTrashed: () => void; 
             <FileText size={18} />
           </NewNoteLink>
           <NewNoteLink className="rail-toggle-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
-            <FileSpreadsheet size={18} />
+            <Sheet size={18} />
           </NewNoteLink>
           <a
             href="/"
@@ -411,7 +411,7 @@ export default function SheetEditor(props: { note: Note; onTrashed: () => void; 
       <div className="sheet-host" data-testid="sheet-editor" ref={containerRef} />
       <footer className="note-status" aria-label="Note status">
         <span className="sheet-kind-badge">
-          <FileSpreadsheet size={12} /> Spreadsheet
+          <Sheet size={12} /> Spreadsheet
         </span>
         <span data-testid="save-status" className={`save-status status-${autosave.status}`} role="status">
           {STATUS_TEXT[autosave.status]}

@@ -1,4 +1,4 @@
-import { FileSpreadsheet, FileText, Inbox, LayoutGrid, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, Tags, Type, UserRound } from 'lucide-react';
+import { FileText, Inbox, LayoutGrid, NotebookPen, Paintbrush, PanelLeftClose, PanelLeftOpen, Sheet, Tags, Type, UserRound } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSections } from '../currentSection';
 import { useData } from '../data';
@@ -145,7 +145,7 @@ export function Sidebar(props: { path: string }) {
         <FileText size={20} />
       </NewNoteLink>
       <NewNoteLink className="rail-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
-        <FileSpreadsheet size={20} />
+        <Sheet size={20} />
       </NewNoteLink>
       <RailLink to="/inbox" label="Inbox" title={`Inbox: ${inboxCount} ${inboxCount === 1 ? 'note' : 'notes'} from bots`} active={p === '/inbox'}>
         <span className="rail-inbox">
