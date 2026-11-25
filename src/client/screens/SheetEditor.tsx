@@ -8,7 +8,7 @@ import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core';
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US';
 import '@univerjs/preset-sheets-core/lib/index.css';
 import { relativeTime, shortDate } from '../../shared/time';
-import type { Note, SheetDoc } from '../../shared/types';
+import type { Font, Note, SheetDoc } from '../../shared/types';
 import { api } from '../api';
 import { useAutosave, type SaveStatus } from '../autosave';
 import { NewNoteLink } from '../components/NewNoteLink';
@@ -28,8 +28,20 @@ const STATUS_TEXT: Record<SaveStatus, string> = {
   error: 'Not saved',
 };
 
+const VALID_FONT_CATEGORIES = new Set(['sans-serif', 'serif', 'monospace', 'display', 'handwriting']);
+
+function toUniverFonts(fonts: Font[]) {
+  const active = fonts.filter((f) => !f.archived);
+  const ordered = [...active.filter((f) => !f.isDefault), ...active.filter((f) => f.isDefault)];
+  return ordered.map((f) => ({
+    value: f.family,
+    label: f.family,
+    ...(VALID_FONT_CATEGORIES.has(f.category) ? { category: f.category as any } : {}),
+  }));
+}
+
 export default function SheetEditor(props: { note: Note; onTrashed: () => void; onChange: (n: Note) => void }) {
-  const { user, bumpNotes } = useData();
+  const { user, fonts, bumpNotes } = useData();
   const { current } = useSections();
   const note = props.note;
   useEffect(() => {
@@ -69,16 +81,34 @@ export default function SheetEditor(props: { note: Note; onTrashed: () => void; 
   const scheduleRef = useRef(autosave.schedule);
   scheduleRef.current = autosave.schedule;
 
+  const fontsReady = fonts.length > 0;
+  const fontsRef = useRef(fonts);
+  fontsRef.current = fonts;
+
+  // Warm-load active Jot @font-face files so Univer's canvas grid and font picker see them as supported.
+  useEffect(() => {
+    if (!fontsReady || typeof document.fonts?.load !== 'function') return;
+    for (const f of fonts) {
+      if (!f.archived) void document.fonts.load(`12px "${f.family}"`).catch(() => {});
+    }
+  }, [fonts, fontsReady]);
+
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !fontsReady) return;
     let disposed = false;
     let ready = false;
+    const customFonts = toUniverFonts(fontsRef.current);
     const { univer, univerAPI } = createUniver({
       locale: LocaleType.EN_US,
       locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
       theme: defaultTheme,
-      presets: [UniverSheetsCorePreset({ container })],
+      presets: [
+        UniverSheetsCorePreset({
+          container,
+          ...(customFonts.length > 0 ? { customFontFamily: { override: true, list: customFonts } } : {}),
+        }),
+      ],
     });
     const wb = univerAPI.createWorkbook(initialSheet.workbook as any);
     workbookRef.current = wb;
@@ -136,9 +166,9 @@ export default function SheetEditor(props: { note: Note; onTrashed: () => void; 
         }
       });
     };
-    // Mount once per note id (NoteEditor keys on noteId).
+    // Mount once per note id once the user's Jot fonts have loaded (NoteEditor keys on noteId).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id]);
+  }, [note.id, fontsReady]);
 
   // Keep Univer's editable state in sync when the note is locked or restored from trash.
   useEffect(() => {

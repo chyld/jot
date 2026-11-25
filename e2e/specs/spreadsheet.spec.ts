@@ -24,6 +24,14 @@ test('create a spreadsheet, verify Univer mounts cleanly under strict CSP, persi
   await expect(host).toHaveAttribute('data-sheet-ready', 'true', { timeout: 15000 });
   await expect(host.locator('canvas').first()).toBeVisible();
 
+  // Font picker should default to Inter and list Jot's fonts (not Univer's built-in Chinese/macOS fonts).
+  await expect(host.getByRole('textbox', { name: 'Font', exact: true })).toHaveValue('Inter');
+  await host.getByRole('button', { name: 'Font', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Inter', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lora', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '宋体' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
   const sheetTitle = `Budget ${uniq()}`;
   const titleInput = article.getByRole('textbox', { name: 'Title' });
   await titleInput.fill(sheetTitle);

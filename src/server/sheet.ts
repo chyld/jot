@@ -1,6 +1,7 @@
 // Spreadsheet workbook storage, validation and plain-text extraction.
 // Spreadsheets are stored in notes.content as { type: 'sheet', version: 1, workbook }
 // wrapping Univer's IWorkbookData JSON snapshot.
+import { DEFAULT_FONT_FAMILY } from '../shared/constants';
 import type { SheetDoc } from '../shared/types';
 import { ContentError, isSafeHref } from './content';
 
@@ -22,6 +23,7 @@ export function emptySheet(): SheetDoc {
       appVersion: '1.6.1',
       locale: 'enUS',
       styles: {},
+      defaultStyle: { ff: DEFAULT_FONT_FAMILY },
       sheetOrder: ['sheet-1'],
       sheets: {
         'sheet-1': {
@@ -29,6 +31,7 @@ export function emptySheet(): SheetDoc {
           name: 'Sheet1',
           rowCount: 100,
           columnCount: 26,
+          defaultStyle: { ff: DEFAULT_FONT_FAMILY },
           cellData: {},
         },
       },
