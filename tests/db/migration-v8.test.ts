@@ -12,7 +12,7 @@ const FIXTURE = resolve(__dirname, '../fixtures/jot-v7.db');
 let dir: string;
 let file: string;
 let others: Record<string, string[]>;
-const TABLES = ['users', 'sessions', 'notes', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'restore_files', 'notes_fts', 'bot_tokens', 'sections'];
+const TABLES = ['users', 'sessions', 'tags', 'note_tags', 'photos', 'fonts', 'styles', 'restore_files', 'notes_fts', 'bot_tokens', 'sections'];
 const dump = (db: Database.Database) => Object.fromEntries(TABLES.map((t) => [t, db.prepare(`SELECT * FROM ${t}`).all().map((r) => JSON.stringify(r)).sort()]));
 
 beforeAll(() => {
@@ -28,8 +28,8 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 it('adds style_buttons with constraints and cascades; nothing existing changes', () => {
   const db = openDatabase(file);
-  expect(SCHEMA_VERSION).toBe(8);
-  expect(db.pragma('user_version', { simple: true })).toBe(8);
+  expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(8);
+  expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
   expect(dump(db)).toEqual(others);
 
   const cols = db.prepare('PRAGMA table_info(style_buttons)').all().map((c: any) => c.name);
@@ -62,6 +62,6 @@ it('adds style_buttons with constraints and cascades; nothing existing changes',
 
 it('later starts change nothing', () => {
   const db = openDatabase(file);
-  expect(db.pragma('user_version', { simple: true })).toBe(8);
+  expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
   db.close();
 });

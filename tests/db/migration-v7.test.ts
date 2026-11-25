@@ -45,9 +45,10 @@ it('gives every user a Default section holding every note, tags intact; nothing 
   const after = db.prepare('SELECT * FROM notes ORDER BY id').all() as any[];
   expect(after.length).toBe(before.length);
   for (const [i, n] of after.entries()) {
-    const { section_id, ...rest } = n;
+    const { section_id, kind, ...rest } = n;
     expect(rest).toEqual(before[i]);
     expect(section_id).toBe('default');
+    expect(kind).toBe('doc');
   }
   // The table was not rebuilt: every note keeps its row.
   expect(db.prepare('SELECT rowid, id FROM notes ORDER BY id').all()).toEqual(rowids);

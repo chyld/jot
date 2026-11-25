@@ -21,6 +21,7 @@ import { createBotNote, findBotRequest, getNote } from '../notes';
 import { buildFtsQuery } from '../search';
 import { detectImageType } from '../uploads';
 import { docToMarkdown, markdownToDoc, noteTitle } from './markdown';
+import { sheetToMarkdown } from '../sheet';
 import { botForToken } from './tokens';
 
 /** Requests to /mcp may be up to 50 MB (base64 images). Other routes keep their limits. */
@@ -226,7 +227,7 @@ function buildServer(ctx: JotContext, bot: Bot, restoring: Set<string>): McpServ
           `in inbox: ${note.inbox ? 'yes' : 'no'}`,
           `tags: ${note.tags.length ? note.tags.join(', ') : '(none)'}`,
           `updated: ${note.updatedAt}`,
-          untrusted(author, `title: ${note.title}\n\n${docToMarkdown(note.content)}`),
+          untrusted(author, `title: ${note.title}\n\n${note.content.type === 'sheet' ? sheetToMarkdown(note.content) : docToMarkdown(note.content)}`),
         ].join('\n'),
       );
     },

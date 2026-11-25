@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import { Bot, Check, ArrowLeft, ArrowRight, List, Lock, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { relativeTime, shortDate } from '../../shared/time';
 import type { StyleInput } from '../../shared/styles';
-import type { Note } from '../../shared/types';
+import type { Note, TiptapDoc } from '../../shared/types';
 import { api, ApiError } from '../api';
 import { useAutosave, type SaveStatus } from '../autosave';
 import { useNow } from '../components/NoteCard';
@@ -42,6 +42,8 @@ function textCounts(editor: Editor | null): { words: number; chars: number } {
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
+const LazySheetEditor = lazy(() => import('./SheetEditor'));
+
 export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
   const [note, setNote] = useState<Note | null>(null);
   const [missing, setMissing] = useState(false);
@@ -66,6 +68,13 @@ export function NoteEditor(props: { noteId: string; onTrashed: () => void }) {
     );
   }
   if (!note) return <div className="empty-state muted">Loading…</div>;
+  if (note.kind === 'sheet') {
+    return (
+      <Suspense fallback={<div className="empty-state muted">Loading spreadsheet…</div>}>
+        <LazySheetEditor note={note} onTrashed={props.onTrashed} onChange={setNote} />
+      </Suspense>
+    );
+  }
   return <LoadedNote note={note} onTrashed={props.onTrashed} onChange={setNote} />;
 }
 
@@ -109,7 +118,7 @@ function LoadedNote(props: { note: Note; onTrashed: () => void; onChange: (n: No
     extensions: jotExtensions(),
     // Pasted text is plain text: no Markdown-style or link rules on paste.
     enablePasteRules: false,
-    content: (restored?.content as Note['content'] | undefined) ?? note.content,
+    content: (restored?.content as TiptapDoc | undefined) ?? (note.content as TiptapDoc),
     editable: !locked,
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,

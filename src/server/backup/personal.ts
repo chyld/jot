@@ -20,8 +20,9 @@ import { MAX_TITLE_LENGTH } from '../../shared/constants';
 import { validateStyleInput } from '../../shared/styles';
 import { DEFAULT_SECTION_ID, isSectionColour, normalizeSectionId, normalizeSectionName, type SectionColour } from '../../shared/sections';
 import { normalizeTag } from '../../shared/tags';
-import type { TiptapDoc, TiptapNode } from '../../shared/types';
+import type { NoteContent, NoteKind, TiptapDoc, TiptapNode } from '../../shared/types';
 import { ContentError, docText, sanitizeDoc } from '../content';
+import { sanitizeSheet, sheetText } from '../sheet';
 import { fontsDir, photosDir, userDir, type JotContext } from '../context';
 import { syncDir, syncFile } from '../durable';
 import { FONT_FILE, isValidFamilyName, type FontFace } from '../fonts';
@@ -46,15 +47,17 @@ export const PERSONAL_FORMAT = 'jot-personal-backup';
 // Default section holding every note).
 // Format 5 added `buttons` (the ten style buttons, with default styles named by their
 // standard name so bindings survive restores; older formats restore unbound and shown).
-export const PERSONAL_VERSION = 5;
+// Format 6 added `kind` on notes ('doc' | 'sheet'; older formats restore as 'doc').
+export const PERSONAL_VERSION = 6;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // ------------------------------------------------------------------ what a backup holds
 
 interface BNote {
   id: string;
+  kind: NoteKind;
   title: string;
-  content: TiptapDoc;
+  content: NoteContent;
   tags: string[];
   createdAt: string;
   updatedAt: string;
@@ -141,6 +144,7 @@ function readAccount(ctx: JotContext, userId: string): PersonalData {
     const tagsOf = db.prepare('SELECT t.name FROM note_tags nt JOIN tags t ON t.id = nt.tag_id WHERE nt.note_id = ? ORDER BY t.name');
     const notes = (db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY created_at, id').all(userId) as any[]).map((n) => ({
       id: n.id,
+      kind: (n.kind === 'sheet' ? 'sheet' : 'doc') as NoteKind,
       title: n.title,
       content: JSON.parse(n.content),
       tags: (tagsOf.all(n.id) as any[]).map((t) => t.name),
@@ -264,6 +268,7 @@ export async function writePersonalBackup(ctx: JotContext, userId: string, outPa
   const missing: MissingFile[] = [];
   const photoIds = new Set(data.photos.map((p) => p.id));
   for (const n of data.notes) {
+    if (n.content.type !== 'doc') continue;
     for (const id of photoRefs(n.content)) {
       if (!photoIds.has(id) && !missing.some((m) => m.name === `photos/${id}`)) {
         missing.push({ name: `photos/${id}`, what: `A photo in note "${n.title || 'Untitled'}" that is not in this account` });
@@ -544,9 +549,11 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
     const label = (n.title || 'Untitled').slice(0, 60);
     // eslint-disable-next-line no-control-regex
     const title = n.title.replace(/[\u0000-\u001f\u007f]/g, ' ');
-    let content: TiptapDoc;
+    if (n.kind !== undefined && n.kind !== 'doc' && n.kind !== 'sheet') fail(`note "${label}" has an invalid kind.`);
+    const kind: NoteKind = n.kind === 'sheet' ? 'sheet' : 'doc';
+    let content: NoteContent;
     try {
-      content = sanitizeDoc(n.content);
+      content = kind === 'sheet' ? sanitizeSheet(n.content) : sanitizeDoc(n.content);
     } catch (err) {
       if (err instanceof ContentError) fail(`note "${label}" has content Jot cannot read.`);
       throw err;
@@ -573,13 +580,15 @@ async function checkPersonal(filesDir: string, check: ArchiveCheck): Promise<Che
     const botName = typeof n.botName === 'string' ? n.botName : null;
     const section = manifest.version >= 4 ? n.section : DEFAULT_SECTION_ID;
     if (!sectionIds.has(section)) fail(`note "${label}" names a section that is not in the backup.`);
-    for (const id of photoRefs(content)) {
-      if (photoIds.has(id)) continue;
-      if (missingNames.has(`photos/${id}`)) danglingUsed.add(`photos/${id}`);
-      else fail(`note "${label}" uses a photo that is not in the backup.`);
+    if (content.type === 'doc') {
+      for (const id of photoRefs(content)) {
+        if (photoIds.has(id)) continue;
+        if (missingNames.has(`photos/${id}`)) danglingUsed.add(`photos/${id}`);
+        else fail(`note "${label}" uses a photo that is not in the backup.`);
+      }
     }
     noteIds.add(n.id);
-    notes.push({ id: n.id, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly, inbox, botName, section });
+    notes.push({ id: n.id, kind, title, content, tags: [...tags], createdAt: n.createdAt, updatedAt: n.updatedAt, deletedAt: n.deletedAt, readOnly, inbox, botName, section });
   }
 
   // The entries must be exactly the files the records point at, apart from listed missing ones.
@@ -862,13 +871,14 @@ function switchData(ctx: JotContext, userId: string, data: PersonalData, photoMa
     const tagIds = new Map<string, string>();
     const insTag = db.prepare('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)');
     const insNote = db.prepare(
-      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only, inbox, bot_name, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO notes (id, kind, user_id, title, content, body_text, created_at, updated_at, deleted_at, read_only, inbox, bot_name, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     const insLink = db.prepare('INSERT INTO note_tags (note_id, tag_id, user_id) VALUES (?, ?, ?)');
     for (const n of data.notes) {
       const id = newId();
-      const content = remapPhotoRefs(n.content, photoMap);
-      insNote.run(id, userId, n.title, JSON.stringify(content), docText(content), n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0, n.inbox ? 1 : 0, n.botName, n.section);
+      const content = n.content.type === 'doc' ? remapPhotoRefs(n.content, photoMap) : n.content;
+      const bodyText = content.type === 'sheet' ? sheetText(content) : docText(content);
+      insNote.run(id, n.kind, userId, n.title, JSON.stringify(content), bodyText, n.createdAt, n.updatedAt, n.deletedAt, n.readOnly ? 1 : 0, n.inbox ? 1 : 0, n.botName, n.section);
       for (const t of n.tags) {
         if (!tagIds.has(t)) {
           tagIds.set(t, newId());

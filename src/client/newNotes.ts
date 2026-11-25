@@ -6,19 +6,20 @@
 //
 // The editor puts the caret in the body of a note marked here once it has loaded it.
 // Reopening a note later (or reloading it) finds no mark and leaves the focus alone.
+import type { NoteKind } from '../shared/types';
 import { api } from './api';
 import { navigate } from './router';
 
 const fresh = new Set<string>();
 
 /**
- * Creates a note and opens it. Returns an error message if the create failed. `replace`
- * replaces the current address instead of adding one (used by /new, so Back and Refresh
- * never come back to it).
+ * Creates a note (or spreadsheet) and opens it. Returns an error message if the create
+ * failed. `replace` replaces the current address instead of adding one (used by /new, so
+ * Back and Refresh never come back to it).
  */
-export async function createAndOpenNote(bump: () => void, opts: { replace?: boolean } = {}): Promise<string | null> {
+export async function createAndOpenNote(bump: () => void, opts: { replace?: boolean; kind?: NoteKind } = {}): Promise<string | null> {
   try {
-    const { note } = await api.createNote();
+    const { note } = await api.createNote(opts.kind);
     fresh.add(note.id);
     bump();
     navigate(`/n/${note.id}`, { replace: opts.replace });

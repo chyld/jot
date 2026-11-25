@@ -8,7 +8,7 @@ import { STARTER_STYLES } from './starter';
 
 export type DB = Database.Database;
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 const SCHEMA_V1 = `
 CREATE TABLE users (
@@ -235,6 +235,14 @@ function migrate(db: DB) {
         CREATE INDEX style_buttons_style ON style_buttons(style_id);
       `);
       db.pragma(`user_version = 8`);
+    })();
+  }
+  // Version 9: spreadsheets alongside documents in notes (kind = 'doc' | 'sheet').
+  // Every existing note defaults to 'doc'.
+  if (version < 9) {
+    db.transaction(() => {
+      db.exec(`ALTER TABLE notes ADD COLUMN kind TEXT NOT NULL DEFAULT 'doc' CHECK (kind IN ('doc', 'sheet'))`);
+      db.pragma(`user_version = 9`);
     })();
   }
 }

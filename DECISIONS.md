@@ -1126,3 +1126,20 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
     Font `<select>` (`StyleDialog.tsx`) likewise groups custom fonts above defaults.
   Tests: `tests/component/fonts-trash.test.tsx`, `tests/component/dropdowns.test.tsx`,
   `e2e/specs/defaults-empty-trash.spec.ts`.
+- **Spreadsheets MVP with Univer Sheets Core (owner request, `feat/spreadsheets`).**
+  - Uses `@univerjs/presets@1.6.1` + `@univerjs/preset-sheets-core@1.6.1` (Apache-2.0) +
+    `rxjs@7.8.2`, strictly excluding commercial `@univerjs-pro/*` packages.
+  - Schema v9 adds `notes.kind TEXT NOT NULL DEFAULT 'doc' CHECK (kind IN ('doc','sheet'))`.
+    Spreadsheets live in `notes` with `{ type: 'sheet', version: 1, workbook }` JSON in
+    `content`, so sections, tags, trash, read-only lock, FTS search, previews and `/n/:id`
+    routing all work unchanged. `src/server/sheet.ts` validates snapshots (8 MB cap, depth
+    and sheet-count limits, prototype-key and unsafe-URL filtering), extracts cell text into
+    `body_text`, checks emptiness, and renders plain text for MCP `read_note`.
+  - Personal backups bumped to format 6 to persist and restore `kind` (older formats default
+    to `'doc'`).
+  - Client adds a dedicated **New spreadsheet** link (`/new?kind=sheet`) beside `+` in the
+    sidebar and home header (keeping `+` / `/new` 1-click for documents), shows a
+    spreadsheet icon on list cards, and `React.lazy`-loads `SheetEditor.tsx` so note-only
+    users never download Univer's bundle.
+  Tests: `tests/unit/sheet.test.ts`, `tests/api/sheets.test.ts`,
+  `e2e/specs/spreadsheet.spec.ts`.

@@ -4,8 +4,11 @@ export interface User {
   username: string;
 }
 
+export type NoteKind = 'doc' | 'sheet';
+
 export interface NoteSummary {
   id: string;
+  kind: NoteKind;
   title: string;
   preview: string;
   tags: string[];
@@ -30,8 +33,16 @@ export interface Bot {
   lastUsedAt: string | null;
 }
 
+export interface SheetDoc {
+  type: 'sheet';
+  version: 1;
+  workbook: Record<string, unknown>;
+}
+
+export type NoteContent = TiptapDoc | SheetDoc;
+
 export interface Note extends NoteSummary {
-  content: TiptapDoc;
+  content: NoteContent;
 }
 
 export interface TiptapNode {

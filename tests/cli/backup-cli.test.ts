@@ -44,6 +44,7 @@ function makeVersion1(db: Database.Database) {
   for (const c of ['inbox', 'bot_name', 'bot_request_id']) db.exec(`ALTER TABLE notes DROP COLUMN ${c}`);
   db.exec('DROP TABLE IF EXISTS bot_tokens');
   db.exec('DROP TABLE IF EXISTS style_buttons');
+  db.exec('ALTER TABLE notes DROP COLUMN kind');
   db.exec('ALTER TABLE notes DROP COLUMN section_id');
   db.exec('DROP TABLE IF EXISTS sections');
   db.exec('DROP TABLE IF EXISTS restore_files');

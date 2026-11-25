@@ -5,7 +5,7 @@
 // current section's: the heading is its name, and the list, chips, search, New and
 // "Delete N empty" work on it alone.
 import { useEffect, useState } from 'react';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Plus, Search, Trash2 } from 'lucide-react';
 import type { NoteSummary, Tag } from '../../shared/types';
 import { api } from '../api';
 import { NoteCard, useNow } from '../components/NoteCard';
@@ -129,6 +129,9 @@ export function NotesScreen(props: { tag: string | null }) {
         )}
         <NewNoteLink className="btn btn-primary" bump={bumpNotes} onError={setNewError}>
           <Plus size={16} /> New
+        </NewNoteLink>
+        <NewNoteLink className="btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
+          <FileSpreadsheet size={16} /> New sheet
         </NewNoteLink>
       </div>
       {newError && (

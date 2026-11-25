@@ -1,5 +1,5 @@
 // Thin JSON client for Jot's API.
-import type { BackupInfo, Bot, CatalogFont, Font, Note, NoteSummary, Photo, RestoreSummary, SafetyBackup, Tag, User } from '../shared/types';
+import type { BackupInfo, Bot, CatalogFont, Font, Note, NoteKind, NoteSummary, Photo, RestoreSummary, SafetyBackup, Tag, User } from '../shared/types';
 import type { ButtonSlot, StyleButton, StyleButtonPatch } from '../shared/buttons';
 import type { Section, SectionColour } from '../shared/sections';
 import type { Style, StyleInput } from '../shared/styles';
@@ -63,7 +63,7 @@ export const api = {
   sectionNotes: (section: string) => request<{ notes: NoteSummary[] }>('GET', `/api/notes?section=${encodeURIComponent(section)}`),
   search: (q: string) => request<{ notes: NoteSummary[] }>('GET', inSection(`/api/search?q=${encodeURIComponent(q)}`)),
   note: (id: string) => request<{ note: Note }>('GET', `/api/notes/${encodeURIComponent(id)}`),
-  createNote: () => request<{ note: Note }>('POST', inSection('/api/notes'), {}),
+  createNote: (kind?: NoteKind) => request<{ note: Note }>('POST', inSection('/api/notes'), kind && kind !== 'doc' ? { kind } : {}),
   moveNote: (id: string, section: string) => request<{ note: Note }>('POST', `/api/notes/${encodeURIComponent(id)}/section`, { section }),
   updateNote: (id: string, patch: { title?: string; content?: unknown }) =>
     request<{ note: Note }>('PATCH', `/api/notes/${encodeURIComponent(id)}`, patch),

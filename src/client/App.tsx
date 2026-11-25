@@ -22,20 +22,20 @@ import { TrashScreen } from './screens/TrashScreen';
  * with the note's address, so Back and Refresh never return here or make a second note.
  * The ref keeps React StrictMode's second effect from creating another.
  */
-function NewNoteScreen() {
+function NewNoteScreen(props: { kind: 'doc' | 'sheet' }) {
   const { bumpNotes } = useData();
   const started = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const create = () => {
     setError(null);
-    void createAndOpenNote(bumpNotes, { replace: true }).then(setError);
+    void createAndOpenNote(bumpNotes, { replace: true, kind: props.kind }).then(setError);
   };
   useEffect(() => {
     if (started.current) return;
     started.current = true;
     create();
   }, []);
-  if (!error) return <div className="loading">Creating note…</div>;
+  if (!error) return <div className="loading">{props.kind === 'sheet' ? 'Creating spreadsheet…' : 'Creating note…'}</div>;
   return (
     <div className="screen">
       <div role="alert" className="form-error">
@@ -48,15 +48,15 @@ function NewNoteScreen() {
   );
 }
 
-/** After logging in, go back to the address that sent you to /login. Only /new is kept. */
-const RETURN_PATHS = ['/new'];
+/** After logging in, go back to the address that sent you to /login. Only /new (and /new?kind=sheet) is kept. */
+const RETURN_PATHS = ['/new', '/new?kind=sheet'];
 
 function Screen(props: { path: string; search: URLSearchParams }) {
   const p = props.path;
   if (p === '/') return <NotesScreen tag={props.search.get('tag')} />;
   const note = match('/n/:id', p);
   if (note) return <NoteScreen noteId={note.id} />;
-  if (p === '/new') return <NewNoteScreen />;
+  if (p === '/new') return <NewNoteScreen kind={props.search.get('kind') === 'sheet' ? 'sheet' : 'doc'} />;
   if (p === '/fonts') return <FontsScreen />;
   if (p === '/styles') return <StylesScreen />;
   if (p === '/buttons') return <ButtonsScreen />;
@@ -101,13 +101,14 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const full = search.toString() ? `${path}?${search.toString()}` : path;
     if (user === null && path !== '/login') {
-      navigate(RETURN_PATHS.includes(path) ? `/login?next=${encodeURIComponent(path)}` : '/login', { replace: true });
+      navigate(RETURN_PATHS.includes(full) ? `/login?next=${encodeURIComponent(full)}` : '/login', { replace: true });
     }
     if (user && path === '/login') {
       navigate(next && RETURN_PATHS.includes(next) ? next : '/', { replace: true });
     }
-  }, [user, path, next]);
+  }, [user, path, next, search]);
 
   if (user === undefined) return <div className="loading">Loading…</div>;
   if (user === null) return <Login onLogin={setUser} />;

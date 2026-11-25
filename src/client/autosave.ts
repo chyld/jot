@@ -117,12 +117,14 @@ export function useAutosave(noteId: string, onSaved: (note: Note) => void, userI
       const all = { ...inflight.current, ...pending.current };
       if (isEmpty(all)) return;
       // A last attempt; the copy in this browser stays until a later save is confirmed.
+      // Browser fetch keepalive caps bodies at 64 KB; drop keepalive for larger snapshots.
+      const body = JSON.stringify(all);
       void fetch(`/api/notes/${encodeURIComponent(noteId)}`, {
         method: 'PATCH',
-        keepalive: true,
+        keepalive: body.length < 60_000,
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(all),
+        body,
       }).catch(() => {});
     };
     window.addEventListener('beforeunload', onUnload);

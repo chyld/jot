@@ -14,7 +14,7 @@ import { validateStyleInput } from '../shared/styles';
 import { isDefaultFont } from '../shared/starter';
 import { DEFAULT_SECTION_ID } from '../shared/sections';
 import { normalizeTag } from '../shared/tags';
-import type { Font, TiptapDoc } from '../shared/types';
+import type { Font, NoteContent, NoteKind } from '../shared/types';
 import { BackupError, RESTORING_MESSAGE } from './backup/errors';
 import {
   cancelRestore,
@@ -29,6 +29,7 @@ import {
 import { registerMcp } from './agent/mcp';
 import { BotError, createBot, listBots, revokeBot } from './agent/tokens';
 import { ContentError, sanitizeDoc } from './content';
+import { sanitizeSheet } from './sheet';
 import { DEFAULT_STARTER_FONTS_DIR, fontsDir, photosDir, REPO_ROOT, type JotContext } from './context';
 import { now, openDatabase } from './db';
 import { syncDir, syncFile } from './durable';
@@ -247,9 +248,13 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     // eslint-disable-next-line no-control-regex
     return v.replace(/[\u0000-\u001f\u007f]/g, ' ');
   };
-  const readContent = (v: unknown): TiptapDoc => {
+  const readKind = (v: unknown): NoteKind => {
+    if (v === 'doc' || v === 'sheet') return v;
+    throw bad('Kind must be "doc" or "sheet".');
+  };
+  const readContent = (v: unknown, kind: NoteKind): NoteContent => {
     try {
-      return sanitizeDoc(v);
+      return kind === 'sheet' ? sanitizeSheet(v) : sanitizeDoc(v);
     } catch (e) {
       if (e instanceof ContentError) throw bad(e.message);
       throw e;
@@ -284,9 +289,10 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   app.post('/api/notes', async (req, reply) => {
     const b = body(req);
     const section = sectionOf(req);
+    const kind = b.kind === undefined ? 'doc' : readKind(b.kind);
     const title = b.title === undefined ? '' : readTitle(b.title);
-    const content = b.content === undefined ? undefined : readContent(b.content);
-    return reply.code(201).send({ note: notes.createNote(db, uid(req), section, title, content) });
+    const content = b.content === undefined ? undefined : readContent(b.content, kind);
+    return reply.code(201).send({ note: notes.createNote(db, uid(req), section, title, content, kind) });
   });
 
   app.get('/api/notes/:id', async (req) => {
@@ -298,9 +304,13 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   app.patch('/api/notes/:id', async (req) => {
     const id = param(req, 'id');
     const b = body(req);
-    const patch: { title?: string; content?: TiptapDoc } = {};
+    const patch: { title?: string; content?: NoteContent } = {};
     if (b.title !== undefined) patch.title = readTitle(b.title);
-    if (b.content !== undefined) patch.content = readContent(b.content);
+    if (b.content !== undefined) {
+      const kind = notes.getNoteKind(db, uid(req), id);
+      if (!kind) throw notFound('Note not found.');
+      patch.content = readContent(b.content, kind);
+    }
     return updated(notes.updateNote(db, uid(req), id, patch));
   });
 

@@ -37,6 +37,7 @@ const inProvider = (ui: React.ReactNode) =>
 
 const note = (id: string, title: string, readOnly = false) => ({
   id,
+  kind: 'doc' as const,
   title,
   preview: '',
   tags: [],

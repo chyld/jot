@@ -72,7 +72,7 @@ describe('read-only toggle', () => {
 });
 
 describe('note card', () => {
-  const note = { id: 'n1', title: 'Fixed', preview: '', tags: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', deletedAt: null, inbox: false, botName: null, section: 'default' };
+  const note = { id: 'n1', kind: 'doc' as const, title: 'Fixed', preview: '', tags: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', deletedAt: null, inbox: false, botName: null, section: 'default' };
   it('marks a read-only note', () => {
     render(<NoteCard note={{ ...note, readOnly: true }} now={new Date()} />);
     expect(screen.getByLabelText('Read-only')).toBeTruthy();

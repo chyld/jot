@@ -4,14 +4,16 @@
 // The functions behind the home page, search, New, "Delete N empty" and the trash take the
 // current section and add it to their queries (sections-spec.md §2). The app checks that
 // the section is the user's before calling them.
-import type { Note, NoteSummary, Tag, TiptapDoc } from '../shared/types';
+import type { Note, NoteContent, NoteKind, NoteSummary, SheetDoc, Tag, TiptapDoc } from '../shared/types';
 import { docText, emptyDoc, previewOf } from './content';
 import { now, type DB } from './db';
 import { newId } from './ids';
 import { buildFtsQuery } from './search';
+import { emptySheet, isEmptySheet, sheetText } from './sheet';
 
 interface NoteRow {
   id: string;
+  kind: string;
   user_id: string;
   title: string;
   content?: string;
@@ -26,13 +28,14 @@ interface NoteRow {
   tag_list: string | null;
 }
 
-const SUMMARY_COLS = `n.id, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only, n.inbox, n.bot_name, n.section_id,
+const SUMMARY_COLS = `n.id, n.kind, n.user_id, n.title, n.body_text, n.created_at, n.updated_at, n.deleted_at, n.read_only, n.inbox, n.bot_name, n.section_id,
   (SELECT group_concat(t.name, ' ' ORDER BY t.name) FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
      WHERE nt.note_id = n.id) AS tag_list`;
 
 function toSummary(r: NoteRow): NoteSummary {
   return {
     id: r.id,
+    kind: r.kind === 'sheet' ? 'sheet' : 'doc',
     title: r.title,
     preview: previewOf(r.body_text),
     tags: r.tag_list ? r.tag_list.split(' ') : [],
@@ -72,7 +75,13 @@ export function getNote(db: DB, userId: string, id: string): Note | null {
     .prepare(`SELECT ${SUMMARY_COLS}, n.content FROM notes n WHERE n.id = ? AND n.user_id = ?`)
     .get(id, userId) as NoteRow | undefined;
   if (!r) return null;
-  return { ...toSummary(r), content: JSON.parse(r.content!) as TiptapDoc };
+  return { ...toSummary(r), content: JSON.parse(r.content!) as NoteContent };
+}
+
+export function getNoteKind(db: DB, userId: string, id: string): NoteKind | null {
+  const r = db.prepare('SELECT kind FROM notes WHERE id = ? AND user_id = ?').get(id, userId) as { kind: string } | undefined;
+  if (!r) return null;
+  return r.kind === 'sheet' ? 'sheet' : 'doc';
 }
 
 export function listNotes(db: DB, userId: string, section: string, tag?: string): NoteSummary[] {
@@ -98,14 +107,18 @@ export function listTrash(db: DB, userId: string, section: string): NoteSummary[
   return rows.map(toSummary);
 }
 
-export function createNote(db: DB, userId: string, section: string, title: string, content: TiptapDoc | undefined): Note {
+function contentText(content: NoteContent): string {
+  return content.type === 'sheet' ? sheetText(content) : docText(content);
+}
+
+export function createNote(db: DB, userId: string, section: string, title: string, content: NoteContent | undefined, kind: NoteKind = 'doc'): Note {
   const id = newId();
-  const doc = content ?? emptyDoc();
+  const body = content ?? (kind === 'sheet' ? emptySheet() : emptyDoc());
   const t = now();
   db.transaction(() => {
     db.prepare(
-      'INSERT INTO notes (id, user_id, title, content, body_text, created_at, updated_at, deleted_at, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)',
-    ).run(id, userId, title, JSON.stringify(doc), docText(doc), t, t, section);
+      'INSERT INTO notes (id, kind, user_id, title, content, body_text, created_at, updated_at, deleted_at, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)',
+    ).run(id, kind, userId, title, JSON.stringify(body), contentText(body), t, t, section);
     reindexNote(db, id);
   })();
   return getNote(db, userId, id)!;
@@ -149,7 +162,7 @@ export function unlockNote(db: DB, id: string): { title: string; username: strin
   })();
 }
 
-export function updateNote(db: DB, userId: string, id: string, patch: { title?: string; content?: TiptapDoc }): UpdateResult {
+export function updateNote(db: DB, userId: string, id: string, patch: { title?: string; content?: NoteContent }): UpdateResult {
   return db.transaction((): UpdateResult => {
     const state = liveCheck(db, userId, id);
     if (state !== 'ok') return state;
@@ -161,7 +174,7 @@ export function updateNote(db: DB, userId: string, id: string, patch: { title?: 
     if (patch.content !== undefined) {
       db.prepare('UPDATE notes SET content = ?, body_text = ? WHERE id = ? AND user_id = ?').run(
         JSON.stringify(patch.content),
-        docText(patch.content),
+        contentText(patch.content),
         id,
         userId,
       );
@@ -208,10 +221,12 @@ export function trashNote(db: DB, userId: string, id: string): Note | null | 're
   })();
 }
 
-/** A body with nothing in it: only paragraphs that hold no text and no other node. */
-function isEmptyContent(json: string): boolean {
+/** A body with nothing in it: empty paragraphs for docs, or no populated cells for sheets. */
+function isEmptyContent(json: string, kind: string): boolean {
   try {
-    const nodes = (JSON.parse(json) as TiptapDoc).content ?? [];
+    const parsed = JSON.parse(json);
+    if (kind === 'sheet') return isEmptySheet(parsed as SheetDoc);
+    const nodes = (parsed as TiptapDoc).content ?? [];
     return nodes.every((n) => n.type === 'paragraph' && !n.content?.length);
   } catch {
     return false;
@@ -220,17 +235,17 @@ function isEmptyContent(json: string): boolean {
 
 /**
  * The user's empty notes: live, on the home page (not in the inbox), not read-only, with
- * no title, no tags and nothing in the body (a photo, a table or a rule is something).
+ * no title, no tags and nothing in the body (a photo, a table, a rule or a sheet cell is something).
  */
 function emptyNoteIds(db: DB, userId: string, section: string): string[] {
   const rows = db
     .prepare(
-      `SELECT n.id, n.title, n.content FROM notes n
+      `SELECT n.id, n.kind, n.title, n.content FROM notes n
         WHERE n.user_id = ? AND n.section_id = ? AND n.deleted_at IS NULL AND n.inbox = 0 AND n.read_only = 0
           AND NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id)`,
     )
-    .all(userId, section) as Array<{ id: string; title: string; content: string }>;
-  return rows.filter((r) => r.title.trim() === '' && isEmptyContent(r.content)).map((r) => r.id);
+    .all(userId, section) as Array<{ id: string; kind: string; title: string; content: string }>;
+  return rows.filter((r) => r.title.trim() === '' && isEmptyContent(r.content, r.kind)).map((r) => r.id);
 }
 
 export function countEmptyNotes(db: DB, userId: string, section: string): number {
