@@ -1,13 +1,17 @@
 // Pasting into the note editor.
-//  - Text always arrives as plain text (from other apps and web pages, and from Jot itself),
-//    taking the formatting at the cursor, with lines kept as paragraphs.
+//  - External text (from other apps and web pages) always arrives as plain text, taking
+//    the formatting at the cursor, with lines kept as paragraphs.
+//  - Internal copies/cuts from Jot preserve all formatting, blocks, links, tables and
+//    photos (within a note or across notes).
 //  - An image on the clipboard (as an image file) is uploaded as a Jot photo and inserted
 //    at the cursor; a disallowed type or a failed upload shows a message; an external or
 //    data: image URL is never inserted; text wins when there is usable text.
 // The paste events carry a real DataTransfer, exactly as the browser delivers Ctrl+V or
 // its Paste menu; "copy inside Jot" uses what Jot itself put on the clipboard.
 import { expect, test, type Page } from '@playwright/test';
-import { body, login, makePng, newNote, typeInBody, uniq, waitSaved } from './helpers';
+import { body, goHome, login, makePng, newNote, typeInBody, uniq, waitSaved } from './helpers';
+
+const JOT_MIME = 'application/x-jot-slice';
 
 interface ClipFile {
   name: string;
@@ -15,26 +19,35 @@ interface ClipFile {
   bytes: number[];
 }
 
-async function paste(page: Page, data: { text?: string; html?: string; files?: ClipFile[] }) {
-  await body(page).evaluate((el, d) => {
-    const dt = new DataTransfer();
-    if (d.html !== undefined) dt.setData('text/html', d.html);
-    if (d.text !== undefined) dt.setData('text/plain', d.text);
-    for (const f of d.files ?? []) dt.items.add(new File([new Uint8Array(f.bytes)], f.name, { type: f.type }));
-    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-  }, data);
+async function paste(page: Page, data: { text?: string; html?: string; jot?: string; files?: ClipFile[] }) {
+  await body(page).evaluate(
+    (el, { d, mime }) => {
+      const dt = new DataTransfer();
+      if (d.html !== undefined) dt.setData('text/html', d.html);
+      if (d.text !== undefined) dt.setData('text/plain', d.text);
+      if (d.jot !== undefined) dt.setData(mime, d.jot);
+      for (const f of d.files ?? []) dt.items.add(new File([new Uint8Array(f.bytes)], f.name, { type: f.type }));
+      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    },
+    { d: data, mime: JOT_MIME },
+  );
 }
 
 /** Copies the editor's selection with Ctrl+C and returns what Jot put on the clipboard. */
-async function copySelection(page: Page): Promise<{ text: string; html: string }> {
-  await page.evaluate(() => {
+async function copySelection(page: Page): Promise<{ text: string; html: string; jot: string }> {
+  await page.evaluate((mime) => {
     (window as any).__copied = null;
     document.addEventListener(
       'copy',
-      (e) => ((window as any).__copied = { text: e.clipboardData!.getData('text/plain'), html: e.clipboardData!.getData('text/html') }),
+      (e) =>
+        ((window as any).__copied = {
+          text: e.clipboardData!.getData('text/plain'),
+          html: e.clipboardData!.getData('text/html'),
+          jot: e.clipboardData!.getData(mime),
+        }),
       { once: true },
     );
-  });
+  }, JOT_MIME);
   // A person's pace: ProseMirror reads a keyboard-made selection just after the keys.
   await page.waitForTimeout(150);
   await page.keyboard.press('Control+C');
@@ -94,21 +107,28 @@ test.describe('paste as plain text', () => {
     expect(paragraphs(doc)).toEqual(['x **not bold** _not italic_ ~~not struck~~ ==not marked== `not code` https://example.com/page']);
   });
 
-  test('styled text and table cells copied inside Jot paste as plain text that takes the formatting at the cursor', async ({ page }) => {
+  test('internal copy in Jot preserves formatting, links, headings, lists, tables and photos across notes', async ({ page }) => {
     await login(page, 'alice');
-    await newNote(page, `Paste from Jot ${uniq()}`);
-    const styled = { type: 'textStyle', attrs: { fontFamily: '"Lora"', fontSize: '32px', color: 'Crimson' } };
+    await newNote(page, `Copy source ${uniq()}`);
+    // Upload a real photo so we also verify copying a photo across notes.
+    await paste(page, { files: [png()] });
+    await expect(body(page).locator('.jot-photo img')).toHaveCount(1);
+    await waitSaved(page);
+    const photoSrc = (await body(page).locator('.jot-photo img').getAttribute('src'))!;
+
+    const styled = { type: 'textStyle', attrs: { fontFamily: '"Lora"', fontSize: '32px', color: '#E00631' } };
     const content = {
       type: 'doc',
       content: [
         {
           type: 'paragraph',
           content: [
-            { type: 'text', text: 'STYLED', marks: [{ type: 'bold' }, { type: 'italic' }, styled, { type: 'highlight', attrs: { color: 'Sunflower' } }] },
+            { type: 'text', text: 'STYLED', marks: [{ type: 'bold' }, { type: 'italic' }, styled, { type: 'highlight', attrs: { color: '#FFE58F' } }] },
             { type: 'text', text: 'LINKED', marks: [{ type: 'link', attrs: { href: 'https://example.com' } }] },
           ],
         },
         { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'HEADING' }] },
+        { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'ITEMONE' }] }] }] },
         {
           type: 'table',
           content: [
@@ -121,50 +141,59 @@ test.describe('paste as plain text', () => {
             },
           ],
         },
-        { type: 'paragraph', content: [{ type: 'text', text: 'plain target' }] },
-        { type: 'paragraph', content: [{ type: 'text', text: 'BOLDTARGET', marks: [{ type: 'bold' }] }] },
+        { type: 'image', attrs: { src: photoSrc, width: 120 } },
       ],
     };
     expect((await page.request.patch(`/api/notes/${noteId(page)}`, { data: { content } })).status()).toBe(200);
     await page.reload();
-    await expect(body(page)).toContainText('BOLDTARGET');
+    await expect(body(page)).toContainText('CELLTWO');
 
-    // Copy the styled paragraph and the heading (Ctrl+C), paste at the end of the plain paragraph.
+    // Select all and copy inside Jot.
     await body(page).getByText('STYLED').click({ delay: 60 });
-    await page.keyboard.press('Home');
-    await page.keyboard.press('Shift+ArrowDown');
-    await page.keyboard.press('Shift+End');
+    await page.keyboard.press('Control+A');
     const fromJot = await copySelection(page);
-    expect(fromJot.html).toMatch(/data-pm-slice/); // really Jot's own rich copy
-    await body(page).getByText('plain target').click({ delay: 60 });
-    await page.keyboard.press('End');
-    await page.waitForTimeout(150); // ProseMirror reads a keyboard-moved cursor just after the key
+    expect(fromJot.jot).toBeTruthy();
+    expect(fromJot.text).toContain('STYLEDLINKED');
+
+    // Open a different note and paste: everything arrives with its full formatting.
+    await goHome(page);
+    await newNote(page, `Copy target ${uniq()}`);
+    await body(page).click({ delay: 60 });
     await paste(page, fromJot);
-
-    // Copy a table cell's text, paste it into the bold paragraph: it becomes bold like typing would.
-    await body(page).getByText('CELLTWO').click({ delay: 60 });
-    await page.keyboard.press('Home');
-    await page.keyboard.press('Shift+End');
-    const cell = await copySelection(page);
-    expect(cell.text).toBe('CELLTWO');
-    expect(cell.html).toMatch(/<strong>CELLTWO<\/strong>/); // copied with its bold
-    await body(page).getByText('BOLDTARGET').click({ delay: 60 });
-    await page.keyboard.press('End');
-    await page.waitForTimeout(150); // ProseMirror reads a keyboard-moved cursor just after the key
-    await paste(page, cell);
     await waitSaved(page);
-
     await page.reload();
-    await expect(body(page)).toContainText('BOLDTARGETCELLTWO');
+    await expect(body(page)).toContainText('CELLTWO');
+
     const doc = await saved(page);
     const blocks = doc.content as any[];
-    const target = blocks.find((b) => b.type === 'paragraph' && JSON.stringify(b).includes('plain target'));
-    expect(target.content).toEqual([{ type: 'text', text: 'plain targetSTYLEDLINKED' }]);
-    expect(blocks.filter((b) => b.type === 'heading').length).toBe(1); // only the original heading
-    expect(blocks.some((b) => b.type === 'paragraph' && JSON.stringify(b).includes('"text":"HEADING"'))).toBe(true);
-    const bold = blocks.at(-1);
-    expect(bold.content).toEqual([{ type: 'text', text: 'BOLDTARGETCELLTWO', marks: [{ type: 'bold' }] }]);
-    expect(blocks.filter((b) => b.type === 'table').length).toBe(1);
+    expect(blocks[0].type).toBe('paragraph');
+    expect(blocks[0].content[0].text).toBe('STYLED');
+    expect(blocks[0].content[0].marks).toEqual(
+      expect.arrayContaining([
+        { type: 'bold' },
+        { type: 'italic' },
+        { type: 'textStyle', attrs: expect.objectContaining({ fontFamily: '"Lora"', fontSize: '32px', color: '#E00631' }) },
+        { type: 'highlight', attrs: { color: '#FFE58F' } },
+      ]),
+    );
+    expect(blocks[0].content[1]).toMatchObject({
+      type: 'text',
+      text: 'LINKED',
+      marks: [{ type: 'link', attrs: expect.objectContaining({ href: 'https://example.com' }) }],
+    });
+    expect(blocks[1]).toEqual({ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'HEADING' }] });
+    expect(blocks[2].type).toBe('bulletList');
+    expect(blocks[3].type).toBe('table');
+    expect(blocks[4]).toMatchObject({ type: 'image', attrs: expect.objectContaining({ src: photoSrc, width: 120 }) });
+
+    // Ctrl+Shift+V (plain text only, no Jot slice on clipboard) still pastes as plain text.
+    await goHome(page);
+    await newNote(page, `Plain paste ${uniq()}`);
+    await typeInBody(page, 'plain ');
+    await paste(page, { text: fromJot.text });
+    await waitSaved(page);
+    const plainDoc = await saved(page);
+    expect(shape(plainDoc)).toEqual({ nodes: ['doc', 'paragraph', 'text'], marks: [] });
   });
 });
 

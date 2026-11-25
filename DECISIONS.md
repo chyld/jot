@@ -348,23 +348,24 @@ published package source. All Tiptap packages are pinned to **3.34.0**.
   but new styles and the font pickers only offer active fonts.
 - "Save selection as style…" opens the style form pre-filled from the formatting at the
   caret (falling back to Inter 16 px when the text has no font or size).
-- Colours outside the palette are dropped when the note is saved. (Pasted text carries no
-  colours at all; see the paste rules below.)
-- **Paste is always plain text** (owner request). One ProseMirror `handlePaste` decides
-  every paste. Ctrl+V and the browser's Paste menu both arrive as the same paste event.
-  - The clipboard's `text/plain` is pasted through ProseMirror's own plain-text path, so
-    pasting into a code block still keeps the text as code. If there is no plain text but
-    there is HTML, only the HTML's text is used (block elements become new lines).
-  - The clipboard's HTML is never parsed into the note, whether it came from another app,
-    a web page or Jot's own copy (styled text, headings, table cells). So no fonts, sizes,
-    colours, highlights, bold, italic, links, headings, lists, tables or images come from
-    the clipboard.
-  - Each line becomes a paragraph. Runs of blank lines are folded, so Jot's own copy of
-    two paragraphs (which puts a blank line between them) comes back as two paragraphs,
-    not three.
-  - The pasted text gets the formatting at the cursor, exactly as a typed character
-    would: the pending formatting if one was just switched on, else the marks at the
-    cursor. A link stops at its end, so pasting just after a link is not linked.
+- Colours outside the palette are dropped when the note is saved. (External pasted text
+  carries no colours at all; see the paste rules below.)
+- **External paste is plain text; internal Jot copy/cut preserves formatting** (owner
+  request; originally all pastes were plain text, see the entry near the end). One
+  ProseMirror `pasteProps` (`src/client/editor/paste.ts`) decides every copy, cut and paste.
+  Ctrl+V and the browser's Paste menu both arrive as the same paste event.
+  - On `copy` and `cut` inside Jot (including copying from read-only notes), Jot writes the
+    usual `text/plain` and `text/html` (so copying out to another app still works) plus its
+    native ProseMirror selection slice (`slice.toJSON()`) under `application/x-jot-slice`.
+  - When pasting into Jot with a valid `application/x-jot-slice`, Jot reconstructs the
+    ProseMirror slice (`Slice.fromJSON`) and inserts it directly, preserving all fonts,
+    sizes, colours, highlights, bold/italic/underline/strike, inline code, links, headings,
+    lists, quotes, code blocks, horizontal rules, tables and photos across notes and tabs.
+  - External pastes (no `application/x-jot-slice`, or `Ctrl+Shift+V` plain-text paste)
+    always go through ProseMirror's plain-text path: external clipboard HTML is never parsed
+    into the note (if there is no plain text but there is HTML, only the HTML's text is
+    used). Each line becomes a paragraph, runs of blank lines are folded, and pasted plain
+    text takes the formatting at the cursor.
   - Tiptap's paste rules (Markdown-style `**bold**`, `==highlight==`, … and URL
     auto-linking on paste) and the link extension's "paste a URL over selected text makes
     a link" are switched off, because they would turn pasted text into formatting. Typing
@@ -1099,3 +1100,14 @@ Built as specified, in the shape of its §9: `src/shared/sections.ts` (rules), `
   clears marks and blocks as before. To clear a whole paragraph, select it first (a triple
   click).
   Tests: `tests/component/editor-extras.test.tsx`, `e2e/specs/editor-extras.spec.ts`.
+- **Internal copy/cut/paste preserves formatting while external paste stays plain text
+  (owner request).** Previously `pasteProps` (`src/client/editor/paste.ts`) stripped
+  formatting even on copies from Jot itself. Now `copy` and `cut` inside the editor write
+  the ProseMirror selection slice (`slice.toJSON()`) under `application/x-jot-slice`
+  alongside the usual `text/plain` and `text/html`. When pasting into Jot with a valid
+  `application/x-jot-slice`, `handlePaste` restores the slice with `Slice.fromJSON` and
+  inserts it (passing through plugin `handlePaste` handlers such as table cell paste
+  first), preserving all inline formatting, blocks, links, tables and photos across notes
+  and tabs (and from read-only notes). External pastes and `Ctrl+Shift+V` carry no Jot
+  slice and continue to paste as plain text taking the cursor's formatting.
+  Tests: `tests/component/paste.test.tsx`, `e2e/specs/paste.spec.ts`.

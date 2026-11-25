@@ -133,7 +133,7 @@ Shown only when relevant:
 - **Table controls** when the cursor is in a table: Tiptap's standard table features (add and remove rows and columns, header row, merge and split cells, column resize).
 - **Photo controls** when a photo is selected: resize, border size, border colour (swatches only, like the colour pickers).
 
-Pasting (Ctrl+V or the browser's Paste menu) always inserts plain text: all formatting from the clipboard is stripped (fonts, sizes, colours, highlights, bold, italic, links, headings, lists, tables), whether the text comes from another app, a web page or Jot itself. Lines are kept as paragraphs, and the pasted text takes the formatting at the cursor, as typed text would. Pasting an image is described in section 7.
+Pasting (Ctrl+V or the browser's Paste menu) from another app or web page always inserts plain text: all external formatting is stripped (fonts, sizes, colours, highlights, bold, italic, links, headings, lists, tables), lines are kept as paragraphs, and the pasted text takes the formatting at the cursor, as typed text would. Copying or cutting inside Jot (including from read-only notes) and pasting back into Jot preserves all formatting, blocks, links, tables and photos across notes and tabs; Ctrl+Shift+V still pastes plain text. Pasting an image file is described in section 7.
 
 ## 7. Photos
 
