@@ -141,10 +141,10 @@ export function Sidebar(props: { path: string }) {
       <RailLink to="/sections" label={`Sections (current: ${current.name})`} active={p === '/sections'} className="rail-section">
         <SectionSquare name={current.name} />
       </RailLink>
-      <NewNoteLink className="rail-new" label="New note" bump={bumpNotes} onError={setNewError}>
+      <NewNoteLink className="rail-btn" label="New note" bump={bumpNotes} onError={setNewError}>
         <FileText size={20} />
       </NewNoteLink>
-      <NewNoteLink className="rail-btn rail-new-sheet" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
+      <NewNoteLink className="rail-btn" kind="sheet" label="New spreadsheet" bump={bumpNotes} onError={setNewError}>
         <FileSpreadsheet size={20} />
       </NewNoteLink>
       <RailLink to="/inbox" label="Inbox" title={`Inbox: ${inboxCount} ${inboxCount === 1 ? 'note' : 'notes'} from bots`} active={p === '/inbox'}>
